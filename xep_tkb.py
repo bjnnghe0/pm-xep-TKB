@@ -550,6 +550,43 @@ def tim_phuong_an(bt, tk, bao_tien_do=None):
 # 5. XUẤT EXCEL (ghi đè lên file mẫu, giữ nguyên 100% định dạng)
 # ==========================================================================
 
+def _dat_o(ws, hang, cot, gt):
+    """Đặt giá trị vào MỘT ô — và không để chuỗi biến thành công thức.
+
+       openpyxl đổi mọi chuỗi bắt đầu bằng '=' thành CÔNG THỨC lưu hẳn trong
+       tệp (data_type 'f', XML ra thẻ <f>). Đã đo: gửi POST /api/xep với
+       {"tuan": "=cmd|' /c calc'!A1"} là ô A4 của sheet "Khối 12" thành công
+       thức. Văn thư tải TKB_Khoi12.xlsx về mở bằng Excel, Excel hỏi cho phép
+       liên kết dữ liệu ngoài, bấm Có là chạy lệnh trên máy văn thư.
+
+       Có HAI đường người dùng đưa chuỗi vào được qua giao diện web, cả hai
+       đều rơi vào ĐẦU ô:
+         - thong_tin.tuan  -> "Khối 12" ô A4        (POST /api/xep)
+         - ghi_chu của quy tắc MỀM (uu_tien_*) -> "Kiểm tra quy tắc" cột B,
+           khối "ĐIỂM CÁC TIÊU CHÍ MỀM"           (POST /api/them-quy-tac,
+           và ghi hẳn vào cauhinh.json khi bấm Lưu)
+       Cùng trường ghi_chu đó ở quy tắc CỨNG thì vô hại vì luôn có tiền tố
+       "[tên_loại] " đứng trước. Ngoài ra còn 15 giá trị khác tới được đầu ô
+       nhưng phải sửa tay cauhinh.json (tiêu đề, tên GVCN, tên lớp, tên môn,
+       tên GV...). Chặn ở ĐÂY là chặn cả 17 đường bằng một chỗ.
+
+       Cách chặn: ép lại data_type='s'. Chuỗi giữ NGUYÊN TỪNG KÝ TỰ (đã đo:
+       XML ra <c t="inlineStr"><is><t>=cmd|...</t></is></c>), nên tờ in ra
+       không đổi gì. KHÔNG dùng cách chèn dấu nháy đơn đứng trước — cách đó
+       làm đổi chữ in ra, mà nhà trường in tờ này để ký trực tiếp.
+
+       Chỉ '=' mới nguy hiểm với .xlsx: đã đo openpyxl 3.1.5 giữ nguyên
+       data_type 's' cho '+1+1', '-1+1', '@SUM(1)' và ' =1+1'.
+
+       Bảy công thức có sẵn trong mau_tkb.xlsx (D43:I43 COUNTA và H48 ngày
+       ký) KHÔNG đi qua hàm này nên vẫn còn nguyên.
+    """
+    o = ws.cell(hang, cot, gt)
+    if o.data_type == 'f':
+        o.data_type = 's'
+    return o
+
+
 def xuat_excel(bt, pa, file_mau, file_xuat):
     try:
         import openpyxl
@@ -566,11 +603,11 @@ def xuat_excel(bt, pa, file_mau, file_xuat):
     wb = openpyxl.load_workbook(file_xuat)
     ws = wb[tt['ten_sheet']]
 
-    ws.cell(vt['hang_tieu_de'], 1).value = tt['tieu_de']
-    ws.cell(vt['hang_tuan'], 1).value = tt['tuan']
+    _dat_o(ws, vt['hang_tieu_de'], 1, tt['tieu_de'])
+    _dat_o(ws, vt['hang_tuan'], 1, tt['tuan'])
     for j, lop in enumerate(bt.lop):
-        ws.cell(vt['hang_gvcn'], vt['cot_bat_dau'] + j).value = \
-            bt.thong_tin_lop[lop]['gvcn']
+        _dat_o(ws, vt['hang_gvcn'], vt['cot_bat_dau'] + j,
+               bt.thong_tin_lop[lop]['gvcn'])
 
     nap(bt, pa)
     for c in bt.cac_cum:
@@ -578,8 +615,8 @@ def xuat_excel(bt, pa, file_mau, file_xuat):
             continue
         cot = vt['cot_bat_dau'] + bt.lop.index(c.lop)
         for p in range(c.vitri, c.vitri + c.size):
-            ws.cell(vt['hang_bat_dau'] + c.ngay * bt.SO_TIET + p,
-                    cot).value = c.nhan()
+            _dat_o(ws, vt['hang_bat_dau'] + c.ngay * bt.SO_TIET + p,
+                   cot, c.nhan())
 
     _sheet_giao_vien(wb, bt, Font, Alignment, Border, Side)
     _sheet_kiem_tra(wb, bt, pa, Font, Alignment, Border, Side)
@@ -607,16 +644,16 @@ def _sheet_giao_vien(wb, bt, Font, Alignment, Border, Side):
     thg = Font(name='Times New Roman', size=10)
     giua = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-    ws.cell(1, 1).value = 'THỜI KHÓA BIỂU THEO GIÁO VIÊN — ' + \
-        bt.cfg['thong_tin']['tuan']
+    _dat_o(ws, 1, 1, 'THỜI KHÓA BIỂU THEO GIÁO VIÊN — '
+           + bt.cfg['thong_tin']['tuan'])
     ws.cell(1, 1).font = Font(name='Times New Roman', size=13, bold=True)
 
     for j, h in enumerate(['Giáo viên', 'Số tiết'], start=1):
-        o = ws.cell(3, j, h); o.font = tit; o.border = kh; o.alignment = giua
+        o = _dat_o(ws, 3, j, h); o.font = tit; o.border = kh; o.alignment = giua
     cot = 3
     for d in range(bt.SO_NGAY):
         for p in range(bt.SO_TIET):
-            o = ws.cell(3, cot, f'T{bt.cac_thu[d]}\nt{bt.cac_tiet[p]}')
+            o = _dat_o(ws, 3, cot, f'T{bt.cac_thu[d]}\nt{bt.cac_tiet[p]}')
             o.font = tit; o.alignment = giua; o.border = kh
             ws.column_dimensions[_cot(cot)].width = 11
             cot += 1
@@ -626,8 +663,8 @@ def _sheet_giao_vien(wb, bt, Font, Alignment, Border, Side):
     hang = 4
     for gv in sorted({c.gv for c in bt.cac_cum if not c.la_trong}):
         ds = [c for c in bt.cac_cum if c.gv == gv and not c.la_trong]
-        o = ws.cell(hang, 1, gv); o.font = thg; o.border = kh; o.alignment = giua
-        o = ws.cell(hang, 2, sum(c.size for c in ds))
+        o = _dat_o(ws, hang, 1, gv); o.font = thg; o.border = kh; o.alignment = giua
+        o = _dat_o(ws, hang, 2, sum(c.size for c in ds))
         o.font = tit; o.border = kh; o.alignment = giua
         luoi = {}
         for c in ds:
@@ -636,7 +673,7 @@ def _sheet_giao_vien(wb, bt, Font, Alignment, Border, Side):
         cot = 3
         for d in range(bt.SO_NGAY):
             for p in range(bt.SO_TIET):
-                o = ws.cell(hang, cot, luoi.get((d, p), ''))
+                o = _dat_o(ws, hang, cot, luoi.get((d, p), ''))
                 o.font = thg; o.alignment = giua; o.border = kh
                 cot += 1
         ws.row_dimensions[hang].height = 26
@@ -658,10 +695,10 @@ def _sheet_kiem_tra(wb, bt, pa, Font, Alignment, Border, Side):
     do = PatternFill('solid', fgColor='FFC7CE')
     tren = Alignment(wrap_text=True, vertical='top')
 
-    ws.cell(1, 1, 'BẢNG ĐỐI CHIẾU QUY TẮC').font = Font(
+    _dat_o(ws, 1, 1, 'BẢNG ĐỐI CHIẾU QUY TẮC').font = Font(
         name='Times New Roman', size=13, bold=True)
     for j, h in enumerate(['Kết quả', 'Nội dung quy tắc', 'Ghi chú'], start=1):
-        o = ws.cell(3, j, h); o.font = tit; o.border = kh
+        o = _dat_o(ws, 3, j, h); o.font = tit; o.border = kh
     ws.column_dimensions['A'].width = 10
     ws.column_dimensions['B'].width = 66
     ws.column_dimensions['C'].width = 55
@@ -669,27 +706,27 @@ def _sheet_kiem_tra(wb, bt, pa, Font, Alignment, Border, Side):
     bc, _ = hau_kiem(bt, pa)
     hang = 4
     for kq, ten_rb, ct in bc:
-        o = ws.cell(hang, 1, kq); o.font = tit; o.border = kh
+        o = _dat_o(ws, hang, 1, kq); o.font = tit; o.border = kh
         o.fill = xanh if kq == 'ĐẠT' else do
         o.alignment = Alignment(horizontal='center')
-        o = ws.cell(hang, 2, ten_rb); o.font = thg; o.border = kh; o.alignment = tren
-        o = ws.cell(hang, 3, ct); o.font = thg; o.border = kh; o.alignment = tren
+        o = _dat_o(ws, hang, 2, ten_rb); o.font = thg; o.border = kh; o.alignment = tren
+        o = _dat_o(ws, hang, 3, ct); o.font = thg; o.border = kh; o.alignment = tren
         hang += 1
 
     hang += 1
-    ws.cell(hang, 1, 'ĐIỂM CÁC TIÊU CHÍ MỀM').font = Font(
+    _dat_o(ws, hang, 1, 'ĐIỂM CÁC TIÊU CHÍ MỀM').font = Font(
         name='Times New Roman', size=12, bold=True)
     hang += 1
     _, ct = cham_diem(bt, pa, chi_tiet=True)
     for k, v in ct.items():
-        ws.cell(hang, 2, k).font = thg
+        _dat_o(ws, hang, 2, k).font = thg
         ws.cell(hang, 2).border = kh
-        ws.cell(hang, 3, v).font = tit
+        _dat_o(ws, hang, 3, v).font = tit
         ws.cell(hang, 3).border = kh
         hang += 1
 
     hang += 1
-    ws.cell(hang, 1, 'SỐ TIẾT / SỐ BUỔI CỦA TỪNG GIÁO VIÊN').font = Font(
+    _dat_o(ws, hang, 1, 'SỐ TIẾT / SỐ BUỔI CỦA TỪNG GIÁO VIÊN').font = Font(
         name='Times New Roman', size=12, bold=True)
     hang += 1
     tk = defaultdict(lambda: [0, set()])
@@ -698,12 +735,12 @@ def _sheet_kiem_tra(wb, bt, pa, Font, Alignment, Border, Side):
             tk[c.gv][0] += c.size
             tk[c.gv][1].add(c.ngay)
     for j, h in enumerate(['Giáo viên', 'Số tiết/tuần', 'Số buổi lên lớp'], start=1):
-        o = ws.cell(hang, j, h); o.font = tit; o.border = kh
+        o = _dat_o(ws, hang, j, h); o.font = tit; o.border = kh
     hang += 1
     for gv in sorted(tk):
         st, ng = tk[gv]
         for j, val in enumerate([gv, st, len(ng)], start=1):
-            o = ws.cell(hang, j, val); o.font = thg; o.border = kh
+            o = _dat_o(ws, hang, j, val); o.font = thg; o.border = kh
         hang += 1
 
 

