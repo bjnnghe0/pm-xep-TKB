@@ -72,7 +72,7 @@
       ["Ngữ văn", "Đ.Duy", 3],   ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
       ["Lịch sử", "N.Uyên", 2],  ["Chuyên đề Lịch sử", "N.Uyên", 1],
       ["Địa lí", "N.Dung", 2],   ["Chuyên đề Địa lí", "N.Dung", 1],
-      ["Sinh học", "T.Hằng", 2],
+      ["Sinh học", "T.T.Hằng", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "V.Q.Huấn", 3],
       ["GDKT-PL", "T.Trinh", 2],
@@ -83,10 +83,10 @@
       ["Ngữ văn", "H.Phương", 3], ["Chuyên đề Ngữ văn", "H.Phương", 1],
       ["Lịch sử", "N.Xuân", 2],  ["Chuyên đề Lịch sử", "N.Xuân", 1],
       ["Địa lí", "H.Hoàng", 2],  ["Chuyên đề Địa lí", "H.Hoàng", 1],
-      ["Sinh học", "T.Hằng", 2],
+      ["Sinh học", "T.T.Hằng", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "V.Trọng", 3],
-      ["GDKT-PL", "T.Hương", 2],
+      ["GDKT-PL", "T.T.Hương", 2],
       ["SHCN", "H.Hoàng", 1]
     ],
     "12B5": [
@@ -94,10 +94,10 @@
       ["Ngữ văn", "H.Trang", 3], ["Chuyên đề Ngữ văn", "H.Trang", 1],
       ["Lịch sử", "N.Xuân", 2],  ["Chuyên đề Lịch sử", "N.Xuân", 1],
       ["Địa lí", "H.Hiền", 2],   ["Chuyên đề Địa lí", "H.Hiền", 1],
-      ["Sinh học", "T.Hiền", 2],
+      ["Sinh học", "T.T.Hiền", 2],
       ["Hoá học", "H.Quân", 2],
       ["HĐTN&HN", "H.Nam", 3],
-      ["GDKT-PL", "T.Hương", 2],
+      ["GDKT-PL", "T.T.Hương", 2],
       ["SHCN", "H.Trang", 1]
     ],
     "12B6": [
@@ -105,7 +105,7 @@
       ["Ngữ văn", "Đ.Duy", 3],   ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
       ["Lịch sử", "N.Uyên", 2],  ["Chuyên đề Lịch sử", "N.Uyên", 1],
       ["Địa lí", "H.Hoàng", 2],  ["Chuyên đề Địa lí", "H.Hoàng", 1],
-      ["Sinh học", "T.Hiền", 2],
+      ["Sinh học", "T.T.Hiền", 2],
       ["Hoá học", "H.Quân", 2],
       ["HĐTN&HN", "X.Thọ", 3],
       ["GDKT-PL", "T.Hà", 2],
