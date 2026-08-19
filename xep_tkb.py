@@ -26,7 +26,7 @@ import argparse
 import shutil
 import sys
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import quy_tac as QT
 
@@ -489,6 +489,58 @@ def hau_kiem(bt, pa):
     return bc, loi
 
 
+KetQuaTim = namedtuple(
+    'KetQuaTim',
+    'tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay')
+
+
+def tim_phuong_an(bt, tk, bao_tien_do=None):
+    """Chạy nhiều lần thử rồi giữ phương án tốt nhất.
+
+       tk        : mục "tim_kiem" đã gộp với tuỳ chọn dòng lệnh, cần đủ
+                   so_lan_thu / seed / gioi_han_buoc /
+                   gioi_han_giay_moi_lan / gioi_han_tong_giay.
+       bao_tien_do : hàm gọi lại sau MỖI lần thử, nhận
+                   (da_thu, so_lan, so_hop_le, con_giay).
+                   None = im lặng, đúng như hành vi dòng lệnh.
+
+       Đây là NƠI DUY NHẤT chứa vòng lặp này. main() và web.py cùng gọi
+       vào đây, đừng chép lại ở chỗ khác.
+    """
+    so_lan = tk['so_lan_thu']
+    seed = tk['seed']
+    gh = tk['gioi_han_buoc']
+    gh_giay = tk['gioi_han_giay_moi_lan']
+    tong_giay = tk['gioi_han_tong_giay']
+
+    t0 = time.time()
+    tot, diem_tot, so_ok, so_hop_le, da_thu = None, None, 0, 0, 0
+    du_phong, diem_dp, loi_dp = None, None, None
+    for i in range(so_lan):
+        if time.time() - t0 > tong_giay:
+            break
+        da_thu += 1
+        pa = BoGiai(bt, random.Random(seed + i), gh, gh_giay).giai()
+        if pa is not None:
+            so_ok += 1
+            d = cham_diem(bt, pa)
+            _, loi = hau_kiem(bt, pa)
+            if loi:
+                # Dự phòng: ÍT VI PHẠM NHẤT trước, điểm mềm chỉ là tiêu chí phụ
+                # khi số quy tắc lỗi bằng nhau.
+                if loi_dp is None or (loi, -d) < (loi_dp, -diem_dp):
+                    du_phong, diem_dp, loi_dp = dict(pa), d, loi
+            else:
+                so_hop_le += 1
+                if diem_tot is None or d > diem_tot:
+                    diem_tot, tot = d, dict(pa)
+        if bao_tien_do:
+            bao_tien_do(da_thu, so_lan, so_hop_le,
+                        max(0, round(tong_giay - (time.time() - t0))))
+    return KetQuaTim(tot, diem_tot, so_ok, so_hop_le, da_thu,
+                     du_phong, diem_dp, loi_dp, time.time() - t0)
+
+
 # ==========================================================================
 # 5. XUẤT EXCEL (ghi đè lên file mẫu, giữ nguyên 100% định dạng)
 # ==========================================================================
@@ -704,12 +756,12 @@ def main():
     thu_muc = os.path.dirname(os.path.abspath(args.cauhinh))
     bt = BaiToan(cfg)
 
-    tk = cfg.get('tim_kiem', {})
-    so_lan = args.lan or tk.get('so_lan_thu', 300)
-    seed = args.seed if args.seed is not None else tk.get('seed', 0)
-    gh = tk.get('gioi_han_buoc', 30000)
-    gh_giay = tk.get('gioi_han_giay_moi_lan', 3.0)
-    tong_giay = tk.get('gioi_han_tong_giay', 60)
+    goc = cfg.get('tim_kiem', {})
+    tk = {'so_lan_thu': args.lan or goc.get('so_lan_thu', 300),
+          'seed': args.seed if args.seed is not None else goc.get('seed', 0),
+          'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
+          'gioi_han_giay_moi_lan': goc.get('gioi_han_giay_moi_lan', 3.0),
+          'gioi_han_tong_giay': goc.get('gioi_han_tong_giay', 60)}
 
     cung = [q for q in bt.quy_tac if not q.TEN.startswith('uu_tien')]
     mem = [q for q in bt.quy_tac if q.TEN.startswith('uu_tien')]
@@ -722,41 +774,22 @@ def main():
     print(f'Cụm tiết      : {len([c for c in bt.cac_cum if not c.la_trong])} '
           f'(+{len([c for c in bt.cac_cum if c.la_trong])} ô trống)')
     print(f'Quy tắc nạp   : {len(cung)} quy tắc cứng, {len(mem)} tiêu chí mềm')
-    print(f'Đang tìm phương án ({so_lan} lần thử, seed={seed}) ...')
+    print(f'Đang tìm phương án ({tk["so_lan_thu"]} lần thử, '
+          f'seed={tk["seed"]}) ...')
 
-    t0 = time.time()
-    tot, diem_tot, so_ok, so_hop_le, da_thu = None, None, 0, 0, 0
-    du_phong, diem_dp, loi_dp, dung_du_phong = None, None, None, False
-    for i in range(so_lan):
-        if time.time() - t0 > tong_giay:
-            break
-        da_thu += 1
-        pa = BoGiai(bt, random.Random(seed + i), gh, gh_giay).giai()
-        if pa is None:
-            continue
-        so_ok += 1
-        d = cham_diem(bt, pa)
-        _, loi = hau_kiem(bt, pa)
-        if loi:
-            # Dự phòng: ÍT VI PHẠM NHẤT trước, điểm mềm chỉ là tiêu chí phụ
-            # khi số quy tắc lỗi bằng nhau.
-            if loi_dp is None or (loi, -d) < (loi_dp, -diem_dp):
-                du_phong, diem_dp, loi_dp = dict(pa), d, loi
-            continue
-        so_hop_le += 1
-        if diem_tot is None or d > diem_tot:
-            diem_tot, tot = d, dict(pa)
+    kqt = tim_phuong_an(bt, tk)
+    tot, diem_tot, loi_dp, dung_du_phong = kqt.tot, kqt.diem, kqt.loi_dp, False
 
-    if tot is None and du_phong is None:
+    if tot is None and kqt.du_phong is None:
         print('\n[KHÔNG XẾP ĐƯỢC] Các quy tắc đang mâu thuẫn nhau.')
         print('Gợi ý: tăng "so_lan_thu"/"gioi_han_tong_giay" trong mục "tim_kiem",')
         print('       hoặc tạm tắt bớt quy tắc bằng cách thêm  "bat": false.')
         sys.exit(1)
     if tot is None:
-        tot, diem_tot, dung_du_phong = du_phong, diem_dp, True
+        tot, diem_tot, dung_du_phong = kqt.du_phong, kqt.diem_dp, True
         print('\n[CẢNH BÁO] Không có phương án nào thoả HẾT quy tắc cứng.')
         print(f'           Đây là phương án ÍT VI PHẠM NHẤT: {loi_dp} quy tắc lỗi, '
-              f'điểm mềm {diem_dp}.')
+              f'điểm mềm {kqt.diem_dp}.')
         ds_loi = [(t, ct) for kq, t, ct in hau_kiem(bt, tot)[0] if kq == 'LỖI']
         print(f'           Các quy tắc đang bị vi phạm ({len(ds_loi)}):')
         for t, ct in ds_loi:
@@ -767,8 +800,8 @@ def main():
 
     ket = (f'Phương án ít vi phạm nhất: {loi_dp} quy tắc lỗi, điểm mềm {diem_tot}.'
            if dung_du_phong else f'Điểm cao nhất: {diem_tot}.')
-    print(f'-> {so_hop_le} phương án hợp lệ / {so_ok} lời giải / {da_thu} lần thử '
-          f'trong {time.time() - t0:.0f}s. {ket}')
+    print(f'-> {kqt.so_hop_le} phương án hợp lệ / {kqt.so_ok} lời giải / '
+          f'{kqt.da_thu} lần thử trong {kqt.giay:.0f}s. {ket}')
 
     _, ct = cham_diem(bt, tot, chi_tiet=True)
     if ct:

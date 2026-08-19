@@ -21,7 +21,6 @@ import argparse
 import copy
 import json
 import os
-import random
 import re
 import shutil
 import threading
@@ -81,12 +80,10 @@ def dat(**kw):
 # ==========================================================================
 # 2. LUỒNG XẾP THỜI KHÓA BIỂU
 # ==========================================================================
-#  Vòng lặp dưới đây LÀM ĐÚNG NHƯ xep_tkb.main(): cùng dãy seed, cùng
-#  giới hạn, cùng cách chọn phương án (hợp lệ thì so điểm mềm; không có
-#  phương án hợp lệ thì lấy phương án ít vi phạm nhất). Sở dĩ phải chép
-#  lại thay vì gọi thẳng main() là vì main() chỉ in kết quả lúc xong,
-#  không báo tiến độ, mà một lượt xếp mất ~50 giây. tests/thu_web.py
-#  khẳng định hai bên chọn ra CÙNG một phương án.
+#  Việc tìm phương án nằm ở X.tim_phuong_an() — CHUNG với xep_tkb.main(),
+#  không chép lại dòng nào. Web chỉ truyền thêm hàm gọi lại để báo tiến
+#  độ; dòng lệnh truyền None nên im lặng y như trước.
+#  tests/thu_web.py vẫn so từng ô của file Excel giữa hai đường chạy.
 
 def _chay(tuan, seed, so_lan, tat):
     try:
@@ -99,12 +96,12 @@ def _chay(tuan, seed, so_lan, tat):
 
         bt = X.BaiToan(cfg)
 
-        tk = cfg.get('tim_kiem', {})
-        so_lan = so_lan or tk.get('so_lan_thu', 300)
-        seed = seed if seed is not None else tk.get('seed', 0)
-        gh = tk.get('gioi_han_buoc', 30000)
-        gh_giay = tk.get('gioi_han_giay_moi_lan', 3.0)
-        tong_giay = tk.get('gioi_han_tong_giay', 60)
+        goc = cfg.get('tim_kiem', {})
+        tk = {'so_lan_thu': so_lan or goc.get('so_lan_thu', 300),
+              'seed': seed if seed is not None else goc.get('seed', 0),
+              'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
+              'gioi_han_giay_moi_lan': goc.get('gioi_han_giay_moi_lan', 3.0),
+              'gioi_han_tong_giay': goc.get('gioi_han_tong_giay', 60)}
 
         cung = [q for q in bt.quy_tac if not q.TEN.startswith('uu_tien')]
         mem = [q for q in bt.quy_tac if q.TEN.startswith('uu_tien')]
@@ -120,32 +117,19 @@ def _chay(tuan, seed, so_lan, tat):
         ghi(f'Quy tắc nạp   : {len(cung)} quy tắc cứng, {len(mem)} tiêu chí mềm')
         if tat:
             ghi(f'Đã tắt tạm    : {len(tat)} quy tắc (chỉ cho lượt chạy này)')
-        ghi(f'Đang tìm phương án ({so_lan} lần thử, seed={seed}) ...')
-        dat(so_lan=so_lan, bat_dau=time.time(), con_giay=tong_giay)
+        ghi(f'Đang tìm phương án ({tk["so_lan_thu"]} lần thử, '
+            f'seed={tk["seed"]}) ...')
+        dat(so_lan=tk['so_lan_thu'], bat_dau=time.time(),
+            con_giay=tk['gioi_han_tong_giay'])
 
-        t0 = time.time()
-        tot, diem_tot, so_ok, so_hop_le, da_thu = None, None, 0, 0, 0
-        du_phong, diem_dp, loi_dp, dung_du_phong = None, None, None, False
-        for i in range(so_lan):
-            if time.time() - t0 > tong_giay:
-                break
-            da_thu += 1
-            pa = X.BoGiai(bt, random.Random(seed + i), gh, gh_giay).giai()
-            if pa is not None:
-                so_ok += 1
-                d = X.cham_diem(bt, pa)
-                _, loi = X.hau_kiem(bt, pa)
-                if loi:
-                    if loi_dp is None or (loi, -d) < (loi_dp, -diem_dp):
-                        du_phong, diem_dp, loi_dp = dict(pa), d, loi
-                else:
-                    so_hop_le += 1
-                    if diem_tot is None or d > diem_tot:
-                        diem_tot, tot = d, dict(pa)
-            dat(da_thu=da_thu, hop_le=so_hop_le,
-                con_giay=max(0, round(tong_giay - (time.time() - t0))))
+        def tien_do(da_thu, so_lan_thu, hop_le, con_giay):
+            dat(da_thu=da_thu, so_lan=so_lan_thu, hop_le=hop_le,
+                con_giay=con_giay)
 
-        if tot is None and du_phong is None:
+        kqt = X.tim_phuong_an(bt, tk, tien_do)
+        tot, diem_tot, dung_du_phong = kqt.tot, kqt.diem, False
+
+        if tot is None and kqt.du_phong is None:
             ghi('')
             ghi('[KHÔNG XẾP ĐƯỢC] Các quy tắc đang mâu thuẫn nhau.')
             ghi('Gợi ý: tăng "so_lan_thu"/"gioi_han_tong_giay" trong mục "tim_kiem",')
@@ -154,17 +138,17 @@ def _chay(tuan, seed, so_lan, tat):
             return
 
         if tot is None:
-            tot, diem_tot, dung_du_phong = du_phong, diem_dp, True
+            tot, diem_tot, dung_du_phong = kqt.du_phong, kqt.diem_dp, True
             ghi('')
             ghi('[CẢNH BÁO] Không có phương án nào thoả HẾT quy tắc cứng.')
-            ghi(f'           Đây là phương án ÍT VI PHẠM NHẤT: {loi_dp} quy tắc '
-                f'lỗi, điểm mềm {diem_dp}.')
+            ghi(f'           Đây là phương án ÍT VI PHẠM NHẤT: {kqt.loi_dp} '
+                f'quy tắc lỗi, điểm mềm {kqt.diem_dp}.')
 
-        ket = (f'Phương án ít vi phạm nhất: {loi_dp} quy tắc lỗi, '
+        ket = (f'Phương án ít vi phạm nhất: {kqt.loi_dp} quy tắc lỗi, '
                f'điểm mềm {diem_tot}.' if dung_du_phong
                else f'Điểm cao nhất: {diem_tot}.')
-        ghi(f'-> {so_hop_le} phương án hợp lệ / {so_ok} lời giải / {da_thu} '
-            f'lần thử trong {time.time() - t0:.0f}s. {ket}')
+        ghi(f'-> {kqt.so_hop_le} phương án hợp lệ / {kqt.so_ok} lời giải / '
+            f'{kqt.da_thu} lần thử trong {kqt.giay:.0f}s. {ket}')
 
         _, ct = X.cham_diem(bt, tot, chi_tiet=True)
         if ct:

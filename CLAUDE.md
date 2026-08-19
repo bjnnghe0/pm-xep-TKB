@@ -357,19 +357,34 @@ sửa gì trong đó.
    bắt `SystemExit` **và** `Exception`, in nguyên văn ra khung nhật ký, máy chủ
    sống tiếp. Đây là **đường đi chính** khi người dùng sửa quy tắc sai, không phải
    trường hợp hiếm.
-3. **Vòng lặp tìm phương án bị CHÉP LẠI.** `_chay()` chép lại vòng lặp của
-   `xep_tkb.main()` vì `main()` không báo tiến độ. Chép lại thì có nguy cơ lệch,
-   nên `tests/thu_web.py` chạy cả hai với cùng cấu hình rồi so **từng ô của vùng
-   D8:I32** trong file Excel xuất ra, cộng điểm mềm và bảng đối chiếu.
-   *Cách chữa gốc:* tách vòng lặp đó khỏi `main()` thành `tim_phuong_an(bt, tk,
-   bao_tien_do=None)` rồi cho cả hai gọi chung — **cần sửa `xep_tkb.py` nên phải
-   hỏi trước, chưa làm.**
+3. **Việc tìm phương án dùng CHUNG một hàm.** `xep_tkb.tim_phuong_an(bt, tk,
+   bao_tien_do=None)` là nơi duy nhất chứa vòng lặp thử-nhiều-seed. `main()` gọi
+   với `bao_tien_do=None` (im lặng, đúng hành vi dòng lệnh cũ); `web._chay()`
+   truyền một hàm gọi lại để cập nhật thanh tiến độ. **Đừng chép lại vòng lặp này
+   ở bất kỳ đâu** — cả dự án chỉ còn một chỗ dựng `BoGiai`.
+
+   `tk` truyền vào là **dict đã gộp sẵn** tuỳ chọn dòng lệnh với mục `tim_kiem`,
+   đủ 5 khoá `so_lan_thu` / `seed` / `gioi_han_buoc` / `gioi_han_giay_moi_lan` /
+   `gioi_han_tong_giay`. Trả về `KetQuaTim` (namedtuple):
+   `tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay`.
+
+   `tests/thu_web.py` vẫn so **từng ô của vùng D8:I32** giữa hai đường chạy
+   (150 ô, 0 lệch). Sau khi gộp, ca thử này canh đúng chỗ đáng canh: phần còn lại
+   của `_chay()` — dựng cấu hình, tắt quy tắc tạm, xuất Excel — mới là chỗ có thể
+   lệch khỏi dòng lệnh.
 
 Công tắc bật/tắt ở màn hình "Quy tắc" mặc định **chỉ áp cho lượt chạy hiện tại**
 (đặt `bat: false` trên bản `cfg` trong bộ nhớ). Nút "Lưu vào cauhinh.json" mới ghi
-file, và luôn sao lưu `cauhinh.bak.json` trước. Ghi bằng `json.dump` rồi gom lại
-các danh sách một dòng cho gần với cách viết tay — **thứ tự khoá giữ nguyên**,
-nhưng cách xuống dòng có thể xê dịch; đã ghi rõ cảnh báo đó ngay cạnh cái nút.
+file, và luôn sao lưu `cauhinh.bak.json` trước.
+
+> **Quyết định có chủ ý, đừng "sửa" lại:** nút Lưu ghi file bằng `json.dump` rồi
+> gom các danh sách toàn số/chuỗi về một dòng (`_gon_json`). Cách này **giữ nguyên
+> thứ tự khoá** nhưng **cách xuống dòng có thể xê dịch** so với bản viết tay.
+> Đã cân nhắc phương án vá thẳng chuỗi văn bản để không đụng một ký tự nào, và
+> **đã bác**: khoá `bat` có thể chưa tồn tại nên phải chèn mới, mỗi quy tắc lại
+> viết một kiểu, vá chuỗi trên JSON viết tay là loại việc dễ làm hỏng file trong
+> im lặng — đúng thứ mà cả dự án này đang tránh. Đổi lại, luôn có
+> `cauhinh.bak.json` và ngay cạnh nút có ghi rõ cảnh báo. Người dùng đã duyệt.
 
 Mục `_quy_tac_de_san_chua_bat` **không** hiện trên giao diện — muốn dùng quy tắc
 mẫu nào thì vẫn phải chép tay sang mục `quy_tac` như cũ.
@@ -443,7 +458,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
 - `python tests/thu_web.py`: **47/47 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
-  đụng `cauhinh.json` thật.
+  đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
+  nhau giữa dòng lệnh và web.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
