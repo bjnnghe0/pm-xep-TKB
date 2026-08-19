@@ -57,27 +57,61 @@ def bao_loi(ghi_chu, khoa, sai, mo_ta_mien,
     raise SystemExit('\n'.join(dong))
 
 
-def kiem_tru(dk, ghi_chu):
-    """Kiểm khoá "tru" của một bộ lọc. Gọi từ QuyTac.khop() và từ
-       xep_tkb._cum_cua() — hai chỗ lọc khác nhau nhưng phải hiểu "tru"
-       giống hệt nhau."""
-    if not isinstance(dk, dict) or 'tru' not in dk:
+def khop_loc(dk, mon, nhom, gv, lop, la_cd):
+    """BỘ LỌC CHUẨN — nơi DUY NHẤT định nghĩa "một tiết có thoả bộ lọc không".
+
+       Nhận tham số RỜI chứ không nhận đối tượng Cum, vì gom_tiet phải lọc
+       ngay trong BaiToan._tao_cum(), tức lúc chưa có cụm nào được tạo ra.
+       Hàm này chỉ so khớp, không kiểm khai báo — kiểm là việc của
+       kiem_bo_loc(), chạy 1 lần lúc dựng, để vòng quay lui khỏi trả giá.
+    """
+    if not dk:
+        return True
+
+    def co(khoa, gt):
+        if khoa not in dk:
+            return True
+        ds = dk[khoa]
+        if not isinstance(ds, list):
+            ds = [ds]
+        return gt in ds
+
+    if not (co('mon', mon) and co('nhom_mon', nhom)
+            and co('gv', gv) and co('lop', lop)):
+        return False
+    if 'la_chuyen_de' in dk and bool(dk['la_chuyen_de']) != la_cd:
+        return False
+    # "tru": khớp bộ lọc con này thì coi như KHÔNG khớp
+    if 'tru' in dk and khop_loc(dk['tru'], mon, nhom, gv, lop, la_cd):
+        return False
+    return True
+
+
+def kiem_bo_loc(dk, ghi_chu, ten='loc'):
+    """Kiểm một bộ lọc lúc dựng. Gọi từ QuyTac.__init__ và từ
+       BaiToan._map_gom_tiet(), nên khai sai ở chỗ nào cũng báo y hệt nhau."""
+    if dk is None:
         return
-    tru = dk['tru']
-    if not isinstance(tru, dict) or not tru:
-        bao_loi(ghi_chu, 'tru', [repr(tru)],
-                'phải nêu ít nhất một trong: '
-                + ' / '.join(k for k in KHOA_LOC if k != 'tru'),
-                goi_y=('      => "tru" rỗng thì loại trừ TẤT CẢ, tức quy tắc '
-                       'không áp cho ai cả.',
-                       '         Muốn tắt hẳn quy tắc thì thêm "bat": false, '
-                       'đừng để "tru" rỗng.'))
-    la = [k for k in tru if k not in KHOA_LOC]
+    if not isinstance(dk, dict):
+        bao_loi(ghi_chu, ten, [repr(dk)],
+                'phải là một khối { ... } gồm ' + ' / '.join(KHOA_LOC))
+    la = [k for k in dk if k not in KHOA_LOC]
     if la:
-        bao_loi(ghi_chu, 'tru', [f'"{k}"' for k in la],
+        bao_loi(ghi_chu, ten, [f'"{k}"' for k in la],
                 'các khoá dùng được: ' + ' / '.join(KHOA_LOC),
-                goi_y=('      => Khoá lạ trong "tru" bị bỏ qua, mà bỏ qua hết '
-                       'thì "tru" loại trừ TẤT CẢ.',))
+                goi_y=('      => Khoá lạ bị bỏ qua, nên bộ lọc hoá ra áp cho '
+                       'TẤT CẢ — gần như chắc chắn không phải ý bạn.',))
+    if 'tru' in dk:
+        tru = dk['tru']
+        if not isinstance(tru, dict) or not tru:
+            bao_loi(ghi_chu, ten + '.tru', [repr(tru)],
+                    'phải nêu ít nhất một trong: '
+                    + ' / '.join(k for k in KHOA_LOC if k != 'tru'),
+                    goi_y=('      => "tru" rỗng thì loại trừ TẤT CẢ, tức quy tắc '
+                           'không áp cho ai cả.',
+                           '         Muốn tắt hẳn quy tắc thì thêm "bat": false, '
+                           'đừng để "tru" rỗng.'))
+        kiem_bo_loc(tru, ghi_chu, ten + '.tru')
 
 
 def dang_ky(ten):
@@ -104,7 +138,8 @@ class QuyTac:
         self.bt = bt
         self.ghi_chu = r.get('ghi_chu') or r.get('_ghichu') or self.MO_TA
         for k in ('loc', 'a', 'b'):
-            kiem_tru(r.get(k), self.ghi_chu)
+            if k in r:
+                kiem_bo_loc(r[k], self.ghi_chu, k)
         if 'thu' in r:
             self._kiem_thu()         # bắt lỗi ngay, đừng đợi tới lúc chấm điểm
         if 'tiet' in r or 'tiet_trong_buoi' in r:
@@ -126,37 +161,13 @@ class QuyTac:
         return self.r.get(khoa, {})
 
     def khop(self, c, dk=None):
-        """Cụm c có thoả bộ lọc dk không? dk gồm: mon / nhom_mon / gv / lop /
-           la_chuyen_de. Giá trị viết 1 chuỗi hoặc 1 danh sách đều được."""
+        """Cụm c có thoả bộ lọc dk không? Việc so khớp nằm ở khop_loc() —
+           đúng bộ lọc mà gom_tiet trong xep_tkb.py cũng dùng."""
         if c.la_trong:
             return False
         if dk is None:
             dk = self.loc()
-
-        def co(khoa, gt):
-            if khoa not in dk:
-                return True
-            ds = dk[khoa]
-            if not isinstance(ds, list):
-                ds = [ds]
-            return gt in ds
-
-        if not co('mon', c.mon):
-            return False
-        if not co('nhom_mon', c.nhom):
-            return False
-        if not co('gv', c.gv):
-            return False
-        if not co('lop', c.lop):
-            return False
-        if 'la_chuyen_de' in dk and bool(dk['la_chuyen_de']) != c.la_cd:
-            return False
-        # "tru": khớp bộ lọc con này thì coi như KHÔNG khớp quy tắc
-        if 'tru' in dk:
-            kiem_tru(dk, self.ghi_chu)
-            if self.khop(c, dk['tru']):
-                return False
-        return True
+        return khop_loc(dk, c.mon, c.nhom, c.gv, c.lop, c.la_cd)
 
     def cac_cum(self, dk=None):
         return [c for c in self.bt.cac_cum if self.khop(c, dk)]

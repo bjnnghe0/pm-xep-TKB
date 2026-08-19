@@ -34,6 +34,8 @@ Ba khoá dùng chung cho mọi quy tắc:
 | `tru` | `{ "gv": "N.Uyên" }` — áp cho tất cả **trừ** những gì khớp bộ lọc con này |
 
 Khoá nào **không ghi** thì coi như không lọc theo khoá đó. `"loc": {}` = áp cho tất cả.
+Viết sai tên khoá (`giao_vien` thay vì `gv` chẳng hạn) thì chương trình **DỪNG** và
+báo lỗi — vì khoá lạ bị bỏ qua sẽ khiến bộ lọc hoá ra áp cho tất cả mọi người.
 Ghi nhiều khoá thì phải thoả **đồng thời** (VD `{"mon":"Hoá học","lop":["12B1","12B2"]}`
 = chỉ tiết Hoá của hai lớp đó).
 

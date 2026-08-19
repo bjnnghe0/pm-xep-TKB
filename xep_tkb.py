@@ -165,33 +165,21 @@ class BaiToan:
         ds = []
         for r in self.khai_bao_qt:
             if r.get('loai') == 'gom_tiet':
-                ds.append((r.get('loc', {}), r['cum'],
-                           r.get('ghi_chu', 'gom_tiet')))
+                loc = r.get('loc', {})
+                QT.kiem_bo_loc(loc, r.get('ghi_chu', 'gom_tiet'))
+                ds.append((loc, r['cum']))
         return ds
 
     def _cum_cua(self, lop, mon, gv, ghi_de):
-        # Bộ lọc riêng của gom_tiet: chạy TRƯỚC khi có đối tượng Cum nên không
-        # dùng được QuyTac.khop(). Phải hiểu "tru" y hệt khop(), nếu không thì
-        # cùng một bộ lọc lại cho kết quả khác nhau giữa gom_tiet và các loại
-        # quy tắc khác.
-        def khop(loc, ghi_chu):
-            QT.kiem_tru(loc, ghi_chu)
-
-            def co(k, v):
-                if k not in loc:
-                    return True
-                x = loc[k]
-                return v in (x if isinstance(x, list) else [x])
-
-            if not (co('lop', lop) and co('mon', mon) and co('gv', gv)
-                    and co('nhom_mon', self.dinh_muc[mon]['nhom'])):
-                return False
-            return not ('tru' in loc and khop(loc['tru'], ghi_chu))
-
-        for loc, cum, ghi_chu in ghi_de:
-            if khop(loc, ghi_chu):
+        """Cách chia cụm cho (lớp, môn, gv) — gom_tiet đè lên dinh_muc_mon.
+           Lọc bằng QT.khop_loc(), đúng bộ lọc mà mọi loại quy tắc khác dùng,
+           nên không còn chuyện cùng một "loc" cho hai kết quả khác nhau."""
+        dm = self.dinh_muc[mon]
+        for loc, cum in ghi_de:
+            if QT.khop_loc(loc, mon, dm['nhom'], gv, lop,
+                           dm.get('la_chuyen_de', False)):
                 return cum
-        return self.dinh_muc[mon]['cum']
+        return dm['cum']
 
     def _tao_cum(self):
         ghi_de = self._map_gom_tiet()

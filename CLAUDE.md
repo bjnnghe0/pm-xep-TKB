@@ -23,6 +23,7 @@ python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần s�
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
 python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
+python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
 ```
 
 ### Môi trường Python trên máy này (Linux)
@@ -56,6 +57,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_du_phong.py` | Ép nhánh dự phòng của `main()` xảy ra bằng một lớp quy tắc dùng-một-lần, chỉ đăng ký trong tiến trình thử | Chạy khi sửa `main()` |
 | `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
+| `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -173,17 +175,29 @@ Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `ta
 Ngoài ra: `gom_tiet` là **ngoại lệ**, không có hook nào — nó được đọc sớm ở
 `BaiToan._map_gom_tiet()` trước khi cắt cụm, và bị `_tao_quy_tac()` bỏ qua.
 
-> **⚠ CÓ HAI CHỖ LỌC, phải sửa cả hai.** `QuyTac.khop()` (`quy_tac.py`) dùng cho
-> mọi loại quy tắc; `BaiToan._cum_cua()` (`xep_tkb.py`) là bản cài **riêng** của
-> `gom_tiet`, chạy trong `_tao_cum()` tức trước khi có đối tượng `Cum` nên không
-> gọi `khop()` được. Thêm khoá lọc mới mà quên một trong hai chỗ là cùng một bộ
-> lọc cho hai kết quả khác nhau tuỳ loại quy tắc.
->
-> Hai chỗ này **đã lệch sẵn**: `_cum_cua()` không hiểu `la_chuyen_de`, còn
-> `khop()` thì có. Cách chữa gốc là tách phần lọc thành một hàm thuần ở
-> `quy_tac.py` nhận `(dk, mon, nhom, gv, lop, la_cd)` rồi cho cả hai chỗ gọi
-> chung — **đã đề xuất, đang chờ duyệt, chưa làm**. Phần kiểm khai báo thì đã
-> dùng chung: `quy_tac.bao_loi()` và `quy_tac.kiem_tru()` ở mức module.
+### Bộ lọc: MỘT bản cài duy nhất
+
+`quy_tac.khop_loc(dk, mon, nhom, gv, lop, la_cd)` là **nơi duy nhất** định nghĩa
+"một tiết có thoả bộ lọc không". Hai chỗ gọi nó:
+
+- `QuyTac.khop()` — mọi loại quy tắc, truyền thẳng từ đối tượng `Cum`.
+- `BaiToan._cum_cua()` (`xep_tkb.py`) — `gom_tiet`, chạy trong `_tao_cum()` tức
+  **trước khi có đối tượng `Cum` nào**. Đây chính là lý do `khop_loc()` nhận
+  **tham số rời** chứ không nhận `Cum`.
+
+Thêm khoá lọc mới thì chỉ sửa `khop_loc()`, hai chỗ tự động theo. Đây không phải
+đưa quy tắc nghiệp vụ vào `xep_tkb.py` mà ngược lại — rút hẳn phần lọc ra khỏi đó.
+
+> **Bài học vì sao phải gộp.** Trước đây `_cum_cua()` có bản cài riêng và
+> **không hiểu `la_chuyen_de`**. Đo được: cùng bộ lọc `{"la_chuyen_de": true}`,
+> `khop()` khớp đúng 24 cụm chuyên đề, còn `_cum_cua()` lại đụng **48 cặp
+> (lớp, môn) thuộc 9 môn KHÔNG phải chuyên đề** — sai hoàn toàn, và im lặng.
+> Cứ để hai bản cài song song thì kiểu lệch này còn tái diễn.
+
+Kiểm khai báo cũng dùng chung, ở mức module trong `quy_tac.py`:
+`bao_loi()` (khuôn thông báo), `kiem_bo_loc()` (khoá lạ, `tru` rỗng / sai kiểu).
+`kiem_bo_loc()` chạy **1 lần lúc dựng** — `QuyTac.__init__` cho `loc`/`a`/`b`,
+`_map_gom_tiet()` cho `gom_tiet` — nên vòng quay lui không phải trả giá kiểm tra.
 
 Thêm loại mới thì nhớ đủ 5 việc: `MO_TA` + `VI_DU` (chép thẳng vào `cauhinh.json`
 là chạy được) → thêm vào đúng nhóm trong `in_danh_muc()` → thêm ca thử vào
@@ -375,6 +389,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
 - `python tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
   chỗ lọc thì tụt còn 5/25.
+- `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
+  cài riêng thì tụt còn 16/23.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
