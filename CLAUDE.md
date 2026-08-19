@@ -492,9 +492,31 @@ chú ngay trong `.gitignore` nhắc đừng thêm dòng loại `docs/`.
 gốc kho, hoặc thư mục tên `docs`. Đặt tên khác thì hoặc phải để trang ở gốc kho
 (lẫn với mã nguồn), hoặc link phải mang đuôi thư mục.
 
+> **⚠ Trên máy Linux này phải chỉ rõ Python cho `dua_len.sh`:**
+> ```bash
+> PYTHON=~/.venvs/xeptkb/bin/python ./dua_len.sh
+> ```
+> Script mặc định gọi `python3`, mà `python3` hệ thống **không có openpyxl** →
+> chạy trần `./dua_len.sh` sẽ chết ở bước xếp. Trên máy Windows của trường thì
+> bấm đúp `dua_len.bat` như thường, không cần gì thêm.
+
 `dua_len.sh` / `dua_len.bat` kiểm đủ điều kiện **trước** khi xếp, để không mất 50
 giây rồi mới báo thiếu: có `git` chưa → có phải kho git chưa → có remote `origin`
 chưa. Thiếu cái nào cũng dừng kèm hướng dẫn trỏ về `DUA_LEN_MANG.md`.
+
+> **✅ ĐÃ LÊN MẠNG THẬT — 19/8/2026.** Kho: `bjnnghe0/pm-xep-TKB` (Public).
+> Trang đang sống tại **https://bjnnghe0.github.io/pm-xep-TKB/** — đã kiểm
+> HTTP 200 và so từng byte với `docs/index.html` (md5 trùng khít).
+>
+> **⚠ Link PHÂN BIỆT CHỮ HOA/THƯỜNG — đã đo, không phải suy đoán.** Chỉ
+> `pm-xep-TKB` cho 200; `pm-xep-tkb` và `PM-XEP-TKB` đều trả **404**. Vì vậy
+> **đừng đọc link cho người khác gõ tay** — hãy gửi link bấm được (Zalo, email)
+> hoặc mã QR. Thiếu dấu `/` cuối thì GitHub tự chuyển hướng 301, không sao;
+> vào bằng `http://` cũng tự chuyển sang `https://`.
+>
+> Email tác giả trong **cả 28 commit** đã đổi sang `281376871+bjnnghe0@
+> users.noreply.github.com` — Gmail thật không lộ. Kho đã đẩy rồi, nên **đừng
+> đặt lại `user.email` về Gmail**; sửa sau phải viết lại lịch sử và ép ghi đè.
 
 > Link Pages là `https://<tk>.github.io/<kho>/` — ngắn gọn, không đuôi thư mục,
 > nhờ dùng đúng tên `docs`. Trong Settings → Pages phải chọn nhánh **main** +
