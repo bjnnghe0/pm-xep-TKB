@@ -29,6 +29,7 @@ python tests/thu_web.py                # thử giao diện web
 python tests/thu_xuat_html.py          # thử trang web tĩnh
 python tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
 python tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
+python tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
 
 python web.py                          # giao diện web -> http://127.0.0.1:20266
 python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -67,6 +68,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
 | `tests/thu_truong.py` | Mọi loại có `TRUONG`; khoá lạ cấp cao nhất thì DỪNG | Chạy khi thêm loại quy tắc |
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
+| `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**) | Hạ tầng dùng chung của mọi ca thử web |
+| `tests/thu_an_ninh.py` | 7 lỗi an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
@@ -391,6 +394,43 @@ dòng, không bấm nổi.
 > `tests/thu_them_quy_tac.py` CA 6 **đọc khai báo trong `style.css`**, không dựng
 > trang thật để đo. Nó bắt được việc khai sai cỡ, **không** bắt được lỗi bố cục
 > kiểu chữ tràn ra ngoài khung. Muốn chắc thì vẫn phải mở trình duyệt xem.
+
+### Bảy bất biến an ninh — ĐỪNG làm hồi quy
+
+Vá 19/8/2026, trước khi thêm đăng nhập. Cả bảy đều **hỏng ngay khi chạy cục bộ**,
+không phải rủi ro lý thuyết chờ tới lúc mở Internet. Mỗi mục có ca thử riêng
+trong `tests/thu_an_ninh.py`; con số trong ngoặc là kết quả khi lùi lại bản cũ.
+
+| # | Bất biến | Chỗ cài |
+|---|---|---|
+| A2 | Thân yêu cầu **dị dạng ≠ thân rỗng**. `Transfer-Encoding`, thiếu/sai `Content-Length` → 400. Ba đường GHI dùng `_than_json(bat_buoc=True)` | `web.py` `_than_json()` (2/10) |
+| A1 | Chỉ nhận yêu cầu từ **chính trang này**: `Host` + `Origin` + `Content-Type: application/json` | `web.py` `_kiem_nguon_goc()` (17/33) |
+| A7 | `cauhinh.bak.goc.json` giữ bản **đầu tiên**, không bao giờ đè; thêm 5 bản xoay vòng | `web.py` `_xoay_sao_luu()` (41/49) |
+| — | Ghi `cauhinh.json` **nguyên tử**: dựng chuỗi → tệp tạm → đọc lại → sao lưu → `os.replace()`. Cả hàm trong `KHOA_GHI` | `web.py` `luu_quy_tac()` |
+| A4 | Kiểm cờ + xoá trạng thái + đặt cờ trong **CÙNG một lần giữ khoá** | `web.py` `gianh_luot()` (11 lượt chồng nhau) |
+| A3 | Dấu vết lỗi ra **cửa sổ dòng lệnh**, người dùng chỉ thấy mã 6 ký tự. `SystemExit` vẫn hiện **nguyên văn** | `web.py` `_bao_su_co()` (70/78) |
+| A8 | Mọi chỗ ghi ô Excel đi qua `_dat_o()` — chuỗi đầu `=` bị ép `data_type='s'` | `xep_tkb.py` `_dat_o()` (9 thẻ `<f>` thay vì 7) |
+
+> **Thêm chỗ ghi ô Excel mới thì PHẢI dùng `_dat_o(ws, hàng, cột, giá_trị)`,
+> đừng gọi thẳng `ws.cell(...)`.** Kiểm kê được 25 chỗ ghi, 17 giá trị rơi vào
+> **đầu ô**, trong đó 2 đường sửa được qua HTTP: `thong_tin.tuan` (→ `Khối 12!A4`)
+> và `ghi_chu` của quy tắc **MỀM** (`cham_diem` dùng nó làm khoá dict → ghi thẳng
+> vào ô, **không có tiền tố**; quy tắc CỨNG thì vô hại vì có `[tên_loại] ` đứng
+> trước). Bảy công thức của `mau_tkb.xlsx` (D43:I43, H48) không đi qua `_dat_o`
+> nên còn nguyên — ca thử khẳng định cả hai chiều.
+
+> **Ca thử web KHÔNG được gọi tắt vào hàm Python.** `tests/thu_web.py` CA 6 tự
+> canh điều đó. Gọi thẳng `web._chay()` / `web.luu_quy_tac()` là bỏ qua đúng tầng
+> sắp đặt cổng đăng nhập — ca thử sẽ xanh giả dù cổng đó hỏng hoàn toàn.
+
+> **Hai bài học khi viết ca thử đua tranh** (mất công mới rút ra được):
+> 1. **Đếm số phản hồi 200 không đo được chồng lấn.** Bộ giải giữ GIL nên luồng
+>    HTTP đói hẳn: đo được người thứ 8 mãi 1,06 giây mới được phục vụ, sau khi
+>    lượt trước đã xong ở 0,78 giây — nhận 200 là ĐÚNG. Phải đo **thẳng số luồng
+>    `_chay` cùng sống**.
+> 2. **Khe hở hẹp thì ca thử xanh cả trên mã hỏng.** Nới bằng cách thêm 50ms vào
+>    `_than_json()` — điểm **nằm trong** vùng chưa khoá của bản cũ và **nằm ngoài**
+>    ở bản mới. Nới khe hở có sẵn, không tạo lỗi mới.
 
 ### Ba chỗ dễ sai, đã xử
 
