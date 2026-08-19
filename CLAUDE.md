@@ -28,6 +28,7 @@ python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_
 python tests/thu_web.py                # thử giao diện web
 python tests/thu_xuat_html.py          # thử trang web tĩnh
 python tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
+python tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
 
 python web.py                          # giao diện web -> http://127.0.0.1:20266
 python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -65,6 +66,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
 | `tests/thu_truong.py` | Mọi loại có `TRUONG`; khoá lạ cấp cao nhất thì DỪNG | Chạy khi thêm loại quy tắc |
+| `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
@@ -375,6 +377,19 @@ số trong danh sách đã ghép; quy tắc từ file không xoá được (dùn
 chứ không phải ~50 giây như lượt xếp thật. Nó cũng **không đụng vào `TT`** nên
 không ghi đè kết quả đang hiện trên màn hình.
 
+### Kích thước ô nhập — có ngưỡng, có ca thử
+
+Mọi thứ bấm được (`input`, `select`, `textarea`, `button`, tab, ô vuông thứ/tiết,
+nút Xoá, công tắc): **min-height ≥ 40px, font-size ≥ 15px**. Ô đánh dấu là ngoại lệ,
+20×20px. Danh sách dài (28 giáo viên…) cao ≥ 200px, mỗi dòng ≥ 32px, có ô lọc và
+dòng đếm. Danh sách ngắn cố định (thứ, tiết, lớp) dựng thành **dãy ô vuông bấm
+bật/tắt** ≥ 56×40px chứ không phải `<select multiple>` — cái đó cao vài pixel mỗi
+dòng, không bấm nổi.
+
+> `tests/thu_them_quy_tac.py` CA 6 **đọc khai báo trong `style.css`**, không dựng
+> trang thật để đo. Nó bắt được việc khai sai cỡ, **không** bắt được lỗi bố cục
+> kiểu chữ tràn ra ngoài khung. Muốn chắc thì vẫn phải mở trình duyệt xem.
+
 ### Ba chỗ dễ sai, đã xử
 
 1. **Không giải trong hàm xử lý HTTP.** Một lượt xếp mất ~50 giây; giải ngay trong
@@ -522,6 +537,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   nhau giữa dòng lệnh và web.
 - `python tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
+- `python tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
+  trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
 - `python tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
   `node` — ca thử không đòi hỏi phải cài `node`.
