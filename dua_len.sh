@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==========================================================================
 #  ĐƯA THỜI KHÓA BIỂU LÊN MẠNG  —  chạy hằng tuần
-#  Xếp TKB -> xuất trang web -> chép sang web_public/ -> đẩy lên GitHub.
+#  Xếp TKB -> xuất trang web -> chép sang docs/ -> đẩy lên GitHub.
 #  Xem từng bước cài đặt lần đầu trong DUA_LEN_MANG.md (PHẦN A).
 # ==========================================================================
 set -u
@@ -52,14 +52,14 @@ echo "  [1/4] Đang xếp thời khoá biểu (khoảng 50 giây)..."
   "Lẽ ra bước trên phải sinh ra tệp này."
 
 # ---- 3. chép sang thư mục sẽ đưa lên mạng ----
-echo "  [2/4] Chép sang web_public/index.html ..."
-mkdir -p web_public
-cp tkb_web.html web_public/index.html
-: > web_public/.nojekyll          # bảo GitHub Pages đừng xử lý lại tệp
+echo "  [2/4] Chép sang docs/index.html ..."
+mkdir -p docs
+cp tkb_web.html docs/index.html
+: > docs/.nojekyll                # bảo GitHub Pages đừng xử lý lại tệp
 
 # ---- 4. ghi vào git ----
 echo "  [3/4] Ghi vào git ..."
-git add web_public/index.html web_public/.nojekyll
+git add docs/index.html docs/.nojekyll
 if git diff --cached --quiet; then
   echo
   echo "  Thời khoá biểu không có gì đổi so với lần trước, không cần đẩy lên."
@@ -90,7 +90,7 @@ case "$XA" in
   *github.com*)
     URL=$(printf '%s' "$XA" | sed -e 's#.*github\.com[:/]##' -e 's#\.git$##')
     TK=${URL%%/*}; KHO=${URL#*/}
-    echo "      https://$TK.github.io/$KHO/web_public/"
+    echo "      https://$TK.github.io/$KHO/"
     ;;
   *)
     echo "      (kho từ xa không phải GitHub nên không đoán được link)"

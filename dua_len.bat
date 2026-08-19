@@ -64,13 +64,13 @@ if not exist tkb_web.html (
   exit /b 1
 )
 
-echo   [2/4] Chép sang web_public\index.html ...
-if not exist web_public mkdir web_public
-copy /y tkb_web.html web_public\index.html >nul
-type nul > web_public\.nojekyll
+echo   [2/4] Chép sang docs\index.html ...
+if not exist docs mkdir docs
+copy /y tkb_web.html docs\index.html >nul
+type nul > docs\.nojekyll
 
 echo   [3/4] Ghi vào git ...
-git add web_public/index.html web_public/.nojekyll
+git add docs/index.html docs/.nojekyll
 git diff --cached --quiet
 if not errorlevel 1 (
   echo.
@@ -101,7 +101,7 @@ if errorlevel 1 (
 echo.
 echo ======================================================================
 echo   XONG. Đợi 1-2 phút rồi mở link GitHub Pages của bạn, dạng:
-echo       https://^<tên tài khoản^>.github.io/tkb-khoi12/web_public/
+echo       https://^<tên tài khoản^>.github.io/tkb-khoi12/
 echo   Trên trang có dòng "Xuất lúc ..." — xem ngày giờ có đúng lần vừa
 echo   chạy không. Đúng là đã lên.
 echo ======================================================================

@@ -112,7 +112,7 @@ Windows sẽ nhớ giúp, các lần sau không hỏi lại.
 ## Bước 6. Đẩy lên lần đầu
 
 Bấm đúp **`dua_len.bat`**. Nó sẽ tự: xếp TKB → xuất trang web → chép vào
-`web_public/` → đẩy lên GitHub. Lần đầu mất khoảng 1 phút rưỡi.
+`docs/` → đẩy lên GitHub. Lần đầu mất khoảng 1 phút rưỡi.
 
 > Máy không cài được git? Vẫn làm được bằng tay: chạy
 > `python xep_tkb.py --xuat-html`, đổi tên `tkb_web.html` thành `index.html`,
@@ -125,7 +125,8 @@ Bấm đúp **`dua_len.bat`**. Nó sẽ tự: xếp TKB → xuất trang web →
 2. Bấm **Settings** (thanh ngang phía trên, có hình bánh răng)
 3. Cột bên trái, kéo xuống, bấm **Pages**
 4. Mục **Source**: chọn **Deploy from a branch**
-5. Dòng dưới: ô nhánh chọn **main**, ô thư mục chọn **/ (root)**, bấm **Save**
+5. Dòng dưới: ô nhánh chọn **main**, ô thư mục chọn **/docs**, bấm **Save**
+   ⚠ Chọn đúng **/docs**, không phải **/ (root)** — trang nằm trong thư mục `docs`.
 6. **Đợi 2–5 phút** cho lần bật đầu tiên *(các lần cập nhật sau chỉ 1–2 phút)*
 7. Tải lại chính trang Settings → Pages. Khi xong sẽ hiện khung xanh:
    *"Your site is live at https://…"*
@@ -135,17 +136,17 @@ Bấm đúp **`dua_len.bat`**. Nó sẽ tự: xếp TKB → xuất trang web →
 Link của bạn là:
 
 ```
-https://<tên tài khoản>.github.io/tkb-khoi12/web_public/
+https://<tên tài khoản>.github.io/tkb-khoi12/
 ```
 
-> Vì sao link có đuôi `/web_public/`? GitHub Pages chỉ cho chọn **gốc kho** hoặc
-> thư mục **`docs`**, không chọn được thư mục khác. Trang nằm trong `web_public`
-> nên phải gọi kèm tên thư mục đó. Script cũng in đúng link này ở dòng cuối,
-> cứ chép từ đó cho chắc.
+Ngắn gọn, không có đuôi thư mục. Có được vậy là nhờ trang đặt trong thư mục
+`docs` — GitHub Pages nhận đúng hai chỗ là gốc kho và `docs`, chọn `docs` thì
+link ra gọn mà thư mục phần mềm cũng không bị lẫn tệp. Script tự in đúng link
+này ở dòng cuối, cứ chép từ đó cho chắc.
 
 - Mở link. Nếu hiện **404** thì chưa xong — đợi thêm 2 phút rồi tải lại.
 - Vẫn 404 sau 10 phút: kiểm lại Bước 7 mục 5 đã chọn đúng **main** và
-  **/ (root)** chưa, và trong kho đã có thư mục `web_public` chưa.
+  **/docs** chưa, và trong kho đã có thư mục `docs` chưa.
 - Mở được rồi thì xem dòng **"Xuất lúc ..."** ở đầu trang — ngày giờ phải khớp
   lần bạn vừa chạy.
 

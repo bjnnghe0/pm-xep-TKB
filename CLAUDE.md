@@ -73,8 +73,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `xuat_html.py` | Sinh `tkb_web.html` — một file tự chứa để chia sẻ | Không phụ thuộc openpyxl |
 | `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp 150 ô với Excel | Chạy khi sửa `xuat_html.py` |
 | `DUA_LEN_MANG.md` | Hướng dẫn GitHub Pages cho người không rành kỹ thuật | Cập nhật khi đổi quy trình |
-| `web_public/` | `index.html` (bản sao `tkb_web.html`) + `.nojekyll` rỗng — thư mục GitHub Pages phục vụ | Do script ghi, đừng sửa tay |
-| `dua_len.sh` · `dua_len.bat` | Xếp → xuất HTML → chép sang `web_public/` → commit → push | Dừng và báo rõ nếu chưa nối kho từ xa |
+| `docs/` | `index.html` (bản sao `tkb_web.html`) + `.nojekyll` rỗng — thư mục GitHub Pages phục vụ | Do script ghi, đừng sửa tay |
+| `dua_len.sh` · `dua_len.bat` | Xếp → xuất HTML → chép sang `docs/` → commit → push | Dừng và báo rõ nếu chưa nối kho từ xa |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -476,17 +476,23 @@ thành công; nút **Xuất trang web** chỉ tải file đó về qua `GET /api
 
 ### Đưa lên GitHub Pages
 
-`web_public/index.html` là bản sao của `tkb_web.html`; `web_public/.nojekyll` rỗng
-để Pages đừng xử lý lại tệp. Đã kiểm `.gitignore` **không** loại nhầm hai tệp này
-(`tkb_web.html` ở thư mục gốc thì bị loại, đúng ý — nó là tệp sinh ra).
+`docs/index.html` là bản sao của `tkb_web.html`; `docs/.nojekyll` rỗng để Pages
+đừng xử lý lại tệp. Đã kiểm `.gitignore` **không** loại nhầm hai tệp này
+(`tkb_web.html` ở thư mục gốc thì bị loại, đúng ý — nó là tệp sinh ra), và có ghi
+chú ngay trong `.gitignore` nhắc đừng thêm dòng loại `docs/`.
+
+**Tên thư mục phải là `docs`, đừng đổi.** GitHub Pages chỉ nhận đúng hai chỗ:
+gốc kho, hoặc thư mục tên `docs`. Đặt tên khác thì hoặc phải để trang ở gốc kho
+(lẫn với mã nguồn), hoặc link phải mang đuôi thư mục.
 
 `dua_len.sh` / `dua_len.bat` kiểm đủ điều kiện **trước** khi xếp, để không mất 50
 giây rồi mới báo thiếu: có `git` chưa → có phải kho git chưa → có remote `origin`
 chưa. Thiếu cái nào cũng dừng kèm hướng dẫn trỏ về `DUA_LEN_MANG.md`.
 
-> Link Pages là `https://<tk>.github.io/<kho>/**web_public/**` — có đuôi thư mục
-> vì Pages chỉ cho chọn gốc kho hoặc `docs/`. Script tự in đúng link này, và chỉ
-> đoán link khi remote thật sự ở `github.com`.
+> Link Pages là `https://<tk>.github.io/<kho>/` — ngắn gọn, không đuôi thư mục,
+> nhờ dùng đúng tên `docs`. Trong Settings → Pages phải chọn nhánh **main** +
+> thư mục **/docs**. Script tự in đúng link này, và chỉ đoán link khi remote
+> thật sự ở `github.com`.
 
 Đã thử toàn bộ script bằng một kho bare cục bộ trong thư mục tạm — **không tạo kho
 GitHub, không push ra ngoài**.

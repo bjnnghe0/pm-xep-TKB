@@ -7,6 +7,9 @@ __pycache__/
 TKB_*.xlsx
 tkb_web.html
 
+# ĐỪNG loại thư mục docs/ — đó là trang GitHub Pages, PHẢI được commit.
+# (tkb_web.html ở thư mục gốc thì loại đúng, vì docs/index.html là bản sao của nó)
+
 # Bản sao lưu do giao diện web tạo khi bấm "Lưu vào cauhinh.json"
 cauhinh.bak.json
 
