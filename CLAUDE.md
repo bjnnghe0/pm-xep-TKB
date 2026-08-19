@@ -18,6 +18,7 @@ python xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
 python xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
 python xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
 python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
+python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
 python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 ```
@@ -204,6 +205,30 @@ dòng 43. Vị trí bảng lấy từ `thong_tin.vi_tri_bang`
   tiết 6–10), hiện để trống vì `khung_gio` chỉ khai Thứ 2–6.
 - Sheet kết quả: **Khối 12** (từ mẫu) + **TKB giáo viên** + **Kiểm tra quy tắc**
   (hai sheet sau do chương trình tạo mới, xoá và vẽ lại mỗi lần chạy).
+
+### Bản in — đã kiểm 19/8/2026, KHÔNG cần chỉnh gì
+
+Mẫu đã sẵn `landscape` + khổ A4 + `fitToPage=True` + `fitToWidth=1`,
+`fitToHeight=0`, lề 0.95/0.7/0.5/0.5 inch. Sheet "Khối 12" in **vừa đúng 1 trang
+A4 ngang**, đủ 6 cột lớp, dòng 43 (sáu ô đều bằng 24) và khối ký tên. Kiểm bằng
+cách xuất PDF thật rồi đếm trang, lặp lại được:
+
+```bash
+python -c "import openpyxl; wb=openpyxl.load_workbook('TKB_Khoi12.xlsx'); \
+  [wb.__delitem__(t) for t in ('TKB giáo viên','Kiểm tra quy tắc')]; wb.save('/tmp/in.xlsx')"
+soffice --headless --convert-to pdf --outdir /tmp /tmp/in.xlsx
+pdfinfo /tmp/in.pdf | grep -E 'Pages|Page size'     # phải là: Pages 1, A4
+pdftoppm -png -r 110 /tmp/in.pdf /tmp/trang         # xem tận mắt
+```
+
+Chỗ trống dưới đáy chỉ còn khoảng 0,15 inch, nên **đừng thêm dòng nào bên dưới
+khối ký tên** — thêm là tràn sang trang 2.
+
+> **Lỗi có sẵn trong mẫu, chưa sửa:** dòng 6 (tên lớp + phòng học) và ô ghi chú
+> `B45` đều bật `wrap_text` nhưng bị ghim `customHeight=True` ở 12.75pt, trong
+> khi nội dung dài 2 dòng → chữ bị **cắt mất một phần** khi in. Sửa được bằng
+> cách cho hai dòng đó tự giãn (`customHeight=False`), không đụng tới bề rộng
+> cột hay cỡ chữ — nhưng phải sửa trong `mau_tkb.xlsx` nên cần nhà trường đồng ý.
 
 ---
 

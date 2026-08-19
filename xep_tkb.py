@@ -11,6 +11,7 @@
      python xep_tkb.py --in-man-hinh       xem luôn TKB trên màn hình
      python xep_tkb.py --seed 99           ra một phương án khác
      python xep_tkb.py --xuat TKB_T3.xlsx  đổi tên file kết quả
+     python xep_tkb.py --tuan "TUẦN 3"    đổi dòng chữ tuần in trên TKB
 
  Dữ liệu và quy tắc nằm hết trong cauhinh.json.
  Định nghĩa các loại quy tắc nằm trong quy_tac.py.
@@ -682,6 +683,9 @@ def main():
     ap = argparse.ArgumentParser(description='Xếp thời khóa biểu')
     ap.add_argument('--cauhinh', default='cauhinh.json')
     ap.add_argument('--xuat', default=None)
+    ap.add_argument('--tuan', default=None,
+                    help='đổi dòng chữ tuần in trên TKB, ghi đè "tuan" '
+                         'trong cauhinh.json (file không bị sửa)')
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--lan', type=int, default=None)
     ap.add_argument('--in-man-hinh', action='store_true')
@@ -694,6 +698,8 @@ def main():
         return
 
     cfg = doc_cau_hinh(args.cauhinh)
+    if args.tuan:
+        cfg['thong_tin']['tuan'] = args.tuan      # chỉ đổi trong bộ nhớ
     thu_muc = os.path.dirname(os.path.abspath(args.cauhinh))
     bt = BaiToan(cfg)
 

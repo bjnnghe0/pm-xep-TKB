@@ -37,6 +37,7 @@ python xep_tkb.py --quy-tac            xem danh mục quy tắc + mẫu chép s�
 python xep_tkb.py --in-man-hinh        xem luôn TKB trên màn hình
 python xep_tkb.py --seed 99            ra một phương án khác hẳn
 python xep_tkb.py --xuat TKB_T3.xlsx   đổi tên file kết quả
+python xep_tkb.py --tuan "TUẦN 3 ..."  đổi dòng chữ tuần, không phải mở file
 python tu_kiem_tra.py                  chạy thử toàn bộ các loại quy tắc
 ```
 
@@ -84,6 +85,15 @@ Trong `cauhinh.json` có sẵn mục `"_quy_tac_de_san_chua_bat"` chứa 7 quy t
 ```json
 "tuan": "TUẦN 3 (07/9/2026-12/9/2026)"
 ```
+
+Hằng tuần chỉ đổi mỗi dòng chữ này thì **không cần mở file ra sửa**, gõ thẳng
+ngoài dòng lệnh là xong:
+
+```
+python xep_tkb.py --tuan "TUẦN 3 (07/9/2026-12/9/2026)"
+```
+
+`--tuan` chỉ đổi chữ in lên TKB của lần chạy đó, `cauhinh.json` giữ nguyên.
 
 ### Đổi khung giờ học
 ```json
