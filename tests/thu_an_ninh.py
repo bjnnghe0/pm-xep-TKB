@@ -367,11 +367,104 @@ def ca_a4_mot_luot(tm):
 
 
 # ==========================================================================
+def ca_a3_khong_lo_traceback(tm):
+    print('\nCA A3 — không trả dấu vết lỗi Python ra ngoài')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a3')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+
+    def sach(than, nhan):
+        """Phản hồi không được chứa dấu vết nội bộ nào."""
+        # Dò dấu vết NỘI BỘ, không dò tên tệp trần: thông báo khai báo sai
+        # cố ý kết thúc bằng "Sửa lại rồi chạy: python xep_tkb.py" — đó là
+        # hướng dẫn cho người dùng, không phải rò rỉ.
+        xau = [('Traceback', 'dấu vết lỗi'),
+               ('File "', 'khung dấu vết lỗi'),
+               (', line ', 'số dòng trong khung dấu vết'),
+               (GOC_TM, 'đường dẫn tuyệt đối của dự án'),
+               ('/home/', 'thư mục người dùng'),
+               ('/usr/lib/python', 'đường dẫn thư viện Python'),
+               ('site-packages', 'đường dẫn thư viện'),
+               ('Error:', 'tên lớp ngoại lệ Python')]
+        thay = [ten for chuoi, ten in xau if chuoi and chuoi in than]
+        kiem(not thay, f'{nhan}: không lộ {thay if thay else "gì cả"}')
+
+    with MayChuTam(dd) as (k, _):
+        # 1. tham số truy vấn không phải số — đúng ca đã đo lộ đường dẫn
+        ma, than = k.get('/api/trang-thai?tu=abc')
+        kiem(ma == 400, f'?tu=abc trả 400 chứ không 500 — {ma}')
+        sach(than, '?tu=abc')
+        for xau_tu in ('?tu=-5', '?tu=99999999999999999999', '?tu=', '?tu=1.5'):
+            ma, than = k.get('/api/trang-thai' + xau_tu)
+            kiem(ma in (200, 400), f'{xau_tu} trả {ma}, không phải 500')
+            sach(than, xau_tu)
+
+        # 2. thân JSON hỏng
+        ma, than = k.post('/api/them-quy-tac', 'khong-phai-json')
+        kiem(ma == 400, f'Thân không phải JSON -> 400 — {ma}')
+        sach(than, 'thân JSON hỏng')
+
+        # 3. lỗi BẤT NGỜ thật sự: phải 500, có mã sự cố, không có traceback
+        import web as W
+        that = W.doc_quy_tac
+
+        def no(*a, **kw):
+            raise RuntimeError('lỗi cố ý để thử — KHONG_DUOC_LO_RA_NGOAI')
+        W.doc_quy_tac = no
+        try:
+            ma, than = k.get('/api/quy-tac')
+        finally:
+            W.doc_quy_tac = that
+        kiem(ma == 500, f'Lỗi bất ngờ trả 500 — {ma}')
+        sach(than, 'lỗi bất ngờ')
+        kiem('KHONG_DUOC_LO_RA_NGOAI' not in than,
+             'Không lộ cả nội dung thông báo lỗi bên trong')
+        kiem('sự cố' in than.lower() or 'su co' in than.lower(),
+             f'Có báo cho người dùng biết là sự cố — {than[:80]}')
+        import re as _re
+        m = _re.search(r'mã sự cố ([0-9a-f]{6})', than)
+        kiem(m, 'Có mã sự cố để đối chiếu với cửa sổ dòng lệnh')
+
+        # Mặt kia của việc vá: dấu vết PHẢI tới được người vận hành, nếu không
+        # thì "vá" hoá ra chỉ là xoá mất chẩn đoán.
+        import contextlib
+        bat = io.StringIO()
+        W.doc_quy_tac = no
+        try:
+            with contextlib.redirect_stderr(bat):
+                ma2, than2 = k.get('/api/quy-tac')
+        finally:
+            W.doc_quy_tac = that
+        loi_console = bat.getvalue()
+        m2 = _re.search(r'\[SỰ CỐ ([0-9a-f]{6})\]', loi_console)
+        kiem(m2, 'Cửa sổ dòng lệnh CÓ in dấu vết kèm mã sự cố')
+        kiem('Traceback' in loi_console and 'KHONG_DUOC_LO_RA_NGOAI' in loi_console,
+             'Và in ĐẦY ĐỦ dấu vết cho người vận hành gỡ lỗi')
+        kiem(m2 and m2.group(1) in than2,
+             f'Mã trên màn hình khớp mã trong dòng lệnh — '
+             f'{m2.group(1) if m2 else "?"}')
+
+        # 4. khai báo sai trong cauhinh.json thì VẪN phải hiện nguyên văn
+        # dùng post() lấy CHUỖI THÔ — js() trả dict, mà "x in dict" là kiểm
+        # KHOÁ chứ không kiểm nội dung, nên ca thử sẽ xanh giả.
+        ma, than = k.post('/api/them-quy-tac',
+                          {'quy_tac': {'loai': 'chi_xep_thu', 'ghi_chu': 'x',
+                                       'thu': [99]}})
+        kiem(ma == 400, f'Khai báo sai -> 400 — {ma}')
+        kiem('[LỖI]' in than and '99' in than
+             and 'Miền hợp lệ' in than and 'SỐ HIỆU THỨ' in than,
+             'Thông báo khai báo sai vẫn giữ NGUYÊN VĂN, cả dòng gợi ý')
+        sach(than, 'khai báo sai')
+
+
+# ==========================================================================
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
     ca_a7_sao_luu_xoay_vong(tm)
     ca_a4_mot_luot(tm)
+    ca_a3_khong_lo_traceback(tm)
 
 
 if __name__ == '__main__':

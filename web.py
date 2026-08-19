@@ -22,7 +22,9 @@ import copy
 import json
 import os
 import re
+import secrets
 import shutil
+import sys
 import threading
 import time
 import traceback
@@ -114,6 +116,30 @@ def ghi(dong=''):
 def dat(**kw):
     with KHOA:
         TT.update(kw)
+
+
+def _bao_su_co(noi=''):
+    """In dấu vết lỗi ra CỬA SỔ DÒNG LỆNH của máy chủ, trả về mã ngắn.
+
+       Trước đây mọi lỗi không lường trước đều trả nguyên traceback về trình
+       duyệt. Đo được: GET /api/trang-thai?tu=abc cho 500 kèm đường dẫn tuyệt
+       đối "/media/adminnam/NAM MEO/projects/PM xep tkb/web.py", số dòng, và
+       cả tên đăng nhập máy. Không cần đăng nhập, không cần thủ đoạn gì.
+
+       Nay người dùng chỉ thấy một mã 6 ký tự; chi tiết nằm ở cửa sổ dòng lệnh
+       — nơi chỉ người đang chạy máy chủ mới đọc được. Có mã thì vẫn ghép được
+       hai bên với nhau khi cần gỡ lỗi.
+    """
+    ma = secrets.token_hex(3)
+    print(f'\n[SỰ CỐ {ma}] {noi}'.rstrip(), file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+    return ma
+
+
+def _loi_su_co(ma):
+    return (f'[LỖI] Máy chủ gặp sự cố bất ngờ (mã sự cố {ma}).\n'
+            f'      Chi tiết đã ghi ra cửa sổ dòng lệnh đang chạy web.py.')
 
 
 # ==========================================================================
@@ -230,11 +256,15 @@ def _chay(tuan, seed, so_lan, tat):
             ghi(d)
         dat(loi=str(e))
     except Exception:
+        # Khác hẳn nhánh SystemExit ở trên: đó là lỗi KHAI BÁO của người dùng,
+        # phải hiện nguyên văn. Còn đây là lỗi của phần mềm — dấu vết chỉ có
+        # ích cho người viết mã, mà lại lộ đường dẫn máy chủ, nên đẩy ra cửa
+        # sổ dòng lệnh và chỉ đưa người dùng một mã đối chiếu.
+        ma_sc = _bao_su_co('trong lúc xếp thời khoá biểu')
         ghi('')
-        ghi('[LỖI BẤT NGỜ] Chi tiết cho người viết phần mềm:')
-        for d in traceback.format_exc().split('\n'):
+        for d in _loi_su_co(ma_sc).split('\n'):
             ghi(d)
-        dat(loi='Lỗi bất ngờ, xem khung nhật ký.')
+        dat(loi=_loi_su_co(ma_sc))
     finally:
         dat(dang_chay=False, xong=True)
 
@@ -654,7 +684,8 @@ class May(BaseHTTPRequestHandler):
             # không phải máy chủ hỏng.
             self._json({'loi': str(e)}, 400)
         except Exception:
-            self._json({'loi': traceback.format_exc()}, 500)
+            self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
+                       500)
 
     def _tinh(self, ten):
         if ten not in TINH:
@@ -667,7 +698,14 @@ class May(BaseHTTPRequestHandler):
         if '?' in self.path:
             for phan in self.path.split('?', 1)[1].split('&'):
                 if phan.startswith('tu='):
-                    tu = int(phan[3:] or 0)
+                    tho = phan[3:]
+                    if tho == '':
+                        continue
+                    try:
+                        tu = max(0, int(tho))
+                    except ValueError:
+                        raise SystemExit(
+                            f'[LỖI] Tham số "tu" phải là số: {tho!r}')
         with KHOA:
             t = dict(TT)
             log = t.pop('log')
@@ -729,7 +767,8 @@ class May(BaseHTTPRequestHandler):
             # không phải máy chủ hỏng.
             self._json({'loi': str(e)}, 400)
         except Exception:
-            self._json({'loi': traceback.format_exc()}, 500)
+            self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
+                       500)
 
     def _xep(self):
         # Đọc và kiểm thân TRƯỚC khi giành chỗ: yêu cầu hỏng thì phải trả lỗi
