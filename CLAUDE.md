@@ -1,0 +1,297 @@
+# Dự án: Phần mềm xếp thời khóa biểu
+
+Khoa Khoa học Cơ bản — Trường Cao đẳng Đà Lạt. Xếp TKB 6 lớp khối 12
+(12B1–12B6), buổi chiều tiết 6–10, Thứ 2 → Thứ 6. Mỗi lớp 24 tiết/tuần trên
+lưới 25 ô (5 ngày × 5 tiết), dư đúng 1 ô trống.
+
+Người dùng cuối là giáo viên, **không biết lập trình**: họ chỉ mở
+`cauhinh.json` bằng Notepad và bấm đúp `chay.bat`.
+
+---
+
+## Lệnh hay dùng
+
+```bash
+python xep_tkb.py                      # xếp và xuất TKB_Khoi12.xlsx
+python xep_tkb.py --quy-tac            # in danh mục 17 loại quy tắc + mẫu JSON
+python xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
+python xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
+python xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
+python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
+python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
+python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
+```
+
+### Môi trường Python trên máy này (Linux)
+Máy này **không có `pip`** và không có `python` (chỉ có `python3`), lại bị PEP 668
+chặn cài gói vào hệ thống. Đã dựng sẵn một venv dùng chung:
+
+```bash
+~/.venvs/xeptkb/bin/python xep_tkb.py       # thay cho "python xep_tkb.py"
+~/.venvs/xeptkb/bin/python tu_kiem_tra.py
+```
+
+Dựng lại khi cần: `python3 -m venv ~/.venvs/xeptkb && ~/.venvs/xeptkb/bin/pip install openpyxl`
+(hiện dùng Python 3.12.3 + openpyxl 3.1.5).
+
+Trên máy Windows của nhà trường thì vẫn đúng như `HUONG_DAN.md`: cài Python,
+chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
+
+---
+
+## Phân vai file
+
+| File | Chứa gì | Nguyên tắc |
+|---|---|---|
+| `cauhinh.json` | Dữ liệu (lớp, GV, số tiết) + toàn bộ danh sách quy tắc | Người dùng cuối sửa. Không phá cấu trúc. |
+| `cauhinh.khoi12.goc.json` | **Bản gốc chỉ có khối 12**, đóng băng ở tag `v1.0-khoi12` | **KHÔNG được sửa.** Chỉ để đối chiếu |
+| `quy_tac.py` | 17 loại quy tắc, registry `DANH_MUC` | **Mọi logic nghiệp vụ nằm ở đây** |
+| `xep_tkb.py` | Mô hình dữ liệu, bộ giải, hậu kiểm, xuất Excel | **Không được hardcode quy tắc nghiệp vụ** |
+| `mau_tkb.xlsx` | Mẫu Excel của trường (1 sheet "Khối 12") | Chương trình copy rồi ghi đè D8:I32 |
+| `TKB_Khoi12.xlsx` | Kết quả (3 sheet) | File sinh ra, ghi đè mỗi lần chạy |
+| `tu_kiem_tra.py` | Chạy thử từng loại quy tắc | Chạy sau mỗi thay đổi |
+| `tests/thu_du_phong.py` | Ép nhánh dự phòng của `main()` xảy ra bằng một lớp quy tắc dùng-một-lần, chỉ đăng ký trong tiến trình thử | Chạy khi sửa `main()` |
+| `chay.bat` | Bấm đúp để chạy trên Windows | — |
+| `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
+
+> **`cauhinh.khoi12.goc.json` là bản đối chiếu, không phải bản chạy.** Nó là bản
+> sao y nguyên của `cauhinh.json` tại thời điểm phần mềm mới chỉ xếp **một khối
+> 12** trên một sheet, và phải giữ nguyên như vậy mãi mãi — chương trình không
+> bao giờ đọc nó. Khi mở rộng sang khối 11 và khối 10, cấu trúc `cauhinh.json` sẽ
+> đổi (nhiều khối, mỗi khối một khung giờ, bộ lọc `loc` thêm khoá `khoi`); lúc đó
+> mở file này ra để đối chiếu xem khai báo cũ đã được chuyển sang dạng mới đúng
+> chưa, và để dựng lại nhanh một ca thử "chỉ khối 12" khi cần khoanh vùng lỗi.
+> Muốn quay lui hẳn về bản một khối thì `git checkout v1.0-khoi12`.
+
+> **Lưu ý thư mục `files/`**: đây là bản tải về ban đầu, thiếu `mau_tkb.xlsx`,
+> `tu_kiem_tra.py`, `chay.bat`, và `files/xep_tkb.py` là **bản CŨ trước khi tách
+> `quy_tac.py`** (không có `import quy_tac`). Bản đang dùng nằm ở thư mục gốc,
+> lấy từ `files/PhanMem_XepTKB.zip`. Đừng sửa nhầm file trong `files/`.
+
+---
+
+## Mô hình dữ liệu
+
+**`Cum`** = nhóm tiết liên tiếp của cùng 1 môn / 1 GV / 1 lớp.
+Thuộc tính (`__slots__`): `ma lop mon nhom gv size la_cd la_trong ngay_ok
+vitri_ok o_cam ngay vitri qt qt_gy`
+
+- `ngay` đếm từ 0 (0 = thứ đầu trong `cac_thu`), `vitri` đếm từ 0 (0 = tiết đầu buổi).
+- `ngay_ok` / `vitri_ok` = miền giá trị **còn lại**: khởi đầu **đầy** rồi bị các
+  quy tắc cắt nhỏ dần (`&=`, `-=`); nằm trong tập = **được phép**.
+- `o_cam` **ngược cực** với hai tập trên: là tập ô `(ngay, vitri)` **bị cấm**,
+  khởi đầu **rỗng** rồi phình to dần (`|=`); nằm trong tập = **bị chặn**.
+  Quen tay coi nó cũng là miền giá trị rồi viết `c.o_cam &= ...` là logic ngược
+  hoàn toàn — quy tắc sẽ im lặng không chặn gì, hoặc chặn nhầm đúng những ô đáng
+  lẽ được phép. Xem `KhongXepO` trong `quy_tac.py` làm mẫu.
+- `qt` = quy tắc phải hỏi trong lúc giải; `qt_gy` = quy tắc có gợi ý thứ tự thử ô.
+- **Ô trống** được mô hình hoá thành một `Cum` giả `la_trong=True`, size = số ô dư
+  (`xep_tkb.py:209`). Khi luật `khong_tiet_trong_giua_buoi` bật (mặc định `True`),
+  miền bị ghim `vitri_ok = {SO_TIET - size}` để dồn ô trống về cuối buổi
+  (`xep_tkb.py:224`) → 24 tiết + 1 ô trống lấp kín đúng 25 ô, không có tiết trống
+  chen giữa buổi. Đặt luật này `false` thì ô trống giữ nguyên miền đầy đủ và có
+  thể rơi vào giữa buổi.
+- `chia_cum(so_tiet, mau_cum)` cắt số tiết/tuần thành các cụm theo `dinh_muc_mon.cum`,
+  có thể bị quy tắc `gom_tiet` ghi đè cho riêng một môn/lớp.
+
+**`BaiToan`** dựng từ `cfg`: `_tao_cum()` → `_tao_quy_tac()` → `_kiem_tra_so_bo()`.
+`_kiem_tra_so_bo()` dừng chương trình nếu có cụm bị chặn hết mọi ô.
+
+`chuyen_doi_cau_hinh_cu(cfg)` nhận cả cấu hình **kiểu cũ** (`rang_buoc`, `uu_tien`)
+lẫn **kiểu mới** (`quy_tac`), tự dịch sang kiểu mới và lọc bỏ `"bat": false`.
+
+---
+
+## Cơ chế quy tắc
+
+Đăng ký bằng `@dang_ky('ten_loai')` vào `DANH_MUC`, kế thừa `QuyTac`. Các hook:
+
+| Hook | Chạy lúc nào | Dùng để |
+|---|---|---|
+| `thu_hep_mien()` | 1 lần trước khi giải | Cắt bớt `ngay_ok` / `vitri_ok`, cộng dồn ô cấm vào `o_cam`. **Nhanh nhất, ưu tiên dùng.** |
+| `lien_quan(c)` | 1 lần | Cụm nào cần gắn quy tắc này (mặc định = `khop(c)`) |
+| `dat_lai()` | 1 lần trước MỖI lần thử (mỗi seed) | Xoá trạng thái riêng. Mặc định dựng lại quy tắc bằng `__init__`, hiếm khi cần ghi đè |
+| `cho_phep(gs,c,ngay,v)` | mỗi nước đi | `False` = chặn |
+| `dat(gs,c)` / `go(gs,c)` | mỗi nước đi | Cập nhật bộ đếm riêng |
+| `thich(gs,c,ngay,v)` | mỗi nước đi | `True` = ô đẹp, thử trước |
+| `hoan(gs,c)` | mỗi nước đi | `True` = hoãn cụm này lại |
+| `hau_kiem()` | sau khi giải | Trả list chỗ vi phạm |
+| `diem()` | sau khi giải | Điểm mềm |
+
+Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `tap_ngay()`,
+`tap_tiet()`, `ten_o(c)`, `_ben(c)` (trả `['a']`/`['b']` cho quy tắc so 2 nhóm),
+`_ke(c, ngay, vitri, k)` (hai cụm có sát nhau không).
+
+### Ba quy ước SỐNG CÒN khi viết loại quy tắc mới
+
+1. **Cờ lớp phải khai đúng.** `CAN_TRONG_KHI_GIAI = True` nếu có dùng
+   `cho_phep`/`dat`/`go`; `CO_GOI_Y = True` nếu có dùng `thich`/`hoan`.
+   Quên khai → hook không bao giờ được gọi (xem `BaiToan._tao_quy_tac`).
+2. **Mọi bộ đếm riêng của quy tắc phải khởi tạo trong `__init__`.** Đối tượng
+   quy tắc chỉ được tạo một lần rồi dùng lại cho mọi seed. Trước mỗi lần thử,
+   `BoGiai._khoi_tao()` (`xep_tkb.py:283`) gọi `q.dat_lai()` cho **tất cả** quy
+   tắc, không phân biệt cờ; `QuyTac.dat_lai()` mặc định dựng lại quy tắc bằng
+   `self.__init__(self.r, self.bt)`. Bộ đếm đặt ở chỗ khác (biến của lớp, gán
+   muộn trong `thu_hep_mien()`…) sẽ không được xoá → rác từ seed trước làm sai
+   kết quả. Chỉ ghi đè `dat_lai()` khi việc dựng lại quá tốn kém, và khi đó phải
+   tự xoá hết bộ đếm. `dat_lai()` chạy đúng 1 lần mỗi seed, không nằm trong vòng
+   quay lui.
+3. **Tên loại quy tắc mềm phải bắt đầu bằng `uu_tien`.** `xep_tkb.py` phân biệt
+   quy tắc cứng / tiêu chí mềm bằng đúng `q.TEN.startswith('uu_tien')`
+   (ở `hau_kiem()` và ở `main()`). Đặt tên sai → quy tắc mềm bị đem đi hậu kiểm.
+
+Ngoài ra: `gom_tiet` là **ngoại lệ**, không có hook nào — nó được đọc sớm ở
+`BaiToan._map_gom_tiet()` trước khi cắt cụm, và bị `_tao_quy_tac()` bỏ qua.
+
+Thêm loại mới thì nhớ đủ 5 việc: `MO_TA` + `VI_DU` (chép thẳng vào `cauhinh.json`
+là chạy được) → thêm vào đúng nhóm trong `in_danh_muc()` → thêm ca thử vào
+`tu_kiem_tra.py` → cập nhật `QUY_TAC.md`.
+
+---
+
+## Bộ giải
+
+Quay lui + MRV. Khoá chọn biến: `(số lựa chọn, hoan(c), la_cd, -size)` — ít lựa
+chọn nhất trước, cụm bị `hoan` để sau, chuyên đề để sau, cụm to trước.
+Forward-checking (`lua_chon` trả rỗng → quay lui ngay), value-ordering theo số
+quy tắc `thich()` ô đó.
+
+Kiểm tra nền trong `dat_duoc()` (không phải quy tắc, luôn chạy): trùng ô của lớp,
+trùng ô của giáo viên, `o_cam`, và luật `mot_cum_moi_mon_moi_ngay`.
+
+`main()` chạy nhiều seed (`tim_kiem.so_lan_thu` — `cauhinh.json` đang đặt 400,
+mặc định trong mã là 300, ghi đè bằng `--lan`), mỗi lần giới hạn theo
+`gioi_han_buoc` (30000) và `gioi_han_giay_moi_lan` (3s), tổng
+`gioi_han_tong_giay` (60s).
+
+Ba nhánh kết thúc:
+1. Có phương án **qua được hậu kiểm** → giữ cái điểm mềm cao nhất.
+2. Có lời giải nhưng cái nào cũng trượt hậu kiểm → in `[CẢNH BÁO]` và lấy phương
+   án **ít vi phạm nhất**, xếp hạng theo khoá `(số quy tắc lỗi tăng dần, điểm mềm
+   giảm dần)` — điểm mềm chỉ là tiêu chí phụ khi số lỗi bằng nhau. In thẳng ra
+   màn hình số quy tắc vi phạm, tên từng quy tắc kèm chi tiết `hau_kiem()` trả
+   về, và dòng gợi ý nới quy tắc nào; vẫn xuất Excel.
+
+Dòng tổng kết dùng **hai câu chữ khác nhau** cho hai nhánh, không được trộn:
+nhánh 1 in `Điểm cao nhất: <d>.`, nhánh 2 in `Phương án ít vi phạm nhất: <n> quy
+tắc lỗi, điểm mềm <d>.` — chữ "cao nhất" chỉ đúng khi việc chọn thật sự dựa trên
+điểm mềm.
+3. Không tìm được lời giải nào → in `[KHÔNG XẾP ĐƯỢC]` rồi `sys.exit(1)`,
+   **không xuất Excel**.
+
+---
+
+## Xuất Excel
+
+`xuat_excel()` copy `mau_tkb.xlsx` → file kết quả rồi **ghi đè nội dung**, nên giữ
+nguyên 100% khung, font Times New Roman, viền, và công thức `=COUNTA(D8:D42)` ở
+dòng 43. Vị trí bảng lấy từ `thong_tin.vi_tri_bang`
+(`hang_bat_dau: 8`, `cot_bat_dau: 4`, `hang_tieu_de: 3`, `hang_tuan: 4`, `hang_gvcn: 7`).
+
+- Ô của lớp thứ *j*, ngày *d*, tiết *p*: `cell(8 + d*5 + p, 4 + j)` → vùng **D8:I32**.
+- Dòng 33–42 là hai khối Thứ 7 của mẫu (33–37 = Sáng, tiết 1–5; 38–42 = Chiều,
+  tiết 6–10), hiện để trống vì `khung_gio` chỉ khai Thứ 2–6.
+- Sheet kết quả: **Khối 12** (từ mẫu) + **TKB giáo viên** + **Kiểm tra quy tắc**
+  (hai sheet sau do chương trình tạo mới, xoá và vẽ lại mỗi lần chạy).
+
+---
+
+## Ràng buộc nghiệp vụ đang khai trong `cauhinh.json`
+
+**9 quy tắc cứng:** SHCN tiết cuối buổi · Vật lý 12B1,12B2 chỉ Thứ 2/3 ·
+Sinh học 12B3,12B4 chỉ Thứ 2/3 · Sinh học 12B5,12B6 chỉ Thứ 2/3 ·
+Hoá 12B1–12B4 không Thứ 3,5 · Văn cô Đ.Duy không Thứ 2 · Sử cô N.Uyên không
+tiết 4,5 của buổi · Toán thầy M.Tuấn 12B2 khác ngày Toán thầy M.Hùng 12B4 ·
+Sử cô N.Xuân khác ngày lịch thầy M.Hùng.
+
+**3 tiêu chí mềm:** chuyên đề kề tiết chính (12đ) · dồn buổi cho GV (−4đ/buổi) ·
+hai buổi cùng môn cách ≥ 2 ngày (3đ).
+
+**2 luật nền** (`luat_chung`): `khong_tiet_trong_giua_buoi`, `mot_cum_moi_mon_moi_ngay`.
+
+Cách gom tiết nằm ở `dinh_muc_mon.cum`: Toán/Văn `[2,1]`, HĐTN `[3]`,
+Sử/Địa/Lý/Sinh/Hoá/GDKT-PL `[2]`, chuyên đề & SHCN `[1]`.
+
+Mục `_quy_tac_de_san_chua_bat` chứa 7 quy tắc mẫu đang tắt — chép sang `quy_tac`
+và bỏ `"bat": false` là dùng được.
+
+---
+
+## Cách kiểm chứng một thay đổi
+
+Ngoài hai lệnh bắt buộc, đây là hai kỹ thuật đã dùng khi sửa nhánh dự phòng của
+`main()` — nhánh mà bộ quy tắc thật không bao giờ chạm tới. Lặp lại được cho mọi
+thay đổi ở chỗ khó dựng tình huống.
+
+### 1. Dựng cấu hình cho hai tiêu chí KÉO NGƯỢC NHAU
+
+Một ca thử chỉ có giá trị khi tiêu chí cũ và tiêu chí mới **chỉ về hai phương án
+khác nhau**. Nếu phương án tốt nhất theo cả hai cách xếp hạng trùng nhau thì ca
+thử xanh cả trước lẫn sau khi sửa — vô nghĩa.
+
+Cách làm trong `tests/thu_du_phong.py`: khai một tiêu chí mềm thưởng rất đậm
+(`uu_tien_o`, 50đ) cho đúng cái mà các quy tắc thử coi là **lỗi** (Toán/Văn vào 2
+tiết đầu buổi). Nhờ vậy phương án điểm mềm cao nhất chắc chắn cũng là phương án
+nhiều lỗi nhất, và hai cách xếp hạng buộc phải cho kết quả khác nhau.
+
+Ca thử **tự khẳng định điều kiện tiên quyết đó** trước khi kiểm cái cần kiểm
+(`Phương án ít lỗi nhất có điểm mềm THẤP HƠN…`), nên nếu dữ liệu đổi khiến ca thử
+mất khả năng phân biệt thì nó báo đỏ chứ không âm thầm xanh.
+
+Hai mẹo phụ đi kèm:
+- Ép nhánh cần thử **luôn** xảy ra bằng một quy tắc thử lúc nào cũng lỗi.
+- Lớp quy tắc dùng-một-lần chỉ gán vào `QT.DANH_MUC` **trong tiến trình thử**,
+  không đăng ký bằng `@dang_ky` trong `quy_tac.py`; ca thử có một mục tự kiểm tra
+  rằng tên loại đó không hề tồn tại trong `quy_tac.py` thật.
+- Khoá chặt `tim_kiem` (giới hạn giây đặt rất rộng) để chạy lại cho ra đúng dãy
+  phương án cũ, rồi so kết quả của `main()` với dãy tự chạy lại được.
+
+### 2. Lùi đúng dòng vừa sửa, xác nhận ca thử chuyển sang ĐỎ
+
+Ca thử xanh chưa chứng minh được gì cả — phải chứng minh nó **biết đỏ**:
+
+```bash
+cp -r <dự án> /tmp/bancu            # chép sang thư mục tạm, đừng đụng bản thật
+# sửa /tmp/bancu/xep_tkb.py, lùi ĐÚNG dòng vừa đổi về bản cũ
+cd /tmp/bancu && python tests/thu_du_phong.py    # phải thoát mã 1
+```
+
+Kiểm cả **mục nào** đỏ, không chỉ nhìn mã thoát: đúng những mục nói về hành vi
+vừa sửa phải đỏ, các mục không liên quan (nhất là mục không-hồi-quy) phải vẫn
+xanh. Khi lùi lại logic cũ của nhánh dự phòng, kết quả đúng là 13/18 — 5 mục về
+việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
+
+---
+
+## Trạng thái đã kiểm chứng (19/8/2026)
+
+- `python xep_tkb.py`: 392 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
+  **−21** (điểm mềm 192 / −240 / 27), **21/21 quy tắc ĐẠT**, xuất `TKB_Khoi12.xlsx`
+  đủ 3 sheet, 144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
+  New Roman + viền `thin` nguyên vẹn.
+- `python tu_kiem_tra.py`: 17 loại quy tắc đã đăng ký, ca CƠ SỞ + 11 ca thử đều
+  **OK** (~105s), điểm từng ca −36 / −39 / −33 / −43 / −25 / −48 / −55 / −22 / 6 /
+  −49 / −50 / 33. 11 loại được thử trực tiếp; 6 loại còn lại (`chi_xep_tiet`,
+  `khong_xep_thu`, `khac_ngay`, và 3 loại `uu_tien_*`) được phủ qua ca CƠ SỞ vì
+  đã có sẵn trong `cauhinh.json`.
+- `python tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
+  dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.
+- 21 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 9 quy tắc cứng.
+
+---
+
+## Quy ước code
+
+- Tên biến / hàm / lớp: **tiếng Việt không dấu** (`thu_hep_mien`, `cac_cum`, `dat_duoc`).
+- Comment, docstring, thông báo ra màn hình, `ghi_chu`: **tiếng Việt có dấu**.
+- Thông báo lỗi cho người dùng cuối theo mẫu `[LỖI] ...` kèm gợi ý sửa ở
+  `cauhinh.json`, dừng bằng `raise SystemExit(...)`.
+- Chỉ dùng thư viện chuẩn + `openpyxl`.
+
+## Điều cấm
+
+- Hardcode quy tắc nghiệp vụ vào `xep_tkb.py`.
+- Đổi định dạng / bố cục Excel xuất ra (nhà trường in ra ký trực tiếp).
+- Xoá hoặc đổi tên các hook của `QuyTac` (làm hỏng cả 17 loại quy tắc).
+- Báo "xong" khi chưa chạy sạch cả `tu_kiem_tra.py` lẫn `xep_tkb.py`.
+- Sửa `cauhinh.json` mà không sao lưu trước — đó là toàn bộ công sức khai báo dữ liệu.
