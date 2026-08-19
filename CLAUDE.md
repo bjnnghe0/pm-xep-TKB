@@ -476,6 +476,13 @@ thành công; nút **Xuất trang web** chỉ tải file đó về qua `GET /api
 
 ### Đưa lên GitHub Pages
 
+> **✅ Nhà trường đã ĐỒNG Ý công khai trang TKB — 19/8/2026.** Điều kiện tiên
+> quyết ghi ở đầu `DUA_LEN_MANG.md` ("Hãy hỏi ý nhà trường trước khi bật GitHub
+> Pages") đã được đáp ứng, nên PHẦN A được phép làm. Phạm vi công khai vẫn đúng
+> bảng đã chốt: tên lớp · **họ tên đầy đủ GVCN** · tên viết tắt GV bộ môn · môn ·
+> thứ và tiết · tuần — và **không có** số điện thoại/email/địa chỉ/ngày sinh/ảnh/
+> tên học sinh. Muốn công khai thêm gì ngoài bảng đó thì phải hỏi lại nhà trường.
+
 `docs/index.html` là bản sao của `tkb_web.html`; `docs/.nojekyll` rỗng để Pages
 đừng xử lý lại tệp. Đã kiểm `.gitignore` **không** loại nhầm hai tệp này
 (`tkb_web.html` ở thư mục gốc thì bị loại, đúng ý — nó là tệp sinh ra), và có ghi
