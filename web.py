@@ -361,6 +361,22 @@ def thu_quy_tac(r, tat):
             'vi_pham': vi_pham}
 
 
+def _tap_chi_so(ds):
+    """Đổi danh sách chỉ số người dùng gửi lên thành tập số nguyên.
+       Giá trị lạ thì DỪNG kèm thông báo, không im lặng bỏ qua — bỏ qua âm
+       thầm ở đường ghi tệp nghĩa là ghi sai mà vẫn báo thành công."""
+    if not isinstance(ds, list):
+        raise SystemExit('[LỖI] Danh sách "tat" phải là một dãy [ ... ]')
+    ra = set()
+    for x in ds:
+        try:
+            ra.add(int(x))
+        except (TypeError, ValueError):
+            raise SystemExit(f'[LỖI] Danh sách "tat" có giá trị không phải '
+                             f'số: {x!r}')
+    return ra
+
+
 def _gon_json(cfg):
     """In JSON dễ đọc, gom các danh sách toàn số/chuỗi lại một dòng cho
        giống cách file đang được viết tay."""
@@ -417,11 +433,50 @@ class May(BaseHTTPRequestHandler):
         self._tra(ma, 'application/json',
                   json.dumps(obj, ensure_ascii=False))
 
-    def _than_json(self):
-        n = int(self.headers.get('Content-Length') or 0)
-        if not n:
+    def _than_json(self, bat_buoc=False):
+        """Đọc thân JSON của yêu cầu.
+
+           bat_buoc=True dành cho các đường GHI XUỐNG TỆP: thiếu thân là DỪNG,
+           tuyệt đối không được coi là "thân rỗng".
+
+           Vì sao phải chặt như vậy: trước đây chỉ có
+               n = int(self.headers.get('Content-Length') or 0)
+           nên một yêu cầu gửi kiểu "Transfer-Encoding: chunked" (hợp lệ với
+           HTTP, và KHÔNG kèm Content-Length) cho n = 0 -> trả {} ->
+           /api/luu-quy-tac hiểu thành "không tắt quy tắc nào" -> bỏ khoá "bat"
+           của MỌI quy tắc rồi ghi đè cauhinh.json, mà vẫn trả 200 báo thành
+           công. Đã đo: 10 quy tắc cứng bị bật lại, người dùng không hề biết.
+        """
+        if self.headers.get('Transfer-Encoding'):
+            raise SystemExit(
+                '[LỖI] Máy chủ không nhận yêu cầu kiểu "Transfer-Encoding".\n'
+                '      Hãy gửi kèm "Content-Length".')
+        tho = self.headers.get('Content-Length')
+        if tho is None or str(tho).strip() == '':
+            if bat_buoc:
+                raise SystemExit(
+                    '[LỖI] Yêu cầu thiếu phần thân.\n'
+                    '      Đường này ghi xuống tệp nên bắt buộc phải có thân.')
             return {}
-        return json.loads(self.rfile.read(n).decode('utf-8'))
+        try:
+            n = int(tho)
+            if n < 0:
+                raise ValueError
+        except ValueError:
+            raise SystemExit(f'[LỖI] "Content-Length" không phải số: {tho!r}')
+        if n == 0:
+            if bat_buoc:
+                raise SystemExit(
+                    '[LỖI] Yêu cầu thiếu phần thân.\n'
+                    '      Đường này ghi xuống tệp nên bắt buộc phải có thân.')
+            return {}
+        try:
+            d = json.loads(self.rfile.read(n).decode('utf-8'))
+        except (ValueError, UnicodeDecodeError) as e:
+            raise SystemExit(f'[LỖI] Thân yêu cầu không phải JSON hợp lệ: {e}')
+        if not isinstance(d, dict):
+            raise SystemExit('[LỖI] Thân yêu cầu phải là một khối { ... }')
+        return d
 
     # ---------------- GET ----------------
     def do_GET(self):
@@ -511,9 +566,10 @@ class May(BaseHTTPRequestHandler):
             if duong == '/api/luu-quy-tac':
                 return self._luu()
             if duong == '/api/them-quy-tac':
-                return self._json(them_quy_tac(self._than_json().get('quy_tac')))
+                return self._json(them_quy_tac(
+                    self._than_json(bat_buoc=True).get('quy_tac')))
             if duong == '/api/xoa-quy-tac':
-                return self._json(xoa_quy_tac(int(self._than_json()['i'])))
+                return self._json(xoa_quy_tac(self._chi_so()))
             if duong == '/api/thu-quy-tac':
                 return self._thu()
             self._tra(404, 'text/plain', 'Không có trang này')
@@ -557,9 +613,22 @@ class May(BaseHTTPRequestHandler):
         return self._json(thu_quy_tac(d.get('quy_tac'), tat))
 
     def _luu(self):
-        d = self._than_json()
-        tat = {int(x) for x in d.get('tat', [])}
-        return self._json(luu_quy_tac(tat))
+        d = self._than_json(bat_buoc=True)
+        if 'tat' not in d:
+            raise SystemExit(
+                '[LỖI] Yêu cầu lưu thiếu danh sách "tat".\n'
+                '      Không có danh sách này thì không biết quy tắc nào bị '
+                'tắt — ghi bừa xuống tệp là bật lại hết.')
+        return self._json(luu_quy_tac(_tap_chi_so(d['tat'])))
+
+    def _chi_so(self):
+        d = self._than_json(bat_buoc=True)
+        if 'i' not in d:
+            raise SystemExit('[LỖI] Yêu cầu xoá thiếu số thứ tự "i".')
+        try:
+            return int(d['i'])
+        except (TypeError, ValueError):
+            raise SystemExit(f'[LỖI] Số thứ tự "i" không phải số: {d["i"]!r}')
 
 
 # ==========================================================================
