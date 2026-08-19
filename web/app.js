@@ -202,12 +202,69 @@ function loaiDangChon() {
   return null;
 }
 
-/* Ô chọn nhiều giá trị — không cho gõ tay, vì gõ sai giờ làm chương trình dừng. */
-function oNhieu(ds, daChon, khoa) {
+/* Hai cách chọn nhiều giá trị. Cả hai đều dựng bằng checkbox thật nên đọc
+   giá trị chỉ có MỘT đường: docNhieu(). Không cho gõ tay, vì gõ sai tên giờ
+   làm chương trình dừng hẳn. */
+
+let demO = 0;
+
+/* Danh sách NGẮN và cố định (thứ, tiết): dãy ô vuông bấm bật/tắt. */
+function oNut(ds, daChon, khoa, nhan) {
   const c = [].concat(daChon === undefined ? [] : daChon).map(String);
-  return `<select multiple data-o="${khoa}">`
-    + ds.map((x) => `<option value="${ma(x)}"${c.includes(String(x)) ? ' selected' : ''}>`
-        + `${ma(x)}</option>`).join('') + '</select>';
+  return `<div class="o-nut" data-o="${khoa}" data-nhieu="1">` + ds.map((x) => {
+    const id = 'n' + (++demO);
+    const co = c.includes(String(x));
+    return `<label class="nut-o${co ? ' chon' : ''}" for="${id}">`
+      + `<input type="checkbox" id="${id}" value="${ma(x)}"${co ? ' checked' : ''}>`
+      + `${ma(nhan ? nhan(x) : x)}</label>`;
+  }).join('') + '</div>';
+}
+
+/* Danh sách DÀI (28 giáo viên, 14 môn...): danh sách cuộn + ô tìm kiếm. */
+function oDs(ds, daChon, khoa) {
+  const c = [].concat(daChon === undefined ? [] : daChon).map(String);
+  return `<div data-o="${khoa}" data-nhieu="1">`
+    + `<input type="search" class="tim" placeholder="gõ để lọc nhanh...">`
+    + '<div class="ds-chon">' + ds.map((x) => {
+        const id = 'd' + (++demO);
+        const co = c.includes(String(x));
+        return `<label class="dong" for="${id}">`
+          + `<input type="checkbox" id="${id}" value="${ma(x)}"${co ? ' checked' : ''}>`
+          + `<span>${ma(x)}</span></label>`;
+      }).join('') + '</div>'
+    + `<p class="dem-chon">Đang chọn: <b>0</b> / ${ds.length}</p></div>`;
+}
+
+/* Đọc giá trị — dùng chung cho cả hai kiểu trên. */
+function docNhieu(hop, khoa) {
+  const c = hop.querySelector(`[data-o="${khoa}"][data-nhieu]`);
+  if (!c) return [];
+  return [...c.querySelectorAll('input[type=checkbox]:checked')].map((x) => x.value);
+}
+
+/* Bật/tắt màu ô vuông, lọc danh sách dài, đếm số đang chọn. */
+function noiSuKien(goc) {
+  goc.querySelectorAll('.nut-o input').forEach((o) => {
+    o.onchange = () => o.closest('.nut-o').classList.toggle('chon', o.checked);
+  });
+  goc.querySelectorAll('[data-nhieu] .ds-chon').forEach((d) => {
+    const hop = d.parentElement;
+    const dem = () => {
+      const n = d.querySelectorAll('input:checked').length;
+      hop.querySelector('.dem-chon b').textContent = n;
+    };
+    d.querySelectorAll('input').forEach((o) => { o.onchange = dem; });
+    dem();
+    const tim = hop.querySelector('.tim');
+    if (tim) {
+      tim.oninput = () => {
+        const t = tim.value.trim().toLowerCase();
+        d.querySelectorAll('.dong').forEach((x) => {
+          x.classList.toggle('an', t && !x.textContent.toLowerCase().includes(t));
+        });
+      };
+    }
+  });
 }
 
 function oMot(ds, daChon, khoa, trong) {
@@ -220,10 +277,10 @@ function oMot(ds, daChon, khoa, trong) {
 function veLoc(khoa, gt, cho_tru) {
   gt = gt || {};
   const h = ['<div class="loc-o">'
-    + '<label>Môn' + oNhieu(GT.mon, gt.mon, khoa + '.mon') + '</label>'
-    + '<label>Nhóm môn' + oNhieu(GT.nhom_mon, gt.nhom_mon, khoa + '.nhom_mon') + '</label>'
-    + '<label>Giáo viên' + oNhieu(GT.gv, gt.gv, khoa + '.gv') + '</label>'
-    + '<label>Lớp' + oNhieu(GT.lop, gt.lop, khoa + '.lop') + '</label>'
+    + '<label>Môn' + oDs(GT.mon, gt.mon, khoa + '.mon') + '</label>'
+    + '<label>Nhóm môn' + oDs(GT.nhom_mon, gt.nhom_mon, khoa + '.nhom_mon') + '</label>'
+    + '<label>Giáo viên' + oDs(GT.gv, gt.gv, khoa + '.gv') + '</label>'
+    + '<label>Lớp' + oNut(GT.lop, gt.lop, khoa + '.lop') + '</label>'
     + '<label>Chuyên đề'
     + oMot(['true', 'false'], gt.la_chuyen_de === undefined ? '' : String(gt.la_chuyen_de),
            khoa + '.la_chuyen_de', '— cả hai —') + '</label>'
@@ -251,9 +308,12 @@ function veTruong() {
     const co = gt !== undefined;
     let than = '';
     if (tr.kieu === 'loc') than = veLoc(tr.ten, gt, true);
-    else if (tr.kieu === 'ds_thu') than = oNhieu(GT.thu, gt, tr.ten);
-    else if (tr.kieu === 'ds_tiet') than = oNhieu(GT.tiet, gt, tr.ten);
-    else if (tr.kieu === 'ds_tiet_buoi') than = oNhieu(GT.tiet_trong_buoi, gt, tr.ten);
+    else if (tr.kieu === 'ds_thu')
+      than = oNut(GT.thu, gt, tr.ten, (x) => 'Thứ ' + x);
+    else if (tr.kieu === 'ds_tiet')
+      than = oNut(GT.tiet, gt, tr.ten, (x) => 'Tiết ' + x);
+    else if (tr.kieu === 'ds_tiet_buoi')
+      than = oNut(GT.tiet_trong_buoi, gt, tr.ten, (x) => 'Tiết thứ ' + x);
     else if (tr.kieu === 'so_thu') than = oMot(GT.thu, gt, tr.ten);
     else if (tr.kieu === 'so_tiet') than = oMot(GT.tiet, gt, tr.ten);
     else if (tr.kieu === 'so_tiet_buoi') than = oMot(GT.tiet_trong_buoi, gt, tr.ten);
@@ -279,6 +339,7 @@ function veTruong() {
       + `<span class="kieu">"${ma(tr.ten)}" — ${ma(DM.kieu[tr.kieu] || tr.kieu)}</span>`
       + than + '</div>';
   }).join('');
+  noiSuKien($('o-truong'));
   $('o-truong').querySelectorAll('input[data-tru]').forEach((o) => {
     o.onchange = () => {
       const h = $('o-truong').querySelector(`[data-tru-hop="${o.dataset.tru}"]`);
@@ -297,6 +358,7 @@ document.addEventListener('click', (e) => {
   d.innerHTML = '<label>Thứ' + oMot(GT.thu, GT.thu[0], '', '—') + '</label>'
               + '<label>Tiết' + oMot(GT.tiet, GT.tiet[0], '', '—') + '</label>';
   hop.appendChild(d);
+  noiSuKien(hop);
 });
 
 function veDsO(khoa, gt) {
@@ -329,12 +391,12 @@ function docForm() {
     } else {
       const o = hop.querySelector(`[data-o="${tr.ten}"]`);
       if (!o) return;
-      if (o.type === 'checkbox') { if (o.checked) r[tr.ten] = true; return; }
-      if (o.multiple) {
-        const v = [...o.selectedOptions].map((x) => so(x.value));
+      if (o.dataset.nhieu !== undefined) {
+        const v = docNhieu(hop, tr.ten).map(so);
         if (v.length) r[tr.ten] = v;
         return;
       }
+      if (o.type === 'checkbox') { if (o.checked) r[tr.ten] = true; return; }
       if (o.dataset.dsSo !== undefined) {
         const v = o.value.split(',').map((x) => +x.trim()).filter((x) => x > 0);
         if (v.length) r[tr.ten] = v;
@@ -349,9 +411,7 @@ function docForm() {
 function docLoc(hop, tien) {
   const d = {};
   ['mon', 'nhom_mon', 'gv', 'lop'].forEach((k) => {
-    const o = hop.querySelector(`[data-o="${tien}.${k}"]`);
-    if (!o) return;
-    const v = [...o.selectedOptions].map((x) => x.value);
+    const v = docNhieu(hop, tien + '.' + k);
     if (v.length) d[k] = v.length === 1 ? v[0] : v;
   });
   const cd = hop.querySelector(`[data-o="${tien}.la_chuyen_de"]`);
