@@ -58,6 +58,10 @@ class QuyTac:
         self.r = r
         self.bt = bt
         self.ghi_chu = r.get('ghi_chu') or r.get('_ghichu') or self.MO_TA
+        if 'tiet' in r or 'tiet_trong_buoi' in r:
+            self._kiem_tiet()        # bắt lỗi ngay, đừng đợi tới lúc chấm điểm
+        if 'o' in r:
+            self._kiem_o()
 
     def dat_lai(self):
         """Xoá sạch trạng thái riêng, chạy 1 lần trước MỖI lần thử (mỗi seed).
@@ -108,15 +112,84 @@ class QuyTac:
                 if t in self.bt.thu2idx}
 
     def tap_tiet(self):
-        """Gộp 'tiet' (số hiệu tiết thật) và 'tiet_trong_buoi' (thứ tự trong buổi)."""
-        v = set()
-        for t in self.r.get('tiet_trong_buoi', []):
-            if 1 <= t <= self.bt.SO_TIET:
-                v.add(t - 1)
-        for t in self.r.get('tiet', []):
-            if t in self.bt.tiet2idx:
-                v.add(self.bt.tiet2idx[t])
+        """Gộp 'tiet' (số hiệu tiết thật) và 'tiet_trong_buoi' (thứ tự trong buổi).
+           Giá trị ngoài miền hợp lệ làm DỪNG chương trình chứ không bị bỏ qua:
+           lặng lẽ bỏ qua là biến một quy tắc sai thành quy tắc không cấm gì,
+           vẫn báo ĐẠT — kiểu lỗi khó phát hiện nhất."""
+        self._kiem_tiet()
+        v = {t - 1 for t in self._ds('tiet_trong_buoi')}
+        v |= {self.bt.tiet2idx[t] for t in self._ds('tiet')}
         return v
+
+    # ------- kiểm giá trị người dùng khai trong cauhinh.json -------
+    def _ds(self, khoa):
+        """Đọc một khoá, chấp nhận cả 1 giá trị lẻ lẫn 1 danh sách."""
+        gt = self.r.get(khoa, [])
+        return gt if isinstance(gt, (list, tuple)) else [gt]
+
+    def _mien_tiet(self):
+        """Hai cách ghi tiết và miền hợp lệ của mỗi cách."""
+        tb = list(range(1, self.bt.SO_TIET + 1))
+        that = list(self.bt.cac_tiet)
+        mo_ta_tb = (f'{tb[0]}..{tb[-1]} (thứ tự trong buổi, 1 = tiết đầu buổi '
+                    f'{self.bt.buoi})')
+        mo_ta_that = ('số hiệu tiết in trên TKB: '
+                      + ', '.join(str(x) for x in that))
+        return tb, that, mo_ta_tb, mo_ta_that
+
+    def _bao_loi(self, khoa, sai, mo_ta_mien,
+                 khoa_kia=None, mien_kia=(), mo_ta_kia='', goi_y=()):
+        """Dừng chương trình, nói đủ để người dùng tự sửa cauhinh.json."""
+        ds = ', '.join(str(x) for x in sai)
+        dong = ['[LỖI] Khai báo sai trong cauhinh.json',
+                f'      Quy tắc : {self.ghi_chu}',
+                f'      Khoá    : "{khoa}"',
+                f'      Giá trị : {ds}   -> KHÔNG hợp lệ',
+                f'      Miền hợp lệ: {mo_ta_mien}']
+        if khoa_kia and all(x in mien_kia for x in sai):
+            dong.append(f'      => Có phải bạn định dùng khoá "{khoa_kia}" không? '
+                        f'Giá trị {ds} hợp lệ với khoá đó.')
+            dong.append(f'         Miền của "{khoa_kia}": {mo_ta_kia}')
+        dong.extend(goi_y)
+        dong.append('      Sửa lại rồi chạy: python xep_tkb.py')
+        raise SystemExit('\n'.join(dong))
+
+    def _kiem_tiet(self):
+        tb, that, mo_ta_tb, mo_ta_that = self._mien_tiet()
+        sai = [t for t in self._ds('tiet_trong_buoi') if t not in tb]
+        if sai:
+            self._bao_loi('tiet_trong_buoi', sai, mo_ta_tb,
+                          'tiet', that, mo_ta_that)
+        sai = [t for t in self._ds('tiet') if t not in that]
+        if sai:
+            self._bao_loi('tiet', sai, mo_ta_that,
+                          'tiet_trong_buoi', tb, mo_ta_tb)
+
+    def _kiem_o(self):
+        """Khoá "o" ghi từng ô cụ thể: [[thứ, tiết], ...]"""
+        tb, that, mo_ta_tb, mo_ta_that = self._mien_tiet()
+        thu = list(self.bt.cac_thu)
+        mo_ta_thu = 'số hiệu thứ trong tuần: ' + ', '.join(str(x) for x in thu)
+        for i, cap in enumerate(self.r.get('o', []), start=1):
+            if not isinstance(cap, (list, tuple)) or len(cap) != 2:
+                raise SystemExit(
+                    '[LỖI] Khai báo sai trong cauhinh.json\n'
+                    f'      Quy tắc : {self.ghi_chu}\n'
+                    f'      Khoá "o", ô thứ {i}: phải ghi [thứ, tiết], '
+                    f'ví dụ [[4, 6], [4, 7]].\n'
+                    f'      Đang ghi: {cap!r}')
+            t, ti = cap
+            if t not in thu:
+                self._bao_loi(f'o — ô thứ {i}, phần THỨ', [t], mo_ta_thu)
+            if ti not in that:
+                gy = ()
+                if ti in tb:
+                    gy = (f'      => Trong khoá "o" phải ghi SỐ HIỆU TIẾT in trên '
+                          f'TKB, không phải thứ tự trong buổi.',
+                          f'         Nếu bạn định nói "tiết thứ {ti} của buổi" '
+                          f'thì phải ghi là tiết {that[ti - 1]}.')
+                self._bao_loi(f'o — ô thứ {i}, phần TIẾT', [ti], mo_ta_that,
+                              goi_y=gy)
 
     def ten_o(self, c):
         return (f'{c.lop}/{c.mon} Thứ {self.bt.cac_thu[c.ngay]} '
@@ -255,11 +328,9 @@ class KhongXepO(QuyTac):
              "o": [[4, 6], [4, 7]]}
 
     def _tap_o(self):
-        v = set()
-        for thu, tiet in self.r.get('o', []):
-            if thu in self.bt.thu2idx and tiet in self.bt.tiet2idx:
-                v.add((self.bt.thu2idx[thu], self.bt.tiet2idx[tiet]))
-        return v
+        self._kiem_o()
+        return {(self.bt.thu2idx[thu], self.bt.tiet2idx[tiet])
+                for thu, tiet in self.r.get('o', [])}
 
     def thu_hep_mien(self):
         cam = self._tap_o()

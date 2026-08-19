@@ -69,12 +69,24 @@ Viết theo số hiệu tiết in trên TKB thì **cho kết quả y hệt**, ch
   "tiet": [9, 10]
 ```
 
-> **⚠ Nhầm hai khoá này là lỗi hay gặp nhất, mà lại KHÔNG báo lỗi.** Ghi
-> `"tiet": [4, 5]` thì chương trình **không cấm gì cả** — buổi chiều làm gì có
-> tiết 4, tiết 5. Ngược lại `"tiet_trong_buoi": [9, 10]` cũng không cấm gì, vì
-> buổi chỉ có 5 tiết. Cả hai trường hợp đều chạy trót lọt, báo ĐẠT, rồi cho ra
-> một TKB không hề tôn trọng yêu cầu của thầy cô. Đặt xong nhớ mở sheet "Kiểm tra
-> quy tắc" xem cột Ghi chú có đúng tiết mình muốn không.
+> **⚠ Nhầm hai khoá này là lỗi hay gặp nhất — nhưng chương trình tự bắt được.**
+> Ghi `"tiet": [4, 5]` (buổi chiều làm gì có tiết 4, tiết 5) hoặc
+> `"tiet_trong_buoi": [9, 10]` (buổi chỉ có 5 tiết) thì chương trình **dừng ngay**,
+> chỉ đích danh khoá sai và đoán luôn khoá bạn định dùng:
+>
+> ```
+> [LỖI] Khai báo sai trong cauhinh.json
+>       Quy tắc : Sử cô Ngọc Uyên không xếp 2 tiết cuối buổi (tiết 9 và tiết 10)
+>       Khoá    : "tiet_trong_buoi"
+>       Giá trị : 9, 10   -> KHÔNG hợp lệ
+>       Miền hợp lệ: 1..5 (thứ tự trong buổi, 1 = tiết đầu buổi Chiều)
+>       => Có phải bạn định dùng khoá "tiet" không? Giá trị 9, 10 hợp lệ với khoá đó.
+>          Miền của "tiet": số hiệu tiết in trên TKB: 6, 7, 8, 9, 10
+>       Sửa lại rồi chạy: python xep_tkb.py
+> ```
+>
+> Khoá `o` của `khong_xep_o` cũng được kiểm y như vậy, cả phần thứ lẫn phần tiết.
+> Ghi `"o": [[4, 4]]` sẽ được nhắc: *"tiết thứ 4 của buổi" thì phải ghi là tiết 9*.
 
 ---
 
