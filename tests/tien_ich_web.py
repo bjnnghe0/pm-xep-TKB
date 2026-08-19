@@ -214,13 +214,16 @@ def doc_o_excel(duong_dan, sheet='Khối 12', vung=(8, 33, 4, 10)):
             for r in range(r1, r2) for c in range(c1, c2)}
 
 
-def doi_trang_thai(k, cho=200):
-    """Hỏi /api/trang-thai tới lúc xong. Trả về đối tượng trạng thái cuối."""
+def doi_trang_thai(k, cho=400):
+    """Hỏi /api/trang-thai tới lúc HẾT CHẠY. Trả về trạng thái cuối.
+
+       Đợi 'dang_chay' về False chứ không đợi cờ 'xong': lúc chưa chạy lần
+       nào thì 'xong' vẫn là False, đợi nó sẽ treo hết thời gian cho phép."""
     import time
     t = {}
     for _ in range(cho):
         ma, t = k.js('/api/trang-thai?tu=0')
-        if t and t.get('xong'):
+        if t and not t.get('dang_chay'):
             return t
-        time.sleep(0.2)
+        time.sleep(0.1)
     return t

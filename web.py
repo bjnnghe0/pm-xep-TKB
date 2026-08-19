@@ -60,16 +60,46 @@ TT = {}
 PHIEN = {'them': []}
 
 
+def _trang_thai_moi():
+    return {
+        'dang_chay': False, 'xong': False, 'loi': None,
+        'log': [], 'da_thu': 0, 'so_lan': 0, 'hop_le': 0,
+        'con_giay': 0, 'bat_dau': 0,
+        'bang': [], 'diem_mem': {}, 'diem': None, 'so_loi': 0,
+        'luoi': None, 'gv': None, 'file_xuat': None, 'file_web': None,
+    }
+
+
 def dat_lai_trang_thai():
     with KHOA:
         TT.clear()
-        TT.update({
-            'dang_chay': False, 'xong': False, 'loi': None,
-            'log': [], 'da_thu': 0, 'so_lan': 0, 'hop_le': 0,
-            'con_giay': 0, 'bat_dau': 0,
-            'bang': [], 'diem_mem': {}, 'diem': None, 'so_loi': 0,
-            'luoi': None, 'gv': None, 'file_xuat': None, 'file_web': None,
-        })
+        TT.update(_trang_thai_moi())
+
+
+def gianh_luot():
+    """Giành quyền chạy MỘT lượt xếp. True = giành được, False = đang bận.
+
+       Điểm mấu chốt: KIỂM cờ, XOÁ trạng thái cũ và ĐẶT cờ đều nằm trong CÙNG
+       một lần giữ khoá. Trước đây ba việc đó tách rời:
+
+           with KHOA:                  <- chỉ ĐỌC cờ, rồi nhả khoá ngay
+               dang = TT['dang_chay']
+           ...12 dòng đọc thân yêu cầu...
+           dat_lai_trang_thai()        <- lại đặt cờ về False
+           dat(dang_chay=True)         <- mãi tới đây mới ĐẶT
+
+       nên hai yêu cầu tới gần nhau (bấm đúp, hai tab, hai người) đều thấy
+       False và cùng khởi động một luồng giải. Đã đo: 8 người bấm cùng lúc,
+       4 trên 6 vòng có 2 lượt cùng chạy — hai luồng cùng ghi TKB_Khoi12.xlsx
+       và cùng trộn vào một khung nhật ký, người này thấy kết quả người kia.
+    """
+    with KHOA:
+        if TT.get('dang_chay'):
+            return False
+        TT.clear()
+        TT.update(_trang_thai_moi())
+        TT['dang_chay'] = True
+        return True
 
 
 dat_lai_trang_thai()
@@ -702,26 +732,24 @@ class May(BaseHTTPRequestHandler):
             self._json({'loi': traceback.format_exc()}, 500)
 
     def _xep(self):
-        with KHOA:
-            if TT['dang_chay']:
-                dang = True
-            else:
-                dang = False
-        if dang:
-            return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
-
+        # Đọc và kiểm thân TRƯỚC khi giành chỗ: yêu cầu hỏng thì phải trả lỗi
+        # mà không chiếm mất lượt của người khác.
         d = self._than_json()
         tuan = (d.get('tuan') or '').strip() or None
         seed = d.get('seed')
         so_lan = d.get('so_lan')
-        tat = [int(x) for x in d.get('tat', [])]
+        tat = sorted(_tap_chi_so(d.get('tat', [])))
         seed = int(seed) if str(seed).strip() not in ('', 'None', 'null') else None
         so_lan = int(so_lan) if str(so_lan).strip() not in ('', 'None', 'null') else None
 
-        dat_lai_trang_thai()
-        dat(dang_chay=True)
-        threading.Thread(target=_chay, args=(tuan, seed, so_lan, tat),
-                         daemon=True).start()
+        if not gianh_luot():
+            return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
+        try:
+            threading.Thread(target=_chay, args=(tuan, seed, so_lan, tat),
+                             daemon=True).start()
+        except BaseException:
+            dat(dang_chay=False, xong=True)     # nhả chỗ, đừng kẹt mãi
+            raise
         return self._json({'ok': True})
 
     def _thu(self):

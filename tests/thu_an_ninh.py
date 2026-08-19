@@ -33,6 +33,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -253,10 +254,124 @@ def ca_a7_sao_luu_xoay_vong(tm):
 
 
 # ==========================================================================
+def ca_a4_mot_luot(tm):
+    print('\nCA A4 — hai lượt xếp KHÔNG BAO GIỜ được chạy chồng lên nhau')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a4')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+
+    # ĐO THẲNG ĐỘ CHỒNG LẤN, không đếm số 200.
+    #
+    # Vì sao không đếm được: bộ giải là Python thuần, ăn CPU và giữ GIL, nên
+    # các luồng HTTP gần như đói hẳn trong lúc giải. Đã đo: 8 người bấm cùng
+    # lúc thì người thứ 8 mãi 1,06 giây mới được phục vụ — sau khi lượt trước
+    # đã xong ở 0,78 giây. Người đó nhận 200 là ĐÚNG, hai lượt NỐI TIẾP nhau
+    # chứ không chồng nhau. Đếm số 200 sẽ báo đỏ oan, và kéo dài lượt giải
+    # cũng không cứu được vì yêu cầu đến muộn lại càng được phục vụ muộn hơn.
+    #
+    # Thứ cần khẳng định là: không lúc nào có hai luồng _chay cùng sống. Bọc
+    # đếm quanh web._chay để đo đúng điều đó. Yêu cầu vẫn đi qua HTTP thật —
+    # đây là dụng cụ đo, không phải gọi tắt vào hàm xử lý.
+    import web as W
+    that = W._chay
+    dem = {'dang': 0, 'nhieu_nhat': 0, 'tong': 0}
+    khoa_dem = threading.Lock()
+
+    def dem_chay(*a, **kw):
+        with khoa_dem:
+            dem['dang'] += 1
+            dem['tong'] += 1
+            dem['nhieu_nhat'] = max(dem['nhieu_nhat'], dem['dang'])
+        try:
+            return that(*a, **kw)
+        finally:
+            with khoa_dem:
+                dem['dang'] -= 1
+
+    W._chay = dem_chay
+
+    # Nới khe hở CÓ SẴN cho đo được — không tạo lỗi mới.
+    #
+    # _than_json() là điểm mấu chốt phân biệt hai bản: bản cũ đọc cờ dang_chay
+    # RỒI MỚI gọi _than_json() rồi mãi sau mới đặt cờ, nên _than_json() nằm
+    # NGAY GIỮA vùng chưa khoá; bản mới gọi _than_json() TRƯỚC khi giành chỗ,
+    # nên nó nằm NGOÀI vùng đó. Thêm 50ms ở đây làm khe hở của bản cũ rộng ra
+    # đủ để mọi luồng cùng lọt, còn bản mới thì không ảnh hưởng gì.
+    #
+    # Không có mẹo này thì khe hở hẹp tới mức 8 luồng qua 5 vòng vẫn không
+    # trúng, và ca thử sẽ XANH cả trên mã hỏng — đã thử, đúng như vậy.
+    that_tj = W.May._than_json
+
+    def cham_tj(may, *a, **kw):
+        d = that_tj(may, *a, **kw)
+        time.sleep(0.05)
+        return d
+
+    W.May._than_json = cham_tj
+    try:
+        SO_NGUOI, SO_VONG = 8, 3
+        with MayChuTam(dd) as (k, _):
+            for vong in range(SO_VONG):
+                doi_trang_thai(k)
+                rao = threading.Barrier(SO_NGUOI)
+                ma = []
+                khoa_ds = threading.Lock()
+
+                def ban(i):
+                    k2 = Khach(k.cong)
+                    rao.wait()
+                    m, _t = k2.js('/api/xep', {'tuan': f'NGUOI-{i}'})
+                    with khoa_ds:
+                        ma.append(m)
+
+                ts = [threading.Thread(target=ban, args=(i,))
+                      for i in range(SO_NGUOI)]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
+                kiem(dem['nhieu_nhat'] == 1,
+                     f'Vòng {vong + 1}: {SO_NGUOI} người bấm cùng lúc -> '
+                     f'nhiều nhất {dem["nhieu_nhat"]} lượt chạy đồng thời '
+                     f'({ma.count(200)} nhận, {ma.count(409)} bị chặn 409)')
+            doi_trang_thai(k)
+
+            kiem(dem['nhieu_nhat'] == 1,
+                 f'Qua {SO_VONG} vòng và {dem["tong"]} lượt, chưa lúc nào có '
+                 f'2 lượt chồng nhau (nhiều nhất {dem["nhieu_nhat"]})')
+
+            # nhật ký chỉ được là của MỘT lượt, không trộn hai người
+            t = doi_trang_thai(k)
+            log = '\n'.join(t.get('log_moi') or [])
+            kiem(log.count('Tổng:') == 1,
+                 f'Khung nhật ký chỉ chứa một lượt — '
+                 f'{log.count("Tổng:")} dòng "Tổng:"')
+            ten = [d for d in (t.get('log_moi') or []) if 'NGUOI-' in d]
+            kiem(len(ten) == 1,
+                 f'Chỉ một tuần được ghi vào nhật ký — {len(ten)} dòng')
+            luoi_tuan = (t.get('luoi') or {}).get('tuan')
+            kiem(bool(ten) and luoi_tuan and luoi_tuan in ten[0],
+                 f'Lưới hiện ra đúng của lượt đã chạy — {luoi_tuan}')
+
+            # yêu cầu hỏng KHÔNG được chiếm chỗ rồi bỏ đó
+            ma, _ = k.post('/api/xep', 'khong-phai-json')
+            kiem(ma == 400, f'Thân hỏng -> 400 — {ma}')
+            ma, _ = k.js('/api/xep', {})
+            kiem(ma == 200,
+                 f'Và lượt sau vẫn bấm được (chỗ không bị chiếm oan) — {ma}')
+            doi_trang_thai(k)
+    finally:
+        W._chay = that
+        W.May._than_json = that_tj
+
+
+# ==========================================================================
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
     ca_a7_sao_luu_xoay_vong(tm)
+    ca_a4_mot_luot(tm)
 
 
 if __name__ == '__main__':
