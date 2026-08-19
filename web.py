@@ -470,11 +470,7 @@ def _chay(tuan, seed, so_lan, tat):
         bt = X.BaiToan(cfg)
 
         goc = cfg.get('tim_kiem', {})
-        tk = {'so_lan_thu': so_lan or goc.get('so_lan_thu', 300),
-              'seed': seed if seed is not None else goc.get('seed', 0),
-              'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
-              'gioi_han_giay_moi_lan': goc.get('gioi_han_giay_moi_lan', 3.0),
-              'gioi_han_tong_giay': goc.get('gioi_han_tong_giay', 60)}
+        tk = X.gop_tim_kiem(goc, so_lan_thu=so_lan, seed=seed)
 
         cung = [q for q in bt.quy_tac if not q.TEN.startswith('uu_tien')]
         mem = [q for q in bt.quy_tac if q.TEN.startswith('uu_tien')]
@@ -718,9 +714,11 @@ def thu_quy_tac(r, tat):
             cfg['quy_tac'][i]['bat'] = False
     bt = X.BaiToan(cfg)
     goc = cfg.get('tim_kiem', {})
-    tk = {'so_lan_thu': 30, 'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
-          'gioi_han_giay_moi_lan': 2, 'gioi_han_tong_giay': 8,
-          'seed': goc.get('seed', 0)}
+    # che_do_tai_lap=False là CỐ Ý, kể cả khi cauhinh.json bật nó: đường này
+    # giải NGAY trong luồng HTTP nên bắt buộc phải giữ chặn bằng đồng hồ, không
+    # thì một lượt thử quy tắc có thể giữ luồng rất lâu.
+    tk = X.gop_tim_kiem(goc, so_lan_thu=30, gioi_han_giay_moi_lan=2,
+                        gioi_han_tong_giay=8, che_do_tai_lap=False)
     kqt = X.tim_phuong_an(bt, tk)
     pa = kqt.tot or kqt.du_phong
     vi_pham = []

@@ -68,9 +68,13 @@ async function hoi() {
   if (t.dang_chay) {
     const pc = t.so_lan ? Math.min(100, Math.round((t.da_thu / t.so_lan) * 100)) : 0;
     $('thanh-chay').style.width = pc + '%';
+    // con_giay là null khi chạy chế độ tái lập (không có giới hạn thời gian
+    // nên không đếm ngược được) — lúc đó bỏ hẳn vế đếm ngược, đừng hiện "null".
+    const dem = (t.con_giay === null || t.con_giay === undefined)
+      ? '' : ` · còn khoảng ${t.con_giay} giây`;
     $('chu-tien-do').textContent =
-      `Đang thử lần ${t.da_thu}/${t.so_lan} · ${t.hop_le} phương án hợp lệ · `
-      + `còn khoảng ${t.con_giay} giây`;
+      `Đang thử lần ${t.da_thu}/${t.so_lan} · ${t.hop_le} phương án hợp lệ`
+      + dem;
   }
 
   if (t.xong) {

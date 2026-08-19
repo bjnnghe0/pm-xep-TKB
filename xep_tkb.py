@@ -359,8 +359,10 @@ class BoGiai:
             return True
         self.buoc += 1
         if self.buoc > self.gioi_han:
-            raise TimeoutError
-        if self.buoc % 512 == 0 and time.time() - self.moc_gio > self.gioi_han_giay:
+            raise TimeoutError            # <- CÁI NÀY bảo đảm dừng, không phải đồng hồ
+        if (self.gioi_han_giay is not None
+                and self.buoc % 512 == 0
+                and time.time() - self.moc_gio > self.gioi_han_giay):
             raise TimeoutError
 
         tot, tot_lc, tot_k = None, None, None
@@ -499,12 +501,64 @@ KetQuaTim = namedtuple(
     'tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay')
 
 
+def gop_tim_kiem(goc, **ghi_de):
+    """Gộp mục "tim_kiem" của cauhinh.json với tuỳ chọn dòng lệnh / web.
+
+       NƠI DUY NHẤT dựng dict tk. Trước đây ba chỗ chép tay cùng một dict
+       (xep_tkb.main, web._chay, web.thu_quy_tac), nên mỗi khi thêm một luật mới
+       là phải nhớ sửa cả ba — quên một chỗ thì hỏng trong im lặng. Cùng lý lẽ
+       đã dùng cho khop_loc() và tim_phuong_an().
+
+       ghi_de: giá trị None bị BỎ QUA (coi như không đè), để người gọi truyền
+       thẳng tuỳ chọn dòng lệnh mà người dùng chưa khai.
+
+       CHẾ ĐỘ TÁI LẬP (che_do_tai_lap): bỏ HẲN hai phép kiểm đồng hồ, chỉ còn
+       chặn bằng BỘ ĐẾM. Xem ghi chú dài ở tim_phuong_an().
+    """
+    tk = {'so_lan_thu': goc.get('so_lan_thu', 300),
+          'seed': goc.get('seed', 0),
+          'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
+          'gioi_han_giay_moi_lan': goc.get('gioi_han_giay_moi_lan', 3.0),
+          'gioi_han_tong_giay': goc.get('gioi_han_tong_giay', 60)}
+    tai_lap = bool(goc.get('che_do_tai_lap', False))
+    for k, v in ghi_de.items():
+        if v is None:
+            continue
+        if k == 'che_do_tai_lap':
+            tai_lap = bool(v)
+        else:
+            tk[k] = v
+    if tai_lap:
+        tk['gioi_han_giay_moi_lan'] = None
+        tk['gioi_han_tong_giay'] = None
+    tk['che_do_tai_lap'] = tai_lap
+    return tk
+
+
 def tim_phuong_an(bt, tk, bao_tien_do=None):
     """Chạy nhiều lần thử rồi giữ phương án tốt nhất.
 
-       tk        : mục "tim_kiem" đã gộp với tuỳ chọn dòng lệnh, cần đủ
-                   so_lan_thu / seed / gioi_han_buoc /
-                   gioi_han_giay_moi_lan / gioi_han_tong_giay.
+       tk        : dict do gop_tim_kiem() dựng, cần đủ so_lan_thu / seed /
+                   gioi_han_buoc / gioi_han_giay_moi_lan / gioi_han_tong_giay.
+                   Hai khoá giây có thể là None = KHÔNG giới hạn thời gian.
+
+       CHẾ ĐỘ TÁI LẬP — vì sao bỏ hẳn phép kiểm chứ không đặt số thật to:
+       cả bộ giải chỉ có ĐÚNG HAI chỗ nhìn đồng hồ (dòng ~363 và dòng ~549
+       bên dưới); mọi thứ còn lại đã tất định sẵn — random.Random(seed + i) cấp
+       riêng cho từng lượt, self.buoc là bộ đếm, dat_lai() dựng lại quy tắc mỗi
+       lượt. Đặt giới hạn "rất rộng" chỉ ghim theo XÁC SUẤT: máy bận thì nó vẫn
+       nổ, ca thử chớp đỏ, và người sau lại đổ cho "dao động bình thường". Bỏ
+       hẳn phép kiểm làm điều đó KHÔNG THỂ xảy ra.
+
+       CÁI GÌ BẢO ĐẢM DỪNG khi không còn đồng hồ: hai BỘ ĐẾM.
+         - gioi_han_buoc: _quay_lui() tăng self.buoc ở đầu MỖI lần gọi rồi ném
+           TimeoutError khi vượt. Mọi đường đệ quy đều đi qua đúng hàm đó, nên
+           một lượt không thể quá gioi_han_buoc nút.
+         - so_lan_thu: vòng for bên ngoài.
+       Chặn trên = so_lan_thu × gioi_han_buoc nút, hữu hạn, không phụ thuộc
+       đồng hồ. Cấu hình VÔ NGHIỆM cũng dừng — có ca thử riêng khẳng định điều
+       đó (tests/thu_tai_lap.py).
+
        bao_tien_do : hàm gọi lại sau MỖI lần thử, nhận
                    (da_thu, so_lan, so_hop_le, con_giay).
                    None = im lặng, đúng như hành vi dòng lệnh.
@@ -522,7 +576,7 @@ def tim_phuong_an(bt, tk, bao_tien_do=None):
     tot, diem_tot, so_ok, so_hop_le, da_thu = None, None, 0, 0, 0
     du_phong, diem_dp, loi_dp = None, None, None
     for i in range(so_lan):
-        if time.time() - t0 > tong_giay:
+        if tong_giay is not None and time.time() - t0 > tong_giay:
             break
         da_thu += 1
         pa = BoGiai(bt, random.Random(seed + i), gh, gh_giay).giai()
@@ -540,8 +594,11 @@ def tim_phuong_an(bt, tk, bao_tien_do=None):
                 if diem_tot is None or d > diem_tot:
                     diem_tot, tot = d, dict(pa)
         if bao_tien_do:
-            bao_tien_do(da_thu, so_lan, so_hop_le,
-                        max(0, round(tong_giay - (time.time() - t0))))
+            # Chế độ tái lập không có đồng hồ nên không đếm ngược được -> None.
+            # Giao diện phải chịu được giá trị này (app.js ẩn dòng đếm ngược).
+            con = (None if tong_giay is None
+                   else max(0, round(tong_giay - (time.time() - t0))))
+            bao_tien_do(da_thu, so_lan, so_hop_le, con)
     return KetQuaTim(tot, diem_tot, so_ok, so_hop_le, da_thu,
                      du_phong, diem_dp, loi_dp, time.time() - t0)
 
@@ -783,6 +840,9 @@ def main():
                          'trong cauhinh.json (file không bị sửa)')
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--lan', type=int, default=None)
+    ap.add_argument('--tai-lap', action='store_true', dest='tai_lap',
+                    help='chế độ TÁI LẬP: bỏ hẳn giới hạn thời gian, chỉ chặn '
+                         'bằng bộ đếm, nên cùng seed luôn cho cùng kết quả')
     ap.add_argument('--in-man-hinh', action='store_true')
     ap.add_argument('--xuat-html', action='store_true',
                     help='xuất thêm trang web tĩnh tkb_web.html để giáo viên '
@@ -802,11 +862,8 @@ def main():
     bt = BaiToan(cfg)
 
     goc = cfg.get('tim_kiem', {})
-    tk = {'so_lan_thu': args.lan or goc.get('so_lan_thu', 300),
-          'seed': args.seed if args.seed is not None else goc.get('seed', 0),
-          'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
-          'gioi_han_giay_moi_lan': goc.get('gioi_han_giay_moi_lan', 3.0),
-          'gioi_han_tong_giay': goc.get('gioi_han_tong_giay', 60)}
+    tk = gop_tim_kiem(goc, so_lan_thu=args.lan, seed=args.seed,
+                      che_do_tai_lap=args.tai_lap or None)
 
     cung = [q for q in bt.quy_tac if not q.TEN.startswith('uu_tien')]
     mem = [q for q in bt.quy_tac if q.TEN.startswith('uu_tien')]

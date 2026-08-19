@@ -20,6 +20,7 @@ python xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
 python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
 python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
 python xep_tkb.py --xuat-html          # xuất thêm trang web tĩnh tkb_web.html
+python xep_tkb.py --tai-lap            # chế độ TÁI LẬP: cùng seed -> cùng kết quả
 python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
@@ -71,6 +72,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tests/thu_tai_lap.py` | Chế độ tái lập: cùng seed cho cùng kết quả (cả giữa hai tiến trình), và cấu hình VÔ NGHIỆM vẫn DỪNG | Chạy khi sửa `gop_tim_kiem()` hoặc `tim_phuong_an()` |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
@@ -234,6 +236,43 @@ là chạy được) → thêm vào đúng nhóm trong `in_danh_muc()` → thêm
 ---
 
 ## Bộ giải
+
+### Chế độ tái lập — `tim_kiem.che_do_tai_lap`
+
+Bộ giải chặn bằng **đồng hồ treo tường**, nên hai lần chạy cùng seed vẫn cho số
+phương án khác nhau (đã thấy 396 → 395 → 396). Con số lệch thì nhỏ, nhưng hệ quả
+thì không: **mọi hồi quy thật đều có thể bị đổ cho "dao động bình thường"**.
+
+Bật `che_do_tai_lap` (trong mục `tim_kiem` của `cauhinh.json`, hoặc cờ
+`--tai-lap`) thì **bỏ HẲN** hai phép kiểm đồng hồ. Mặc định TẮT; chạy thật giữ
+nguyên 60 giây.
+
+> **Bỏ hẳn chứ không đặt số thật to.** `cau_hinh_tam()` của bộ thử vốn đã đặt
+> `gioi_han_giay_moi_lan: 10, gioi_han_tong_giay: 3600` — tức đã cố ghim, nhưng
+> ghim theo **xác suất**: máy bận thì nó vẫn nổ, ca thử chớp đỏ, và người sau lại
+> đổ cho dao động. Bỏ hẳn phép kiểm làm điều đó **không thể** xảy ra.
+
+**Cái gì bảo đảm bộ giải DỪNG khi không còn đồng hồ — hai BỘ ĐẾM:**
+
+| Bộ đếm | Chỗ cài | Chặn cái gì |
+|---|---|---|
+| `gioi_han_buoc` (30000) | `_quay_lui()` tăng `self.buoc` ở đầu **mỗi** lần gọi rồi ném `TimeoutError` khi vượt | Một lượt. Mọi đường đệ quy đều đi qua đúng hàm đó |
+| `so_lan_thu` | vòng `for` của `tim_phuong_an()` | Số lượt |
+
+Chặn trên = `so_lan_thu × gioi_han_buoc` nút, hữu hạn, không phụ thuộc đồng hồ.
+
+> **Ca thử phải bắt bộ giải VÉT THẬT, không chỉ "trả về nhanh".** Bản đầu tôi
+> dồn hết mọi môn vào **một** thứ: đúng là vô nghiệm, nhưng bộ giải bí ngay ở nút
+> đầu và trả về sau **0,0 giây** — chứng minh được đúng một điều vô nghĩa. Cấu
+> hình dùng thật là dồn vào **hai** thứ: vẫn vô nghiệm (24 tiết không nhét vừa
+> 10 ô) nhưng đủ rộng để quay lui bùng nổ — đo được **đốt trọn 20.000 bước trong
+> ~6 giây mỗi lượt**, và nhân ba bộ đếm thì thời gian nhân ba (5,9s → 17,6s).
+
+`gop_tim_kiem()` là **nơi duy nhất** dựng dict `tim_kiem`. Trước đây ba chỗ chép
+tay cùng một dict (`xep_tkb.main`, `web._chay`, `web.thu_quy_tac`) nên mỗi luật
+mới phải nhớ sửa cả ba. Ngoại lệ có chủ ý: `web.thu_quy_tac()` ép
+`che_do_tai_lap=False` kể cả khi cấu hình bật, vì nó giải **ngay trong luồng
+HTTP** nên bắt buộc phải giữ chặn bằng đồng hồ.
 
 Quay lui + MRV. Khoá chọn biến: `(số lựa chọn, hoan(c), la_cd, -size)` — ít lựa
 chọn nhất trước, cụm bị `hoan` để sau, chuyên đề để sau, cụm to trước.
