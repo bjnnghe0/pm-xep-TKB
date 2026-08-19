@@ -73,6 +73,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `xuat_html.py` | Sinh `tkb_web.html` — một file tự chứa để chia sẻ | Không phụ thuộc openpyxl |
 | `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp 150 ô với Excel | Chạy khi sửa `xuat_html.py` |
 | `DUA_LEN_MANG.md` | Hướng dẫn GitHub Pages cho người không rành kỹ thuật | Cập nhật khi đổi quy trình |
+| `web_public/` | `index.html` (bản sao `tkb_web.html`) + `.nojekyll` rỗng — thư mục GitHub Pages phục vụ | Do script ghi, đừng sửa tay |
+| `dua_len.sh` · `dua_len.bat` | Xếp → xuất HTML → chép sang `web_public/` → commit → push | Dừng và báo rõ nếu chưa nối kho từ xa |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -457,12 +459,37 @@ Không CDN, không font ngoài, không `fetch`, không `localStorage`. Mở bằ
 không thêm logic nghiệp vụ. `web.py` sinh sẵn `tkb_web.html` sau mỗi lượt xếp
 thành công; nút **Xuất trang web** chỉ tải file đó về qua `GET /api/tai-web`.
 
-> **Riêng tư:** trang này công khai với bất kỳ ai có link. Ô tiết chỉ hiện **tên
-> viết tắt** giáo viên, nhưng đầu mỗi cột lớp đang hiện **họ tên đầy đủ của GVCN**
-> (lấy từ khoá `gvcn`), giống bản in. Muốn chỉ hiện tên viết tắt thì đổi `gvcn`
-> sang `gvcn_vt` trong `xuat_html.du_lieu()` — khoá `gvcn_vt` đã có sẵn trong
-> `cauhinh.json` và hiện chưa chỗ nào dùng. Đã nêu trong `DUA_LEN_MANG.md`, chờ
-> nhà trường quyết.
+> **Riêng tư — đã chốt 19/8/2026, đừng tự đổi:** trang công khai **GIỮ NGUYÊN họ
+> tên đầy đủ của GVCN** ở đầu mỗi cột lớp (khoá `gvcn`). Lý do: trang này là bản
+> điện tử của đúng tờ TKB đang treo ở trường, mà tờ đó vốn đã ghi họ tên đầy đủ
+> GVCN — đổi sang tên viết tắt sẽ làm bản trên mạng khác bản in, gây khó cho phụ
+> huynh khi cần biết ai chủ nhiệm lớp con mình. Người dùng đã cân nhắc và quyết
+> định như vậy.
+>
+> Kèm theo quyết định đó: `DUA_LEN_MANG.md` mở đầu bằng bảng liệt kê **chính xác**
+> những gì công khai (tên lớp · **họ tên đầy đủ GVCN** · tên viết tắt GV bộ môn ·
+> môn · thứ và tiết · tuần), nói rõ **không có** số điện thoại/email/địa chỉ/ngày
+> sinh/ảnh/tên học sinh, và nhắc **hỏi ý nhà trường trước khi bật Pages**.
+>
+> Khoá `gvcn_vt` trong `cauhinh.json` vẫn chưa chỗ nào dùng — nếu sau này nhà
+> trường đổi ý thì đó là chỗ để đổi sang, trong `xuat_html.du_lieu()`.
+
+### Đưa lên GitHub Pages
+
+`web_public/index.html` là bản sao của `tkb_web.html`; `web_public/.nojekyll` rỗng
+để Pages đừng xử lý lại tệp. Đã kiểm `.gitignore` **không** loại nhầm hai tệp này
+(`tkb_web.html` ở thư mục gốc thì bị loại, đúng ý — nó là tệp sinh ra).
+
+`dua_len.sh` / `dua_len.bat` kiểm đủ điều kiện **trước** khi xếp, để không mất 50
+giây rồi mới báo thiếu: có `git` chưa → có phải kho git chưa → có remote `origin`
+chưa. Thiếu cái nào cũng dừng kèm hướng dẫn trỏ về `DUA_LEN_MANG.md`.
+
+> Link Pages là `https://<tk>.github.io/<kho>/**web_public/**` — có đuôi thư mục
+> vì Pages chỉ cho chọn gốc kho hoặc `docs/`. Script tự in đúng link này, và chỉ
+> đoán link khi remote thật sự ở `github.com`.
+
+Đã thử toàn bộ script bằng một kho bare cục bộ trong thư mục tạm — **không tạo kho
+GitHub, không push ra ngoài**.
 
 ---
 
