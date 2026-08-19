@@ -244,11 +244,18 @@ def ca_4_trang_tinh():
     for chu in ('Xếp thời khoá biểu', 'Quy tắc', 'Lịch giáo viên',
                 'Lưu vào cauhinh.json', 'Tải file .xlsx'):
         kiem(chu in html, f'Có nhãn tiếng Việt có dấu: "{chu}"')
+    # Đừng ghim cứng danh sách: thêm một đường API là ca thử vỡ dù không sai gì.
+    # Điều cần khẳng định là JS và web.py khớp nhau — cả hai chiều.
     duong = set(re.findall(r"fetch\('(/api/[^'?]+)", js)) \
         | set(re.findall(r"location = '(/api/[^']+)'", js))
-    kiem(duong == {'/api/xep', '/api/trang-thai', '/api/quy-tac',
-                   '/api/luu-quy-tac', '/api/tai-ve'},
-         f'JS chỉ gọi đúng 5 đường API đã có — {sorted(duong)}')
+    may = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
+    co = set(re.findall(r"duong == '(/api/[^']+)'", may))
+    kiem(duong and not (duong - co),
+         f'Mọi đường API mà JS gọi đều có trong web.py — '
+         f'{len(duong)} đường, thừa: {sorted(duong - co)}')
+    kiem(not (co - duong),
+         f'Không có đường API nào trong web.py bị bỏ quên không dùng — '
+         f'{sorted(co - duong)}')
 
 
 def ca_5_luu_quy_tac(tm):

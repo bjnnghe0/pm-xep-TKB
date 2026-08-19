@@ -21,6 +21,8 @@ sửa code. Tra cứu đầy đủ 17 loại quy tắc: **`QUY_TAC.md`**.
 | `tu_kiem_tra.py` | Chạy thử mọi loại quy tắc | Chạy sau khi sửa `quy_tac.py` |
 | `chay.bat` | Bấm đúp để chạy trên Windows | Không |
 | `web.py`, `web/` | Giao diện web chạy cục bộ | Không |
+| `xuat_html.py` | Sinh trang web tĩnh cho giáo viên/học sinh xem | Không |
+| `DUA_LEN_MANG.md` | Hướng dẫn đưa trang lên GitHub Pages | Đọc khi cần chia sẻ |
 | `TKB_Khoi12.xlsx` | Kết quả | — |
 
 ## 2. Cài đặt (làm một lần)
@@ -39,6 +41,7 @@ python xep_tkb.py --in-man-hinh        xem luôn TKB trên màn hình
 python xep_tkb.py --seed 99            ra một phương án khác hẳn
 python xep_tkb.py --xuat TKB_T3.xlsx   đổi tên file kết quả
 python xep_tkb.py --tuan "TUẦN 3 ..."  đổi dòng chữ tuần, không phải mở file
+python xep_tkb.py --xuat-html          xuất thêm trang web tkb_web.html để chia sẻ
 python tu_kiem_tra.py                  chạy thử toàn bộ các loại quy tắc
 ```
 
@@ -75,13 +78,29 @@ Bốn màn hình:
 | Màn hình | Làm gì |
 |---|---|
 | **1 · Xếp TKB** | Nhập tuần / seed / số lần thử rồi bấm nút. Một lượt mất khoảng 50 giây, thanh tiến độ chạy trong lúc chờ. Xong thì hiện bảng đối chiếu ĐẠT/LỖI và điểm các tiêu chí mềm. |
-| **2 · Xem TKB** | Xem ngay trên màn hình, có nút tải file `.xlsx` về. |
+| **2 · Xem TKB** | Xem ngay trên màn hình, có nút tải file `.xlsx` và nút **Xuất trang web** (tải `tkb_web.html` để chia sẻ). |
 | **3 · Quy tắc** | Bật/tắt từng quy tắc. Mặc định **chỉ áp cho lượt xếp tiếp theo**, không đụng file. Muốn ghi hẳn thì bấm "Lưu vào cauhinh.json" — bản cũ được cất thành `cauhinh.bak.json`. |
 | **4 · Lịch giáo viên** | Lịch dạy từng thầy cô, có ô lọc theo tên. |
 
 Nếu khai báo trong `cauhinh.json` bị sai, trang web hiện **nguyên văn** thông báo lỗi
 trong khung đỏ và máy chủ vẫn chạy — cứ sửa file rồi bấm xếp lại, không phải khởi
 động lại.
+
+## 3b. Chia sẻ thời khoá biểu cho giáo viên và học sinh
+
+`python xep_tkb.py --xuat-html` (hoặc nút **Xuất trang web** trên giao diện) sinh
+ra **`tkb_web.html`** — một file duy nhất, mở bằng điện thoại cũng đọc tốt, xem
+được theo lớp / theo giáo viên / cả khối.
+
+- **Có mạng:** đưa lên GitHub Pages, link giữ nguyên mọi tuần.
+  Xem từng bước trong **`DUA_LEN_MANG.md`**.
+- **Mất mạng:** chép file vào USB hoặc thư mục chung, **bấm đúp là mở** — file
+  không cần Internet, không cần cài gì thêm.
+
+> ⚠ Trang này ai có link cũng xem được. Chỉ để tên viết tắt giáo viên như hiện
+> tại, đừng thêm số điện thoại hay thông tin cá nhân vào `cauhinh.json`.
+
+---
 
 ## 4. File kết quả có 3 sheet
 

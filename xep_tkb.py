@@ -12,6 +12,7 @@
      python xep_tkb.py --seed 99           ra một phương án khác
      python xep_tkb.py --xuat TKB_T3.xlsx  đổi tên file kết quả
      python xep_tkb.py --tuan "TUẦN 3"    đổi dòng chữ tuần in trên TKB
+     python xep_tkb.py --xuat-html         xuất thêm trang web tĩnh tkb_web.html
 
  Dữ liệu và quy tắc nằm hết trong cauhinh.json.
  Định nghĩa các loại quy tắc nằm trong quy_tac.py.
@@ -742,6 +743,9 @@ def main():
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--lan', type=int, default=None)
     ap.add_argument('--in-man-hinh', action='store_true')
+    ap.add_argument('--xuat-html', action='store_true',
+                    help='xuất thêm trang web tĩnh tkb_web.html để giáo viên '
+                         'và học sinh vào xem')
     ap.add_argument('--quy-tac', action='store_true',
                     help='in danh mục các loại quy tắc rồi thoát')
     args = ap.parse_args()
@@ -829,6 +833,12 @@ def main():
     print('   • Sheet "Khối 12"          : TKB chính (đúng mẫu tuần 1)')
     print('   • Sheet "TKB giáo viên"    : lịch dạy từng thầy cô')
     print('   • Sheet "Kiểm tra quy tắc" : bảng đối chiếu ĐẠT/LỖI')
+
+    if args.xuat_html:
+        import xuat_html as XH                    # nạp muộn, không bắt buộc có
+        fh = XH.xuat_html(bt, tot, os.path.join(thu_muc, 'tkb_web.html'))
+        print(f'\nĐã xuất trang web: {fh}')
+        print('   Bấm đúp để mở, hoặc đưa lên mạng — xem DUA_LEN_MANG.md')
 
 
 if __name__ == '__main__':

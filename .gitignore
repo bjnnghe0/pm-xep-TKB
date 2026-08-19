@@ -5,6 +5,7 @@ __pycache__/
 # File KẾT QUẢ do chương trình sinh ra (chạy lại là có).
 # Lưu ý: mau_tkb.xlsx là file MẪU của nhà trường, VẪN phải theo dõi.
 TKB_*.xlsx
+tkb_web.html
 
 # Bản sao lưu do giao diện web tạo khi bấm "Lưu vào cauhinh.json"
 cauhinh.bak.json

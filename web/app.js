@@ -138,6 +138,7 @@ function veTKB(l) {
 }
 
 $('nut-tai').onclick = () => { window.location = '/api/tai-ve'; };
+$('nut-tai-web').onclick = () => { window.location = '/api/tai-web'; };
 
 // ---------------------------------------------------------------- 3. quy tắc
 async function napQuyTac() {

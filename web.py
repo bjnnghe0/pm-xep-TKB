@@ -59,7 +59,7 @@ def dat_lai_trang_thai():
             'log': [], 'da_thu': 0, 'so_lan': 0, 'hop_le': 0,
             'con_giay': 0, 'bat_dau': 0,
             'bang': [], 'diem_mem': {}, 'diem': None, 'so_loi': 0,
-            'luoi': None, 'gv': None, 'file_xuat': None,
+            'luoi': None, 'gv': None, 'file_xuat': None, 'file_web': None,
         })
 
 
@@ -172,13 +172,16 @@ def _chay(tuan, seed, so_lan, tat):
         fx = X.xuat_excel(bt, tot,
                           os.path.join(tm, tt['file_mau']),
                           os.path.join(tm, tt['file_xuat']))
+        import xuat_html as XH
+        fh = XH.xuat_html(bt, tot, os.path.join(tm, 'tkb_web.html'))
         ghi('')
         ghi(f'Đã xuất file: {fx}')
+        ghi(f'Đã xuất trang web: {fh}')
 
         dat(bang=[{'kq': a, 'ten': b, 'ghi_chu': c} for a, b, c in bc],
             diem_mem=dict(ct), diem=diem_tot, so_loi=so_loi,
             luoi=luoi_tkb(bt, tot, cfg), gv=lich_gv(bt),
-            file_xuat=os.path.basename(fx))
+            file_xuat=os.path.basename(fx), file_web=os.path.basename(fh))
 
     except SystemExit as e:
         # Khai báo sai trong cauhinh.json -> chương trình gốc gọi sys.exit.
@@ -333,6 +336,8 @@ class May(BaseHTTPRequestHandler):
                 return self._json(doc_quy_tac())
             if duong == '/api/tai-ve':
                 return self._tai_ve()
+            if duong == '/api/tai-web':
+                return self._tai_web()
             self._tra(404, 'text/plain', 'Không có trang này')
         except SystemExit as e:
             self._json({'loi': str(e)}, 500)
@@ -371,6 +376,21 @@ class May(BaseHTTPRequestHandler):
                                          'officedocument.spreadsheetml.sheet')
         self.send_header('Content-Disposition',
                          f'attachment; filename="{os.path.basename(dd)}"')
+        self.send_header('Content-Length', str(len(than)))
+        self.end_headers()
+        self.wfile.write(than)
+
+    def _tai_web(self):
+        dd = os.path.join(thu_muc_cauhinh(), 'tkb_web.html')
+        if not os.path.exists(dd):
+            return self._tra(404, 'text/plain',
+                             'Chưa có trang web. Hãy xếp thời khoá biểu trước.')
+        with open(dd, 'rb') as f:
+            than = f.read()
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Disposition',
+                         'attachment; filename="tkb_web.html"')
         self.send_header('Content-Length', str(len(than)))
         self.end_headers()
         self.wfile.write(than)

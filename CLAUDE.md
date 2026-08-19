@@ -19,12 +19,14 @@ python xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
 python xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
 python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
 python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
+python xep_tkb.py --xuat-html          # xuất thêm trang web tĩnh tkb_web.html
 python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
 python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
 python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
 python tests/thu_web.py                # thử giao diện web
+python tests/thu_xuat_html.py          # thử trang web tĩnh
 
 python web.py                          # giao diện web -> http://127.0.0.1:20266
 python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -64,6 +66,9 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
+| `xuat_html.py` | Sinh `tkb_web.html` — một file tự chứa để chia sẻ | Không phụ thuộc openpyxl |
+| `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp 150 ô với Excel | Chạy khi sửa `xuat_html.py` |
+| `DUA_LEN_MANG.md` | Hướng dẫn GitHub Pages cho người không rành kỹ thuật | Cập nhật khi đổi quy trình |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -391,6 +396,37 @@ mẫu nào thì vẫn phải chép tay sang mục `quy_tac` như cũ.
 
 ---
 
+## Trang web tĩnh (`xuat_html.py`)
+
+`xuat_html(bt, pa, duong_dan)` — nhận đúng `bt` và `pa` như `xuat_excel()`, sinh
+**một file `.html` duy nhất**, tự chứa: HTML + CSS + JS + dữ liệu nhúng dạng JSON.
+Không CDN, không font ngoài, không `fetch`, không `localStorage`. Mở bằng `file://`
+(bấm đúp từ USB) chạy đủ chức năng; đưa lên GitHub Pages cũng chạy y hệt.
+
+- Dữ liệu nằm ở `<script id="du-lieu" type="application/json">`, JS nằm giữa hai
+  mốc `/*JS-BAT-DAU*/` … `/*JS-KET-THUC*/` — **hai mốc này để ca thử bóc ra kiểm**,
+  đừng xoá. Chuỗi `</` trong JSON được đổi thành `<\/` để không cắt ngang thẻ
+  `<script>`.
+- Ô ghi dạng mảng phẳng `[lop, ngay, vitri, mon, gv]` cho nhẹ file (~14 KB).
+- Ba chế độ xem chọn bằng nút, lựa chọn ghi vào địa chỉ trang (`#lop=12B3`,
+  `#gv=N.Uyên`, `#khoi`) nên **chia sẻ được đúng màn hình đang xem** và tải lại
+  không mất. Không dùng `localStorage` — người xem có thể mở bằng `file://`.
+- Ưu tiên điện thoại: font hệ thống, `viewport`, `@media (max-width: 560px)`, bảng
+  "cả khối" cuộn ngang trong khung `overflow-x: auto` với cột đầu `position: sticky`.
+
+`xep_tkb.py` **chỉ thêm lời gọi** (`--xuat-html`, nạp muộn `import xuat_html`),
+không thêm logic nghiệp vụ. `web.py` sinh sẵn `tkb_web.html` sau mỗi lượt xếp
+thành công; nút **Xuất trang web** chỉ tải file đó về qua `GET /api/tai-web`.
+
+> **Riêng tư:** trang này công khai với bất kỳ ai có link. Ô tiết chỉ hiện **tên
+> viết tắt** giáo viên, nhưng đầu mỗi cột lớp đang hiện **họ tên đầy đủ của GVCN**
+> (lấy từ khoá `gvcn`), giống bản in. Muốn chỉ hiện tên viết tắt thì đổi `gvcn`
+> sang `gvcn_vt` trong `xuat_html.du_lieu()` — khoá `gvcn_vt` đã có sẵn trong
+> `cauhinh.json` và hiện chưa chỗ nào dùng. Đã nêu trong `DUA_LEN_MANG.md`, chờ
+> nhà trường quyết.
+
+---
+
 ## Cách kiểm chứng một thay đổi
 
 Ngoài hai lệnh bắt buộc, đây là hai kỹ thuật đã dùng khi sửa nhánh dự phòng của
@@ -457,9 +493,12 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   chỗ lọc thì tụt còn 5/25.
 - `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
-- `python tests/thu_web.py`: **47/47 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python tests/thu_web.py`: **48/48 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
+- `python tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
+  giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
+  `node` — ca thử không đòi hỏi phải cài `node`.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
