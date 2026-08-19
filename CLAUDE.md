@@ -239,22 +239,36 @@ pdftoppm -png -r 110 /tmp/in.pdf /tmp/trang         # xem tận mắt
 ```
 
 Đo bằng `pdftotext -bbox`: chữ cuối cùng cách mép vùng in **0,07 inch** — trang
-đã gần như kín. Vì `fitToHeight=1`, thêm dòng bên dưới khối ký tên sẽ **không**
-tràn sang trang 2 nữa mà **âm thầm thu nhỏ cả bảng**. Thêm rồi thì phải xuất PDF
-xem lại, đừng đinh ninh là vẫn đọc được.
+đã gần như kín.
 
-> **Dòng 6 đã sửa; ô ghi chú `B45` thì chưa.** Cả hai đều bật `wrap_text` nhưng
-> bị ghim `customHeight=True` ở 12.75pt trong khi nội dung dài hơn một dòng, nên
-> chữ bị cắt khi in.
-> - **Dòng 6** (tên lớp + phòng học): đã bỏ ghim, cho tự giãn — giờ hiện đủ ba
->   dòng. Đây là chỗ đáng sửa nhất vì nó chứa tên lớp.
-> - **`B45`** (ghi chú giờ vào lớp): **cố ý để nguyên**. Cột B chỉ rộng 7.29 nên
->   cho tự giãn thì câu ghi chú xếp thành **11 dòng dọc**, đẩy khối ký tên sang
->   trang 2 — đã thử và đo. Muốn chữa đúng thì phải gộp `B45:I45` rồi mới cho tự
->   giãn, hoặc tắt `wrap_text` để câu đó tràn ngang qua các cột; cả hai đều là
->   đổi bố cục mẫu nên cần nhà trường đồng ý.
->
-> Sửa `mau_tkb.xlsx` thì **đừng dùng openpyxl để ghi đè cả file** — nó ghi lại
+> **⚠ Cạm bẫy mới, khó phát hiện hơn tràn trang.** Từ khi đặt `fitToHeight=1`,
+> thêm dòng bên dưới khối ký tên **không còn tràn sang trang 2** nữa — Excel im
+> lặng **thu nhỏ toàn bộ bảng** cho vừa một trang. Tràn trang thì mở file ra là
+> thấy ngay và biết đường sửa; thu nhỏ dần thì không có dấu hiệu gì, đến lúc
+> nhận ra thì chữ đã bé quá không đọc nổi. **Mỗi lần thêm dòng phải xuất PDF xem
+> lại**, đừng đinh ninh là vẫn đọc được.
+
+#### Bài học: ô bật `wrap_text` ở cột hẹp phải GỘP NGANG trước, tự giãn sau
+
+Cột B chỉ rộng **7.29**, tức khoảng 7 ký tự. Ô nào ở cột B mà bật `wrap_text` thì
+cho tự giãn chiều cao **không** cho ra "vừa đủ" mà cho ra một cột chữ dọc dài
+ngoẵng: ô ghi chú `B45` từng giãn thành **11 dòng** và đẩy khối ký tên sang trang
+2 — đã thử và đo, không phải suy đoán. Thứ tự đúng là **gộp ngang trước, bỏ ghim
+`customHeight` sau**. Cùng nguyên tắc cho mọi cột hẹp khác (A rộng 6.29, C rộng
+11.57).
+
+| Dòng | Đã làm | Kết quả in ra |
+|---|---|---|
+| 6 — tên lớp + phòng học | bỏ ghim `customHeight` | đủ 3 dòng; cột D–I đã rộng 25.71 nên không cần gộp |
+| 45 — ghi chú giờ vào lớp | **gộp `B45:I45`** rồi mới bỏ ghim | đủ 2 dòng, chạy ngang cả bảng |
+
+> **Chỗ chưa kiểm được:** bản in ở đây kiểm bằng LibreOffice. Excel có một hạn
+> chế đã biết — **không tự giãn chiều cao cho dòng mà nội dung nằm trong ô đã
+> gộp**. Nếu mở trên Excel thấy dòng ghi chú cụt mất dòng thứ hai thì chữa bằng
+> cách ghim lại dòng 45 ở khoảng `ht="26"` (đủ 2 dòng) — cách đó đúng trên cả
+> Excel lẫn LibreOffice.
+
+> **Sửa `mau_tkb.xlsx` thì đừng dùng openpyxl để ghi đè cả file** — nó ghi lại
 > toàn bộ workbook. Cách đã dùng: mở như file zip, sửa đúng thuộc tính cần trong
 > `xl/worksheets/sheet1.xml`, đóng lại, rồi đối chiếu mọi phần còn lại phải giống
 > hệt từng byte.
