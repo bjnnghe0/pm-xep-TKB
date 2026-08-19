@@ -8,34 +8,34 @@
 
  Ba điều đáng lo nhất ở web.py, kiểm hết:
 
- 1. web.py CHÉP LẠI vòng lặp tìm phương án của xep_tkb.main() (vì main()
-    không báo tiến độ, mà một lượt xếp mất ~50 giây). Chép lại thì có
-    nguy cơ hai bên lệch nhau. Ca thử chạy cả hai với cùng cấu hình và
-    so TỪNG Ô của file Excel xuất ra.
+ 1. web.py và xep_tkb.main() phải chọn ra CÙNG một phương án. Việc tìm
+    phương án đã gộp về X.tim_phuong_an(), nhưng phần còn lại của _chay()
+    — dựng cấu hình, tắt quy tắc tạm, xuất Excel — vẫn có thể lệch.
+    Ca thử chạy cả hai với cùng cấu hình và so TỪNG Ô của file Excel.
  2. Khai báo sai làm chương trình gốc gọi sys.exit. Trong web thì phải
     bắt lại, nếu không máy chủ chết. Đây là đường đi thường gặp.
  3. Mỗi lúc chỉ một lượt xếp; bấm nữa phải bị chặn.
 
+ MỌI CA ĐI QUA HTTP THẬT — xem tests/tien_ich_web.py để biết vì sao.
+ Tóm tắt: gọi thẳng hàm Python thì bỏ qua đúng tầng sắp đặt cổng đăng
+ nhập, ca thử sẽ vẫn xanh dù cổng đó hỏng hoàn toàn.
+
  Mọi thứ chạy trong thư mục tạm, không đụng cauhinh.json thật.
 ==========================================================================
 """
-import copy
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
-import threading
-import time
-import urllib.error
-import urllib.request
 from contextlib import redirect_stdout
-from http.server import ThreadingHTTPServer
 
-GOC_TM = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, GOC_TM)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from tien_ich_web import (GOC_TM, MayChuTam, cau_hinh_tam,   # noqa: E402
+                          doc_o_excel, doi_trang_thai)
 import xep_tkb as X          # noqa: E402
 import web                   # noqa: E402
 
@@ -45,30 +45,6 @@ KQ = []
 def kiem(dieu_kien, mo_ta):
     KQ.append((bool(dieu_kien), mo_ta))
     print(f'  [{"ĐẠT" if dieu_kien else "LỖI"}] {mo_ta}')
-
-
-def cau_hinh_tam(thu_muc, sua=None):
-    """Chép cauhinh.json + mau_tkb.xlsx sang thư mục tạm, khoá chặt tim_kiem
-       để hai lần chạy cho ra đúng cùng một dãy phương án."""
-    cfg = X.doc_cau_hinh(os.path.join(GOC_TM, 'cauhinh.json'))
-    cfg['tim_kiem'] = {'so_lan_thu': 8, 'gioi_han_buoc': 30000,
-                       'gioi_han_giay_moi_lan': 10,
-                       'gioi_han_tong_giay': 3600, 'seed': 2027}
-    if sua:
-        sua(cfg)
-    dd = os.path.join(thu_muc, 'cauhinh.json')
-    with io.open(dd, 'w', encoding='utf-8') as f:
-        json.dump(cfg, f, ensure_ascii=False)
-    shutil.copy(os.path.join(GOC_TM, 'mau_tkb.xlsx'),
-                os.path.join(thu_muc, 'mau_tkb.xlsx'))
-    return dd
-
-
-def o_excel(duong_dan):
-    import openpyxl
-    ws = openpyxl.load_workbook(duong_dan)['Khối 12']
-    return {(r, c): ws.cell(r, c).value
-            for r in range(8, 33) for c in range(4, 10)}
 
 
 # --------------------------------------------------------------------------
@@ -87,43 +63,46 @@ def ca_1_giong_dong_lenh(tm):
     finally:
         sys.argv = argv
     ra_cli = man.getvalue()
-    o_cli = o_excel(xuat)
+    o_cli = doc_o_excel(xuat)
     shutil.copy(xuat, os.path.join(tm, 'cli.xlsx'))
     os.remove(xuat)
 
-    web.DUONG_DAN_CAUHINH = dd
-    web.dat_lai_trang_thai()
-    web._chay(None, None, None, [])
-    o_web = o_excel(xuat)
-    log = '\n'.join(web.TT['log'])
+    # ---- đường web: qua HTTP thật, không gọi thẳng web._chay() ----
+    with MayChuTam(dd) as (k, _):
+        ma, _ = k.js('/api/xep', {})
+        kiem(ma == 200, f'POST /api/xep nhận lệnh — {ma}')
+        t = doi_trang_thai(k)
 
-    kiem(web.TT['loi'] is None, 'Luồng web chạy trót lọt, không lỗi')
-    lech = [k for k in o_cli if o_cli[k] != o_web.get(k)]
+    o_web = doc_o_excel(xuat)
+    log = '\n'.join(t.get('log_moi') or [])
+
+    kiem(t.get('loi') is None, f'Lượt xếp qua HTTP trót lọt — {t.get("loi")}')
+    lech = [x for x in o_cli if o_cli[x] != o_web.get(x)]
     kiem(not lech,
          f'Từng ô của vùng D8:I32 giống hệt nhau — {len(o_cli)} ô, {len(lech)} lệch')
 
-    import re
     m1 = re.search(r'Điểm cao nhất: (-?\d+)', ra_cli)
-    kiem(m1 and web.TT['diem'] == int(m1.group(1)),
+    kiem(m1 and t.get('diem') == int(m1.group(1)),
          f'Điểm mềm bằng nhau: dòng lệnh {m1.group(1) if m1 else "?"} '
-         f'= web {web.TT["diem"]}')
+         f'= web {t.get("diem")}')
     m2 = re.search(r'Tổng: (\d+)/(\d+) quy tắc ĐẠT', ra_cli)
-    dat_web = len(web.TT['bang']) - web.TT['so_loi']
+    dat_web = len(t.get('bang') or []) - (t.get('so_loi') or 0)
     kiem(m2 and (int(m2.group(1)), int(m2.group(2)))
-         == (dat_web, len(web.TT['bang'])),
+         == (dat_web, len(t.get('bang') or [])),
          f'Bảng đối chiếu bằng nhau: {m2.group(0) if m2 else "?"} '
-         f'= web {dat_web}/{len(web.TT["bang"])}')
+         f'= web {dat_web}/{len(t.get("bang") or [])}')
     kiem('ĐỐI CHIẾU QUY TẮC' in log and 'Đã xuất file' in log,
          'Khung nhật ký có đúng những phần chương trình vẫn in ra')
-    kiem(web.TT['luoi'] and len(web.TT['luoi']['hang']) == 25
-         and web.TT['luoi']['tong'] == [24] * 6,
+    luoi = t.get('luoi')
+    kiem(luoi and len(luoi['hang']) == 25 and luoi['tong'] == [24] * 6,
          'Lưới TKB đủ 25 hàng, mỗi lớp 24 tiết')
-    kiem(web.TT['gv'] and len(web.TT['gv']['gv']) == 28,
-         f'Lịch giáo viên đủ 28 người — {len(web.TT["gv"]["gv"])}')
+    gv = t.get('gv')
+    kiem(gv and len(gv['gv']) == 28,
+         f'Lịch giáo viên đủ 28 người — {len(gv["gv"]) if gv else 0}')
 
 
 def ca_2_bat_system_exit(tm):
-    print('\nCA 2 — khai báo sai: bắt SystemExit, máy chủ phải sống')
+    print('\nCA 2 — khai báo sai: bắt SystemExit, máy chủ phải SỐNG TIẾP')
     print('-' * 74)
     tm2 = os.path.join(tm, 'sai')
     os.makedirs(tm2, exist_ok=True)
@@ -132,94 +111,71 @@ def ca_2_bat_system_exit(tm):
         cfg['quy_tac'][1]['tiet_trong_buoi'] = [9, 10]      # buổi chỉ có 5 tiết
     dd = cau_hinh_tam(tm2, lam_hong)
 
-    web.DUONG_DAN_CAUHINH = dd
-    web.dat_lai_trang_thai()
-    no = None
-    try:
-        web._chay(None, None, None, [])
-    except BaseException as e:                              # kể cả SystemExit
-        no = repr(e)
-    kiem(no is None, f'_chay() KHÔNG ném gì ra ngoài — {no}')
-    kiem(web.TT['loi'] and 'Khai báo sai' in web.TT['loi'],
-         'Trạng thái có ghi lỗi')
-    log = '\n'.join(web.TT['log'])
-    kiem('tiet_trong_buoi' in log and 'Có phải bạn định dùng khoá "tiet"' in log,
-         'Nhật ký giữ NGUYÊN VĂN thông báo lỗi, cả dòng gợi ý')
-    kiem(web.TT['dang_chay'] is False and web.TT['xong'] is True,
-         'Cờ trạng thái về đúng: hết chạy, đã xong')
+    with MayChuTam(dd) as (k, _):
+        ma, _ = k.js('/api/xep', {})
+        kiem(ma == 200, f'Máy chủ nhận lệnh xếp — {ma}')
+        t = doi_trang_thai(k)
+        kiem(t.get('loi') and 'Khai báo sai' in t['loi'],
+             f'Trạng thái có ghi lỗi — {str(t.get("loi"))[:40]}')
+        log = '\n'.join(t.get('log_moi') or [])
+        kiem('tiet_trong_buoi' in log
+             and 'Có phải bạn định dùng khoá "tiet"' in log,
+             'Nhật ký giữ NGUYÊN VĂN thông báo lỗi, cả dòng gợi ý')
+        kiem(t.get('dang_chay') is False and t.get('xong') is True,
+             'Cờ trạng thái về đúng: hết chạy, đã xong')
+        # điều đáng giá nhất của ca này: SAU khi khai báo sai, máy chủ còn sống
+        ma2, than2 = k.get('/')
+        kiem(ma2 == 200 and '<title>' in than2,
+             f'Máy chủ VẪN SỐNG sau khi gặp khai báo sai — {ma2}')
+        ma3, d3 = k.js('/api/quy-tac')
+        kiem(ma3 == 200 and d3, 'Vẫn phục vụ được đường API khác')
 
 
 def ca_3_may_chu(tm):
     print('\nCA 3 — máy chủ HTTP')
     print('-' * 74)
     dd = cau_hinh_tam(tm)
-    web.DUONG_DAN_CAUHINH = dd
-    web.dat_lai_trang_thai()
-    may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
-    may.daemon_threads = True
-    threading.Thread(target=may.serve_forever, daemon=True).start()
-    dia, cong = may.server_address
-    B = f'http://127.0.0.1:{cong}'
-    kiem(dia == '127.0.0.1', f'Chỉ bind 127.0.0.1, không mở ra mạng — {dia}')
+    with MayChuTam(dd) as (k, (dia, _cong)):
+        kiem(dia == '127.0.0.1', f'Chỉ bind 127.0.0.1, không mở ra mạng — {dia}')
 
-    def lay(duong, than=None, chu=True):
-        """chu=False khi nội dung trả về là nhị phân (file .xlsx)."""
-        yc = urllib.request.Request(B + duong, method='POST' if than else 'GET')
-        if than is not None:
-            yc.add_header('Content-Type', 'application/json')
-            than = json.dumps(than).encode()
-        try:
-            with urllib.request.urlopen(yc, than, timeout=20) as t:
-                d = t.read()
-                return t.status, d.decode('utf-8') if chu else d
-        except urllib.error.HTTPError as e:
-            d = e.read()
-            return e.code, d.decode('utf-8', 'replace') if chu else d
+        ma, than = k.get('/')
+        kiem(ma == 200 and '<title>' in than and 'Xếp thời khoá biểu' in than,
+             'GET / trả trang HTML tiếng Việt')
+        for f in ('style.css', 'app.js'):
+            kiem(k.get('/web/' + f)[0] == 200, f'GET /web/{f}')
+        kiem('http://' not in than.replace('http://127.0.0.1', '')
+             and 'https://' not in than,
+             'Trang không gọi ra ngoài Internet (không CDN)')
+        for xau in ('/web/../web.py', '/web/cauhinh.json', '/api/lung-tung'):
+            kiem(k.get(xau)[0] == 404, f'Chặn đường dẫn lạ {xau}')
 
-    ma, than = lay('/')
-    kiem(ma == 200 and '<title>' in than and 'Xếp thời khoá biểu' in than,
-         'GET / trả trang HTML tiếng Việt')
-    for f in ('style.css', 'app.js'):
-        kiem(lay('/web/' + f)[0] == 200, f'GET /web/{f}')
-    kiem('http://' not in than.replace('http://127.0.0.1', '')
-         and 'https://' not in than,
-         'Trang không gọi ra ngoài Internet (không CDN)')
-    for xau in ('/web/../web.py', '/web/cauhinh.json', '/api/lung-tung'):
-        kiem(lay(xau)[0] == 404, f'Chặn đường dẫn lạ {xau}')
+        ma, d = k.js('/api/quy-tac')
+        kiem(ma == 200 and len(d['quy_tac']) == 13,
+             f'GET /api/quy-tac liệt kê {len(d["quy_tac"])} quy tắc')
+        kiem(all({'i', 'loai', 'ghi_chu', 'bat'} <= set(r) for r in d['quy_tac']),
+             'Mỗi dòng có đủ ghi_chu + loai + cờ bật/tắt')
 
-    ma, than = lay('/api/quy-tac')
-    d = json.loads(than)
-    kiem(ma == 200 and len(d['quy_tac']) == 13,
-         f'GET /api/quy-tac liệt kê {len(d["quy_tac"])} quy tắc')
-    kiem(all({'i', 'loai', 'ghi_chu', 'bat'} <= set(r) for r in d['quy_tac']),
-         'Mỗi dòng có đủ ghi_chu + loai + cờ bật/tắt')
+        ma, _ = k.js('/api/xep', {'so_lan': '3', 'tat': []})
+        kiem(ma == 200, 'POST /api/xep nhận lệnh')
+        ma2, d2 = k.js('/api/xep', {'tat': []})
+        kiem(ma2 == 409 and 'Đang xếp' in (d2 or {}).get('loi', ''),
+             f'Bấm lần nữa lúc đang chạy bị chặn — {ma2}')
 
-    ma, _ = lay('/api/xep', {'so_lan': '3', 'tat': []})
-    kiem(ma == 200, 'POST /api/xep nhận lệnh')
-    ma2, than2 = lay('/api/xep', {'tat': []})
-    kiem(ma2 == 409 and 'Đang xếp' in than2,
-         f'Bấm lần nữa lúc đang chạy bị chặn — {ma2} {json.loads(than2).get("loi")}')
-
-    for _ in range(200):
-        t = json.loads(lay('/api/trang-thai?tu=0')[1])
-        if t['xong']:
-            break
-        time.sleep(0.2)
-    kiem(t['xong'] and not t['dang_chay'], 'Hỏi trạng thái tới lúc xong')
-    kiem(t['log_het'] > 10 and len(t['log_moi']) == t['log_het'],
-         'Nhật ký lấy được theo lô, có đánh dấu đã đọc tới đâu')
-    kiem(json.loads(lay('/api/trang-thai?tu=%d' % t['log_het'])[1])['log_moi'] == [],
-         'Hỏi tiếp từ vị trí cũ thì không trả lại dòng đã đọc')
-    ma, than = lay('/api/tai-ve', chu=False)
-    kiem(ma == 200 and than[:2] == b'PK' and len(than) > 10000,
-         f'Tải được file .xlsx thật ({len(than)} byte, đúng chữ ký ZIP)')
-    may.shutdown()
+        t = doi_trang_thai(k)
+        kiem(t.get('xong') and not t.get('dang_chay'), 'Hỏi trạng thái tới lúc xong')
+        kiem(t['log_het'] > 10 and len(t['log_moi']) == t['log_het'],
+             'Nhật ký lấy được theo lô, có đánh dấu đã đọc tới đâu')
+        _, t2 = k.js('/api/trang-thai?tu=%d' % t['log_het'])
+        kiem(t2['log_moi'] == [],
+             'Hỏi tiếp từ vị trí cũ thì không trả lại dòng đã đọc')
+        ma, than = k.get_nhi_phan('/api/tai-ve')
+        kiem(ma == 200 and than[:2] == b'PK' and len(than) > 10000,
+             f'Tải được file .xlsx thật ({len(than)} byte, đúng chữ ký ZIP)')
 
 
 def ca_4_trang_tinh():
     print('\nCA 4 — trang tĩnh: JS và HTML khớp nhau')
     print('-' * 74)
-    import re
     html = io.open(os.path.join(GOC_TM, 'web', 'index.html'),
                    encoding='utf-8').read()
     js = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
@@ -259,36 +215,56 @@ def ca_4_trang_tinh():
 
 
 def ca_5_luu_quy_tac(tm):
-    print('\nCA 5 — lưu quy tắc vào cauhinh.json')
+    print('\nCA 5 — lưu quy tắc vào cauhinh.json (qua HTTP)')
     print('-' * 74)
     tm4 = os.path.join(tm, 'luu')
     os.makedirs(tm4, exist_ok=True)
     dd = cau_hinh_tam(tm4)
-    web.DUONG_DAN_CAUHINH = dd
     truoc = X.doc_cau_hinh(dd)
 
-    kq = web.luu_quy_tac({4, 5})
-    bak = os.path.join(tm4, 'cauhinh.bak.json')
-    kiem(os.path.exists(bak), 'Có sao lưu thành cauhinh.bak.json')
-    kiem(X.doc_cau_hinh(bak) == truoc, 'Bản sao lưu đúng là nội dung cũ')
+    with MayChuTam(dd) as (k, _):
+        ma, kq = k.js('/api/luu-quy-tac', {'tat': [4, 5]})
+        kiem(ma == 200 and kq and 'doi' in kq,
+             f'POST /api/luu-quy-tac trả về số dòng đã đổi — {ma} {kq}')
 
-    sau = X.doc_cau_hinh(dd)
-    kiem(list(sau) == list(truoc), 'Thứ tự khoá cấp cao nhất giữ nguyên')
-    kiem(list(sau['quy_tac'][0]) == list(truoc['quy_tac'][0]),
-         'Thứ tự khoá bên trong quy tắc giữ nguyên')
-    kiem([i for i, r in enumerate(sau['quy_tac']) if r.get('bat') is False]
-         == [4, 5], f'Đúng 2 quy tắc bị tắt, {kq["doi"]} dòng đổi')
-    kiem({k: v for k, v in sau.items() if k != 'quy_tac'}
-         == {k: v for k, v in truoc.items() if k != 'quy_tac'},
-         'Mọi mục khác của file y nguyên')
+        bak = os.path.join(tm4, 'cauhinh.bak.json')
+        kiem(os.path.exists(bak), 'Có sao lưu thành cauhinh.bak.json')
+        kiem(X.doc_cau_hinh(bak) == truoc, 'Bản sao lưu đúng là nội dung cũ')
 
-    web.luu_quy_tac(set())
-    lai = X.doc_cau_hinh(dd)
-    kiem(all('bat' not in r for r in lai['quy_tac']),
-         'Bật lại thì khoá "bat" biến mất hẳn, không để rác')
-    kiem(len(lai['_quy_tac_de_san_chua_bat']) == 7
-         and all(r['bat'] is False for r in lai['_quy_tac_de_san_chua_bat']),
-         'Không đụng tới mục _quy_tac_de_san_chua_bat')
+        sau = X.doc_cau_hinh(dd)
+        kiem(list(sau) == list(truoc), 'Thứ tự khoá cấp cao nhất giữ nguyên')
+        kiem(list(sau['quy_tac'][0]) == list(truoc['quy_tac'][0]),
+             'Thứ tự khoá bên trong quy tắc giữ nguyên')
+        kiem([i for i, r in enumerate(sau['quy_tac']) if r.get('bat') is False]
+             == [4, 5], f'Đúng 2 quy tắc bị tắt, {kq["doi"]} dòng đổi')
+        kiem({x: v for x, v in sau.items() if x != 'quy_tac'}
+             == {x: v for x, v in truoc.items() if x != 'quy_tac'},
+             'Mọi mục khác của file y nguyên')
+
+        k.js('/api/luu-quy-tac', {'tat': []})
+        lai = X.doc_cau_hinh(dd)
+        kiem(all('bat' not in r for r in lai['quy_tac']),
+             'Bật lại thì khoá "bat" biến mất hẳn, không để rác')
+        kiem(len(lai['_quy_tac_de_san_chua_bat']) == 7
+             and all(r['bat'] is False for r in lai['_quy_tac_de_san_chua_bat']),
+             'Không đụng tới mục _quy_tac_de_san_chua_bat')
+
+
+def ca_6_moi_ca_qua_http():
+    print('\nCA 6 — chính tệp ca thử này không được gọi tắt vào hàm Python')
+    print('-' * 74)
+    ma = io.open(os.path.abspath(__file__), encoding='utf-8').read()
+    ma = ma.split('"""', 2)[-1]                       # bỏ phần chú thích đầu tệp
+    than = '\n'.join(d for d in ma.split('\n')        # bỏ mọi dòng chú thích
+                     if not d.lstrip().startswith('#'))
+    than = than.split("if __name__ ==")[0]
+    for goi in ('web._chay(', 'web.luu_quy_tac(', 'web.them_quy_tac(',
+                'web.xoa_quy_tac(', 'web.thu_quy_tac('):
+        kiem(goi not in than,
+             f'Không gọi tắt {goi[:-1]} — mọi ca phải đi qua HTTP')
+    kiem('MayChuTam' in than, 'Có dựng máy chủ HTTP thật')
+    kiem(than.count('MayChuTam(') >= 4,
+         f'Ít nhất 4 ca dựng máy chủ thật — {than.count("MayChuTam(")}')
 
 
 if __name__ == '__main__':
@@ -301,6 +277,7 @@ if __name__ == '__main__':
         ca_3_may_chu(tm)
         ca_4_trang_tinh()
         ca_5_luu_quy_tac(tm)
+        ca_6_moi_ca_qua_http()
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
