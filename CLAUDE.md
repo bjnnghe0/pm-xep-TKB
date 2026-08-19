@@ -63,10 +63,20 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 > chưa, và để dựng lại nhanh một ca thử "chỉ khối 12" khi cần khoanh vùng lỗi.
 > Muốn quay lui hẳn về bản một khối thì `git checkout v1.0-khoi12`.
 
-> **Lưu ý thư mục `files/`**: đây là bản tải về ban đầu, thiếu `mau_tkb.xlsx`,
-> `tu_kiem_tra.py`, `chay.bat`, và `files/xep_tkb.py` là **bản CŨ trước khi tách
-> `quy_tac.py`** (không có `import quy_tac`). Bản đang dùng nằm ở thư mục gốc,
-> lấy từ `files/PhanMem_XepTKB.zip`. Đừng sửa nhầm file trong `files/`.
+> **⚠ Repo từng có thư mục `files/` — đã xoá ở commit `461c40e`, ĐỪNG khôi phục.**
+> Đó là bản tải về ban đầu, lẫn `files/xep_tkb.py` **cũ** (có từ trước khi tách
+> `quy_tac.py`: không có `import quy_tac`, còn đọc mục `rang_buoc` kiểu cũ) với
+> `files/quy_tac.py` **mới**, lại thiếu hẳn `mau_tkb.xlsx`, `tu_kiem_tra.py`,
+> `chay.bat` — ghép lại không chạy được. Bản đúng chính là thư mục gốc này, giải
+> ra từ `files/PhanMem_XepTKB.zip`.
+>
+> Nội dung cũ vẫn nằm nguyên trong commit `defbd59`, cần thì tra bằng
+> `git show defbd59:files/xep_tkb.py`. Khôi phục nó về lại cây làm việc sẽ tạo
+> hai bản `cauhinh.json` / `quy_tac.py` / `xep_tkb.py` trong cùng một repo —
+> đúng cái bẫy sửa nhầm file mà lần dọn này giải quyết.
+>
+> Lưu ý kèm theo: tag `v1.0-khoi12` trỏ vào `defbd59` nên `git checkout
+> v1.0-khoi12` **sẽ kéo `files/` trở lại**; quay lui xong nhớ xoá đi.
 
 ---
 
