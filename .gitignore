@@ -6,6 +6,9 @@ __pycache__/
 # Lưu ý: mau_tkb.xlsx là file MẪU của nhà trường, VẪN phải theo dõi.
 TKB_*.xlsx
 
+# Bản sao lưu do giao diện web tạo khi bấm "Lưu vào cauhinh.json"
+cauhinh.bak.json
+
 # File Excel mở dở
 ~$*.xlsx
 

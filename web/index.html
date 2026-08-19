@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xếp thời khoá biểu — Khoa Khoa học Cơ bản</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Xếp thời khoá biểu — Khối 12</h1>
+  <p class="phu">Khoa Khoa học Cơ bản · Trường Cao đẳng Đà Lạt
+     <span class="cuc-bo">chỉ chạy trên máy này</span></p>
+</header>
+
+<nav id="tabs">
+  <button class="tab dang-chon" data-man="man-xep">1 · Xếp TKB</button>
+  <button class="tab" data-man="man-xem">2 · Xem TKB</button>
+  <button class="tab" data-man="man-quytac">3 · Quy tắc</button>
+  <button class="tab" data-man="man-gv">4 · Lịch giáo viên</button>
+</nav>
+
+<!-- ================= 1. XẾP TKB ================= -->
+<section id="man-xep" class="man">
+  <div class="hop">
+    <div class="dong-nhap">
+      <label>Tuần
+        <input id="o-tuan" type="text" size="34"
+               placeholder="để trống = lấy theo cauhinh.json">
+      </label>
+      <label>Seed
+        <input id="o-seed" type="number" size="6" placeholder="mặc định">
+      </label>
+      <label>Số lần thử
+        <input id="o-lan" type="number" size="6" placeholder="mặc định">
+      </label>
+      <button id="nut-xep" class="chinh">Xếp thời khoá biểu</button>
+    </div>
+    <p class="ghi-chu">Một lượt xếp mất khoảng 50 giây. Cứ để trang này mở,
+       tiến độ hiện bên dưới.</p>
+  </div>
+
+  <div id="tien-do" class="hop an">
+    <div class="thanh"><div id="thanh-chay"></div></div>
+    <p id="chu-tien-do"></p>
+  </div>
+
+  <div id="hop-loi" class="hop loi an"><pre id="chu-loi"></pre></div>
+
+  <h2>Nhật ký</h2>
+  <pre id="log" class="log"></pre>
+
+  <div id="hop-ket-qua" class="an">
+    <h2>Điểm các tiêu chí mềm</h2>
+    <table id="bang-diem" class="bang"></table>
+    <h2>Đối chiếu quy tắc <span id="tom-tat" class="tom-tat"></span></h2>
+    <table id="bang-doi-chieu" class="bang"></table>
+  </div>
+</section>
+
+<!-- ================= 2. XEM TKB ================= -->
+<section id="man-xem" class="man an">
+  <div class="hop">
+    <button id="nut-tai">Tải file .xlsx</button>
+    <span id="chu-tuan" class="ghi-chu"></span>
+  </div>
+  <div class="cuon-ngang"><table id="bang-tkb" class="bang tkb"></table></div>
+  <p id="chua-xep-1" class="ghi-chu">Chưa có kết quả. Sang màn hình
+     <b>1 · Xếp TKB</b> bấm nút xếp trước đã.</p>
+</section>
+
+<!-- ================= 3. QUY TẮC ================= -->
+<section id="man-quytac" class="man an">
+  <div class="hop">
+    <p class="ghi-chu">Công tắc ở đây <b>chỉ áp cho lượt xếp tiếp theo</b>,
+       không đụng vào <code>cauhinh.json</code>. Muốn ghi hẳn vào file thì bấm
+       nút bên dưới.</p>
+    <button id="nut-luu">Lưu vào cauhinh.json</button>
+    <span class="ghi-chu">Trước khi ghi, bản cũ được sao lưu thành
+      <code>cauhinh.bak.json</code>. File sẽ được ghi lại nên cách xuống dòng
+      có thể đổi đôi chút.</span>
+    <p id="chu-luu" class="ghi-chu"></p>
+  </div>
+  <table id="bang-quy-tac" class="bang"></table>
+</section>
+
+<!-- ================= 4. LỊCH GIÁO VIÊN ================= -->
+<section id="man-gv" class="man an">
+  <div class="hop">
+    <label>Lọc theo tên
+      <input id="o-loc-gv" type="text" size="20" placeholder="ví dụ: N.Uyên">
+    </label>
+  </div>
+  <div class="cuon-ngang"><table id="bang-gv" class="bang gv"></table></div>
+  <p id="chua-xep-2" class="ghi-chu">Chưa có kết quả. Sang màn hình
+     <b>1 · Xếp TKB</b> bấm nút xếp trước đã.</p>
+</section>
+
+<script src="/web/app.js"></script>
+</body>
+</html>

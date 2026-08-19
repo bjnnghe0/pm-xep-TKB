@@ -24,6 +24,10 @@ python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
 python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
 python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
+python tests/thu_web.py                # thử giao diện web
+
+python web.py                          # giao diện web -> http://127.0.0.1:20266
+python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
 ```
 
 ### Môi trường Python trên máy này (Linux)
@@ -58,6 +62,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
+| `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
+| `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -325,6 +331,51 @@ và bỏ `"bat": false` là dùng được.
 
 ---
 
+## Giao diện web (`web.py` + `web/`)
+
+`python web.py` → `http://127.0.0.1:20266`. Ctrl+C để tắt.
+**Chỉ thư viện chuẩn** (`http.server`, `json`, `threading`), **chỉ bind 127.0.0.1**,
+không tải gì từ mạng. `web.py` **chỉ gọi vào** `xep_tkb.py` / `quy_tac.py`, không
+sửa gì trong đó.
+
+| Đường | Việc |
+|---|---|
+| `GET /` · `GET /web/<tệp>` | Trang và tệp tĩnh — danh sách trắng `TINH`, đường dẫn lạ trả 404 |
+| `POST /api/xep` | Bắt đầu một lượt; đang chạy thì trả **409** kèm "Đang xếp, vui lòng đợi." |
+| `GET /api/trang-thai?tu=N` | Tiến độ + nhật ký **từ dòng N trở đi** (đừng gửi lại cả khung log mỗi lần hỏi) |
+| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc / ghi cờ bật-tắt |
+| `GET /api/tai-ve` | Tải `TKB_Khoi12.xlsx` |
+
+### Ba chỗ dễ sai, đã xử
+
+1. **Không giải trong hàm xử lý HTTP.** Một lượt xếp mất ~50 giây; giải ngay trong
+   handler thì trình duyệt treo, người dùng tưởng hỏng rồi bấm lại. Bộ giải chạy ở
+   `threading.Thread`, trang hỏi `/api/trang-thai` mỗi 0,7 giây.
+2. **`SystemExit` phải bắt trong luồng.** `kiem_bo_loc()`, `_bao_loi()`,
+   `_kiem_tra_so_bo()`… đều `raise SystemExit` khi khai báo sai — đúng, vì với
+   dòng lệnh thì dừng hẳn là phải. Nhưng trong web nó sẽ giết cả máy chủ. `_chay()`
+   bắt `SystemExit` **và** `Exception`, in nguyên văn ra khung nhật ký, máy chủ
+   sống tiếp. Đây là **đường đi chính** khi người dùng sửa quy tắc sai, không phải
+   trường hợp hiếm.
+3. **Vòng lặp tìm phương án bị CHÉP LẠI.** `_chay()` chép lại vòng lặp của
+   `xep_tkb.main()` vì `main()` không báo tiến độ. Chép lại thì có nguy cơ lệch,
+   nên `tests/thu_web.py` chạy cả hai với cùng cấu hình rồi so **từng ô của vùng
+   D8:I32** trong file Excel xuất ra, cộng điểm mềm và bảng đối chiếu.
+   *Cách chữa gốc:* tách vòng lặp đó khỏi `main()` thành `tim_phuong_an(bt, tk,
+   bao_tien_do=None)` rồi cho cả hai gọi chung — **cần sửa `xep_tkb.py` nên phải
+   hỏi trước, chưa làm.**
+
+Công tắc bật/tắt ở màn hình "Quy tắc" mặc định **chỉ áp cho lượt chạy hiện tại**
+(đặt `bat: false` trên bản `cfg` trong bộ nhớ). Nút "Lưu vào cauhinh.json" mới ghi
+file, và luôn sao lưu `cauhinh.bak.json` trước. Ghi bằng `json.dump` rồi gom lại
+các danh sách một dòng cho gần với cách viết tay — **thứ tự khoá giữ nguyên**,
+nhưng cách xuống dòng có thể xê dịch; đã ghi rõ cảnh báo đó ngay cạnh cái nút.
+
+Mục `_quy_tac_de_san_chua_bat` **không** hiện trên giao diện — muốn dùng quy tắc
+mẫu nào thì vẫn phải chép tay sang mục `quy_tac` như cũ.
+
+---
+
 ## Cách kiểm chứng một thay đổi
 
 Ngoài hai lệnh bắt buộc, đây là hai kỹ thuật đã dùng khi sửa nhánh dự phòng của
@@ -391,6 +442,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   chỗ lọc thì tụt còn 5/25.
 - `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
+- `python tests/thu_web.py`: **47/47 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+  đụng `cauhinh.json` thật.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.

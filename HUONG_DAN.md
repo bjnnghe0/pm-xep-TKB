@@ -20,6 +20,7 @@ sửa code. Tra cứu đầy đủ 17 loại quy tắc: **`QUY_TAC.md`**.
 | `mau_tkb.xlsx` | File mẫu (TKB Tuần 1 đã xoá nội dung tiết) | Khi đổi phòng học, GVCN |
 | `tu_kiem_tra.py` | Chạy thử mọi loại quy tắc | Chạy sau khi sửa `quy_tac.py` |
 | `chay.bat` | Bấm đúp để chạy trên Windows | Không |
+| `web.py`, `web/` | Giao diện web chạy cục bộ | Không |
 | `TKB_Khoi12.xlsx` | Kết quả | — |
 
 ## 2. Cài đặt (làm một lần)
@@ -43,6 +44,44 @@ python tu_kiem_tra.py                  chạy thử toàn bộ các loại quy t
 
 > **Mẹo:** mỗi `--seed` cho một phương án khác nhau nhưng đều hợp lệ.
 > Chạy vài seed rồi chọn cái nhìn thuận mắt nhất.
+
+### Cách dễ hơn: giao diện web
+
+Không phải nhớ lệnh nào cả.
+
+**Khởi động:** mở Command Prompt tại thư mục này, gõ:
+
+```
+python web.py
+```
+
+rồi mở trình duyệt (Chrome, Edge, Firefox — cái nào cũng được) vào địa chỉ:
+
+```
+http://127.0.0.1:20266
+```
+
+Muốn dùng cổng khác: `python web.py --port 8080`.
+
+**Tắt:** quay lại cửa sổ Command Prompt, bấm **Ctrl + C**, hoặc đóng luôn cửa sổ đó.
+Đóng trình duyệt thôi thì chưa tắt máy chủ.
+
+> **Chỉ chạy trên chính máy này.** Địa chỉ `127.0.0.1` nghĩa là "máy tôi đang ngồi".
+> Máy khác trong phòng, trong trường, hay ngoài Internet **không vào được**, kể cả
+> khi biết địa chỉ. Cũng không tải gì từ mạng nên máy không có Internet vẫn chạy.
+
+Bốn màn hình:
+
+| Màn hình | Làm gì |
+|---|---|
+| **1 · Xếp TKB** | Nhập tuần / seed / số lần thử rồi bấm nút. Một lượt mất khoảng 50 giây, thanh tiến độ chạy trong lúc chờ. Xong thì hiện bảng đối chiếu ĐẠT/LỖI và điểm các tiêu chí mềm. |
+| **2 · Xem TKB** | Xem ngay trên màn hình, có nút tải file `.xlsx` về. |
+| **3 · Quy tắc** | Bật/tắt từng quy tắc. Mặc định **chỉ áp cho lượt xếp tiếp theo**, không đụng file. Muốn ghi hẳn thì bấm "Lưu vào cauhinh.json" — bản cũ được cất thành `cauhinh.bak.json`. |
+| **4 · Lịch giáo viên** | Lịch dạy từng thầy cô, có ô lọc theo tên. |
+
+Nếu khai báo trong `cauhinh.json` bị sai, trang web hiện **nguyên văn** thông báo lỗi
+trong khung đỏ và máy chủ vẫn chạy — cứ sửa file rồi bấm xếp lại, không phải khởi
+động lại.
 
 ## 4. File kết quả có 3 sheet
 
