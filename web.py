@@ -49,6 +49,10 @@ def thu_muc_cauhinh():
 # ==========================================================================
 
 KHOA = threading.Lock()
+# Khoá RIÊNG cho việc ghi cauhinh.json. Tách khỏi KHOA (vốn chỉ giữ TT trong
+# tích tắc) vì việc ghi tệp lâu hơn nhiều — dùng chung một khoá sẽ làm thanh
+# tiến độ đứng hình mỗi lần có người bấm Lưu.
+KHOA_GHI = threading.Lock()
 TT = {}
 
 # Quy tắc người dùng thêm ở màn hình Quy tắc — CHỈ nằm trong bộ nhớ của phiên
@@ -387,25 +391,85 @@ def _gon_json(cfg):
                   s, flags=re.S)
 
 
+SO_BAN_SAO_LUU = 5          # số bản sao lưu xoay vòng, ngoài bản gốc
+
+
+def _xoay_sao_luu(tm):
+    """Đẩy các bản sao lưu lùi một bậc rồi cất bản hiện tại vào cauhinh.bak.json.
+
+       Trước đây chỉ có ĐÚNG MỘT khe: shutil.copy(cauhinh.json, cauhinh.bak.json).
+       Lỡ tay tắt nhầm rồi bấm Lưu, nhận ra sai bấm Lưu lần nữa để sửa —
+       chính thao tác sửa đó chép bản đã hỏng đè lên bản sao lưu. Bản gốc mất
+       vĩnh viễn. Đã đo: sau 2 lần lưu, cauhinh.bak.json mang đúng nội dung đã
+       hỏng chứ không còn nội dung ban đầu.
+
+       Nay: cauhinh.bak.goc.json giữ bản ĐẦU TIÊN, chỉ ghi một lần và không bao
+       giờ bị đè — dù bấm Lưu bao nhiêu lần vẫn lùi về được. Cộng thêm 5 bản
+       xoay vòng cauhinh.bak.1..5.json cho các bước gần đây.
+    """
+    goc = os.path.join(tm, 'cauhinh.bak.goc.json')
+    if not os.path.exists(goc):                       # chỉ ghi MỘT LẦN
+        shutil.copy(DUONG_DAN_CAUHINH, goc)
+    for i in range(SO_BAN_SAO_LUU, 1, -1):
+        cu = os.path.join(tm, f'cauhinh.bak.{i - 1}.json')
+        if os.path.exists(cu):
+            shutil.move(cu, os.path.join(tm, f'cauhinh.bak.{i}.json'))
+    bak = os.path.join(tm, 'cauhinh.bak.json')
+    if os.path.exists(bak):
+        shutil.move(bak, os.path.join(tm, 'cauhinh.bak.1.json'))
+    shutil.copy(DUONG_DAN_CAUHINH, bak)
+    return bak
+
+
 def luu_quy_tac(tat):
-    """Ghi cờ bật/tắt vào cauhinh.json. Sao lưu trước, giữ nguyên thứ tự khoá."""
-    cfg, so_file = cau_hinh_phien()                 # dict giữ thứ tự khoá
-    n = len(PHIEN['them'])
-    for i, r in enumerate(cfg['quy_tac']):
-        muon_bat = i not in tat
-        if i < so_file and bool(r.get('bat', True)) != muon_bat:
-            n += 1
-        if muon_bat:
-            r.pop('bat', None)                        # bật = bỏ hẳn khoá "bat"
-        else:
-            r['bat'] = False
-    sao_luu = os.path.join(thu_muc_cauhinh(), 'cauhinh.bak.json')
-    shutil.copy(DUONG_DAN_CAUHINH, sao_luu)
-    with open(DUONG_DAN_CAUHINH, 'w', encoding='utf-8') as f:
-        f.write(_gon_json(cfg) + '\n')
-    X.doc_cau_hinh(DUONG_DAN_CAUHINH)                 # đọc lại, hỏng thì báo ngay
-    PHIEN['them'].clear()                             # đã nằm trong file rồi
-    return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
+    """Ghi cờ bật/tắt vào cauhinh.json. Sao lưu trước, giữ nguyên thứ tự khoá.
+
+       Ghi NGUYÊN TỬ. Trước đây thứ tự là:
+           open(cauhinh.json, 'w')      <- CẮT CỤT tệp về 0 byte ngay tại đây
+           f.write(_gon_json(cfg))      <- rồi mới dựng chuỗi
+       nên bất cứ lỗi nào lúc dựng chuỗi là mất trắng toàn bộ khai báo dữ liệu,
+       người dùng chỉ thấy một trang báo lỗi. Đã đo: tệp còn 0 byte.
+
+       Nay theo đúng thứ tự an toàn: dựng chuỗi -> ghi ra tệp tạm -> đọc lại
+       tệp tạm để chắc chắn hợp lệ -> sao lưu -> os.replace(). os.replace()
+       là thao tác nguyên tử trên cả Linux lẫn Windows, nên cauhinh.json hoặc
+       là bản cũ nguyên vẹn, hoặc là bản mới nguyên vẹn, không có ở giữa.
+
+       Cả hàm nằm trong KHOA_GHI: hai người cùng bấm Lưu thì lần lượt, không
+       còn cảnh hai luồng cùng mở tệp ở chế độ 'w'.
+    """
+    with KHOA_GHI:
+        cfg, so_file = cau_hinh_phien()             # dict giữ thứ tự khoá
+        n = len(PHIEN['them'])
+        for i, r in enumerate(cfg['quy_tac']):
+            muon_bat = i not in tat
+            if i < so_file and bool(r.get('bat', True)) != muon_bat:
+                n += 1
+            if muon_bat:
+                r.pop('bat', None)                    # bật = bỏ hẳn khoá "bat"
+            else:
+                r['bat'] = False
+
+        # 1. dựng xong chuỗi TRƯỚC, chưa đụng vào tệp nào
+        chuoi = _gon_json(cfg) + '\n'
+
+        # 2. ghi ra tệp tạm rồi đọc lại — hỏng thì bỏ tệp tạm, tệp thật y nguyên
+        tm = thu_muc_cauhinh()
+        tam = os.path.join(tm, 'cauhinh.tam.json')
+        with open(tam, 'w', encoding='utf-8') as f:
+            f.write(chuoi)
+        try:
+            X.doc_cau_hinh(tam)
+        except BaseException:
+            os.remove(tam)
+            raise
+
+        # 3. sao lưu xoay vòng, rồi 4. thay thế nguyên tử
+        sao_luu = _xoay_sao_luu(tm)
+        os.replace(tam, DUONG_DAN_CAUHINH)
+
+        PHIEN['them'].clear()                         # đã nằm trong file rồi
+        return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
 
 
 # ==========================================================================

@@ -10,8 +10,13 @@ tkb_web.html
 # ĐỪNG loại thư mục docs/ — đó là trang GitHub Pages, PHẢI được commit.
 # (tkb_web.html ở thư mục gốc thì loại đúng, vì docs/index.html là bản sao của nó)
 
-# Bản sao lưu do giao diện web tạo khi bấm "Lưu vào cauhinh.json"
-cauhinh.bak.json
+# Bản sao lưu do giao diện web tạo khi bấm "Lưu vào cauhinh.json".
+# cauhinh.bak.goc.json giữ bản ĐẦU TIÊN (không bao giờ bị đè),
+# cauhinh.bak.json là bản ngay trước, cauhinh.bak.1..5.json là các bản cũ hơn.
+# cauhinh.tam.json là tệp trung gian của lần ghi đang dở.
+# LƯU Ý: mẫu này KHÔNG chạm tới cauhinh.khoi12.goc.json — tệp đó PHẢI theo dõi.
+cauhinh.bak*.json
+cauhinh.tam.json
 
 # File Excel mở dở
 ~$*.xlsx

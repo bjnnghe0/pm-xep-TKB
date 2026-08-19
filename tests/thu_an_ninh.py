@@ -49,9 +49,20 @@ def kiem(dieu_kien, mo_ta):
 
 
 def so_tat(dd):
-    """Danh sách chỉ số quy tắc đang bị tắt trong tệp cấu hình."""
-    cfg = X.doc_cau_hinh(dd)
+    """Danh sách chỉ số quy tắc đang bị tắt trong tệp cấu hình.
+       Tệp chưa có thì trả None — để ca thử báo ĐỎ chứ không vỡ giữa chừng."""
+    cfg = doc_an_toan(dd)
+    if cfg is None:
+        return None
     return [i for i, r in enumerate(cfg['quy_tac']) if r.get('bat') is False]
+
+
+def doc_an_toan(dd):
+    """Đọc cấu hình, không có hoặc hỏng thì trả None thay vì ném."""
+    try:
+        return X.doc_cau_hinh(dd)
+    except BaseException:
+        return None
 
 
 # ==========================================================================
@@ -165,9 +176,87 @@ def ca_a1_nguon_goc(tm):
 
 
 # ==========================================================================
+def ca_a7_sao_luu_xoay_vong(tm):
+    print('\nCA A7 — sao lưu xoay vòng, và ghi cauhinh.json phải NGUYÊN TỬ')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a7')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    goc = X.doc_cau_hinh(dd)
+
+    def bak(ten):
+        return os.path.join(tmx, ten)
+
+    with MayChuTam(dd) as (k, _):
+        for lan, t in enumerate([[1], [2], [3], [4]], start=1):
+            ma, _kq = k.js('/api/luu-quy-tac', {'tat': t})
+            kiem(ma == 200, f'Lưu lần {lan} (tắt quy tắc {t}) — {ma}')
+
+        # 1. bản GỐC phải còn nguyên sau 4 lần lưu
+        kiem(os.path.exists(bak('cauhinh.bak.goc.json')),
+             'Có bản gốc cauhinh.bak.goc.json')
+        kiem(doc_an_toan(bak('cauhinh.bak.goc.json')) == goc,
+             'Bản gốc SAU 4 LẦN LƯU vẫn đúng là nội dung ban đầu')
+
+        # 2. các bản xoay vòng phải giữ đúng thứ tự lùi dần
+        kiem(so_tat(bak('cauhinh.bak.json')) == [3],
+             f'cauhinh.bak.json = ngay trước lần lưu cuối — '
+             f'{so_tat(bak("cauhinh.bak.json"))}')
+        kiem(so_tat(bak('cauhinh.bak.1.json')) == [2],
+             f'cauhinh.bak.1.json lùi thêm một bậc — '
+             f'{so_tat(bak("cauhinh.bak.1.json"))}')
+        kiem(so_tat(bak('cauhinh.bak.2.json')) == [1],
+             f'cauhinh.bak.2.json lùi thêm bậc nữa — '
+             f'{so_tat(bak("cauhinh.bak.2.json"))}')
+        kiem(so_tat(dd) == [4], f'Tệp thật đang ở trạng thái mới nhất — {so_tat(dd)}')
+
+        # 3. NGUYÊN TỬ: dựng chuỗi JSON hỏng thì tệp thật phải Y NGUYÊN
+        import web as W
+        truoc = io.open(dd, encoding='utf-8').read()
+        that = W._gon_json
+
+        def hong(cfg):
+            raise RuntimeError('cố ý làm hỏng lúc dựng chuỗi JSON')
+        W._gon_json = hong
+        try:
+            ma, _ = k.js('/api/luu-quy-tac', {'tat': [0]})
+        finally:
+            W._gon_json = that
+        sau = io.open(dd, encoding='utf-8').read()
+        kiem(ma == 500, f'Dựng chuỗi hỏng thì báo lỗi — {ma}')
+        kiem(sau == truoc,
+             f'cauhinh.json KHÔNG bị cắt cụt, còn nguyên {len(sau)} byte '
+             f'(trước {len(truoc)})')
+        kiem(len(sau) > 1000 and doc_an_toan(dd) is not None,
+             'Và vẫn đọc được như một tệp JSON hợp lệ')
+
+        # 4. hai người bấm Lưu cùng lúc: tệp phải luôn đọc được
+        loi = []
+
+        def ban(i):
+            try:
+                k2 = Khach(k.cong)
+                k2.js('/api/luu-quy-tac', {'tat': [i]})
+            except Exception as e:          # pragma: no cover
+                loi.append(repr(e))
+        ts = [threading.Thread(target=ban, args=(i,)) for i in range(6)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        kiem(not loi, f'6 người bấm Lưu cùng lúc, không ai lỗi — {loi[:1]}')
+        cuoi = doc_an_toan(dd)
+        kiem(cuoi is not None,
+             'Sau khi 6 người lưu đồng thời, tệp vẫn đọc được')
+        kiem(cuoi and len(cuoi.get('quy_tac', [])) == len(goc['quy_tac']),
+             'Và không mất quy tắc nào')
+
+
+# ==========================================================================
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
+    ca_a7_sao_luu_xoay_vong(tm)
 
 
 if __name__ == '__main__':
