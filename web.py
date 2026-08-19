@@ -28,6 +28,7 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import quy_tac as QT
 import xep_tkb as X
 
 THU_MUC = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +50,10 @@ def thu_muc_cauhinh():
 
 KHOA = threading.Lock()
 TT = {}
+
+# Quy tắc người dùng thêm ở màn hình Quy tắc — CHỈ nằm trong bộ nhớ của phiên
+# này. Ghi xuống cauhinh.json vẫn chỉ qua nút "Lưu vào cauhinh.json".
+PHIEN = {'them': []}
 
 
 def dat_lai_trang_thai():
@@ -87,7 +92,7 @@ def dat(**kw):
 
 def _chay(tuan, seed, so_lan, tat):
     try:
-        cfg = X.doc_cau_hinh(DUONG_DAN_CAUHINH)
+        cfg, _ = cau_hinh_phien()
         if tuan:
             cfg['thong_tin']['tuan'] = tuan
         for i in tat:                       # tắt quy tắc cho riêng lượt này
@@ -245,18 +250,115 @@ def lich_gv(bt):
 # 3. ĐỌC / GHI QUY TẮC
 # ==========================================================================
 
-def doc_quy_tac():
+def cau_hinh_phien():
+    """cauhinh.json + các quy tắc vừa thêm trong phiên. Không đụng file."""
     cfg = X.doc_cau_hinh(DUONG_DAN_CAUHINH)
+    tu_file = [r for r in cfg.get('quy_tac', []) if isinstance(r, dict)]
+    cfg['quy_tac'] = tu_file + [copy.deepcopy(r) for r in PHIEN['them']]
+    return cfg, len(tu_file)
+
+
+def doc_quy_tac():
+    cfg, so_file = cau_hinh_phien()
     ds = []
-    for i, r in enumerate(cfg.get('quy_tac', [])):
-        if not isinstance(r, dict):
-            continue
+    for i, r in enumerate(cfg['quy_tac']):
         ds.append({'i': i, 'loai': r.get('loai', '?'),
                    'ghi_chu': r.get('ghi_chu', ''),
                    'bat': bool(r.get('bat', True)),
-                   'mem': str(r.get('loai', '')).startswith('uu_tien')})
-    return {'quy_tac': ds, 'tuan': cfg['thong_tin']['tuan'],
+                   'mem': str(r.get('loai', '')).startswith('uu_tien'),
+                   'moi': i >= so_file,          # chưa lưu xuống file
+                   'noi_dung': {k: v for k, v in r.items()
+                                if k not in ('loai', 'ghi_chu', 'bat')}})
+    return {'quy_tac': ds, 'so_file': so_file, 'so_moi': len(PHIEN['them']),
+            'tuan': cfg['thong_tin']['tuan'],
             'tim_kiem': cfg.get('tim_kiem', {})}
+
+
+def danh_muc_loai():
+    """Danh mục loại quy tắc, sinh thẳng từ QT.DANH_MUC — không chép tay."""
+    ra = []
+    for ten_nhom, ds in QT.nhom_danh_muc():
+        ra.append({'nhom': ten_nhom, 'loai': [
+            {'ten': t, 'mo_ta': QT.DANH_MUC[t].MO_TA,
+             'truong': [dict(x) for x in QT.DANH_MUC[t].TRUONG],
+             'vi_du': QT.DANH_MUC[t].VI_DU,
+             'mem': t.startswith('uu_tien')} for t in ds]})
+    return {'nhom': ra, 'kieu': QT.KIEU, 'khoa_loc': list(QT.KHOA_LOC)}
+
+
+def gia_tri_chon():
+    """Các giá trị chọn được, đọc thẳng từ cauhinh.json."""
+    cfg = X.doc_cau_hinh(DUONG_DAN_CAUHINH)
+    pc = {k: v for k, v in cfg['phan_cong'].items() if not k.startswith('_')}
+    dm = {k: v for k, v in cfg['dinh_muc_mon'].items() if k != '_doc'}
+    kg = cfg['khung_gio']
+    return {
+        'lop': [l['ten'] for l in cfg['lop']],
+        'gv': sorted({g for ds in pc.values() for _, g, _ in ds}),
+        'mon': sorted({m for ds in pc.values() for m, _, _ in ds}),
+        'nhom_mon': sorted({v['nhom'] for v in dm.values()}),
+        'thu': list(kg['cac_thu']),
+        'tiet': list(kg['cac_tiet']),
+        'tiet_trong_buoi': list(range(1, len(kg['cac_tiet']) + 1)),
+    }
+
+
+def them_quy_tac(r):
+    """Dựng thử BaiToan trước khi nhận. Khai sai thì SystemExit bay lên trên
+       và người gọi hiện nguyên văn ra trang."""
+    if not isinstance(r, dict):
+        raise SystemExit('[LỖI] Quy tắc phải là một khối { ... }')
+    if not str(r.get('ghi_chu', '')).strip():
+        raise SystemExit('[LỖI] Chưa điền "Nội dung quy tắc"\n'
+                         '      Câu này hiện nguyên văn trên bảng đối chiếu '
+                         'và trên sheet "Kiểm tra quy tắc", nên không được '
+                         'để trống.')
+    cfg, _ = cau_hinh_phien()
+    cfg['quy_tac'].append(copy.deepcopy(r))
+    X.BaiToan(cfg)                     # ném SystemExit nếu khai sai
+    PHIEN['them'].append(copy.deepcopy(r))
+    return doc_quy_tac()
+
+
+def xoa_quy_tac(i):
+    _, so_file = cau_hinh_phien()
+    if i < so_file:
+        raise SystemExit(
+            '[LỖI] Chỉ xoá được quy tắc vừa thêm trong phiên này.\n'
+            '      Quy tắc đã có trong cauhinh.json thì dùng công tắc để tắt, '
+            'rồi bấm "Lưu vào cauhinh.json".')
+    j = i - so_file
+    if not 0 <= j < len(PHIEN['them']):
+        raise SystemExit('[LỖI] Không có quy tắc thứ %d để xoá.' % i)
+    PHIEN['them'].pop(j)
+    return doc_quy_tac()
+
+
+def thu_quy_tac(r, tat):
+    """Xếp thử rút gọn để xem thêm quy tắc này còn xếp được không.
+       Chạy thẳng trong luồng HTTP vì đã chặn cứng 30 lần thử / 8 giây —
+       khác hẳn lượt xếp thật (~50 giây) nên không được làm như vậy ở /api/xep."""
+    cfg, _ = cau_hinh_phien()
+    if r:
+        cfg['quy_tac'].append(copy.deepcopy(r))
+    for i in tat:
+        if 0 <= i < len(cfg['quy_tac']):
+            cfg['quy_tac'][i]['bat'] = False
+    bt = X.BaiToan(cfg)
+    goc = cfg.get('tim_kiem', {})
+    tk = {'so_lan_thu': 30, 'gioi_han_buoc': goc.get('gioi_han_buoc', 30000),
+          'gioi_han_giay_moi_lan': 2, 'gioi_han_tong_giay': 8,
+          'seed': goc.get('seed', 0)}
+    kqt = X.tim_phuong_an(bt, tk)
+    pa = kqt.tot or kqt.du_phong
+    vi_pham = []
+    if pa is not None:
+        vi_pham = [{'ten': t, 'ghi_chu': c}
+                   for kq, t, c in X.hau_kiem(bt, pa)[0] if kq == 'LỖI']
+    return {'xep_duoc': kqt.tot is not None, 'co_loi_giai': pa is not None,
+            'so_hop_le': kqt.so_hop_le, 'so_lan': kqt.da_thu,
+            'giay': round(kqt.giay, 1), 'diem': kqt.diem,
+            'vi_pham': vi_pham}
 
 
 def _gon_json(cfg):
@@ -271,13 +373,11 @@ def _gon_json(cfg):
 
 def luu_quy_tac(tat):
     """Ghi cờ bật/tắt vào cauhinh.json. Sao lưu trước, giữ nguyên thứ tự khoá."""
-    cfg = X.doc_cau_hinh(DUONG_DAN_CAUHINH)          # dict giữ thứ tự khoá
-    n = 0
-    for i, r in enumerate(cfg.get('quy_tac', [])):
-        if not isinstance(r, dict):
-            continue
+    cfg, so_file = cau_hinh_phien()                 # dict giữ thứ tự khoá
+    n = len(PHIEN['them'])
+    for i, r in enumerate(cfg['quy_tac']):
         muon_bat = i not in tat
-        if bool(r.get('bat', True)) != muon_bat:
+        if i < so_file and bool(r.get('bat', True)) != muon_bat:
             n += 1
         if muon_bat:
             r.pop('bat', None)                        # bật = bỏ hẳn khoá "bat"
@@ -288,6 +388,7 @@ def luu_quy_tac(tat):
     with open(DUONG_DAN_CAUHINH, 'w', encoding='utf-8') as f:
         f.write(_gon_json(cfg) + '\n')
     X.doc_cau_hinh(DUONG_DAN_CAUHINH)                 # đọc lại, hỏng thì báo ngay
+    PHIEN['them'].clear()                             # đã nằm trong file rồi
     return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
 
 
@@ -334,13 +435,19 @@ class May(BaseHTTPRequestHandler):
                 return self._trang_thai()
             if duong == '/api/quy-tac':
                 return self._json(doc_quy_tac())
+            if duong == '/api/loai-quy-tac':
+                return self._json(danh_muc_loai())
+            if duong == '/api/gia-tri':
+                return self._json(gia_tri_chon())
             if duong == '/api/tai-ve':
                 return self._tai_ve()
             if duong == '/api/tai-web':
                 return self._tai_web()
             self._tra(404, 'text/plain', 'Không có trang này')
         except SystemExit as e:
-            self._json({'loi': str(e)}, 500)
+            # Khai báo sai là lỗi của dữ liệu người dùng gửi lên -> 400,
+            # không phải máy chủ hỏng.
+            self._json({'loi': str(e)}, 400)
         except Exception:
             self._json({'loi': traceback.format_exc()}, 500)
 
@@ -403,9 +510,17 @@ class May(BaseHTTPRequestHandler):
                 return self._xep()
             if duong == '/api/luu-quy-tac':
                 return self._luu()
+            if duong == '/api/them-quy-tac':
+                return self._json(them_quy_tac(self._than_json().get('quy_tac')))
+            if duong == '/api/xoa-quy-tac':
+                return self._json(xoa_quy_tac(int(self._than_json()['i'])))
+            if duong == '/api/thu-quy-tac':
+                return self._thu()
             self._tra(404, 'text/plain', 'Không có trang này')
         except SystemExit as e:
-            self._json({'loi': str(e)}, 500)
+            # Khai báo sai là lỗi của dữ liệu người dùng gửi lên -> 400,
+            # không phải máy chủ hỏng.
+            self._json({'loi': str(e)}, 400)
         except Exception:
             self._json({'loi': traceback.format_exc()}, 500)
 
@@ -431,6 +546,15 @@ class May(BaseHTTPRequestHandler):
         threading.Thread(target=_chay, args=(tuan, seed, so_lan, tat),
                          daemon=True).start()
         return self._json({'ok': True})
+
+    def _thu(self):
+        with KHOA:
+            ban = TT['dang_chay']
+        if ban:
+            return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
+        d = self._than_json()
+        tat = [int(x) for x in d.get('tat', [])]
+        return self._json(thu_quy_tac(d.get('quy_tac'), tat))
 
     def _luu(self):
         d = self._than_json()

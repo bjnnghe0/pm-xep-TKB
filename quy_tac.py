@@ -969,30 +969,40 @@ class UuTienTraiDeu(QuyTac):
 # IN DANH MỤC RA MÀN HÌNH
 # ==========================================================================
 
+# Xếp 17 loại vào nhóm cho dễ tra. Loại nào quên xếp vẫn hiện, xem nhom_danh_muc().
+NHOM_LOAI = (
+    ('GIỚI HẠN NGÀY / TIẾT',
+     ['chi_xep_thu', 'khong_xep_thu', 'chi_xep_tiet', 'khong_xep_tiet',
+      'khong_xep_o', 'co_dinh']),
+    ('QUAN HỆ GIỮA CÁC TIẾT',
+     ['khac_ngay', 'cung_ngay', 'toi_da_tiet_moi_ngay',
+      'toi_da_ngay_moi_tuan', 'khong_ke_nhau', 'phai_ke_nhau']),
+    ('GOM TIẾT', ['gom_tiet']),
+    ('TIÊU CHÍ MỀM (chỉ cộng/trừ điểm)',
+     ['uu_tien_o', 'uu_tien_ke_nhau', 'uu_tien_it_buoi', 'uu_tien_trai_deu']),
+)
+
+
+def nhom_danh_muc():
+    """Danh mục đã xếp nhóm, KÈM nhóm "CHƯA XẾP NHÓM" cho loại mới thêm mà
+       quên xếp. Dùng chung cho in_danh_muc() và cho giao diện web — khai một
+       chỗ, hai nơi khỏi lệch."""
+    ds = [(ten, [t for t in ds_t if t in DANH_MUC]) for ten, ds_t in NHOM_LOAI]
+    da = {t for _, ds_t in ds for t in ds_t}
+    con = sorted(t for t in DANH_MUC if t not in da)
+    if con:
+        ds.append(('CHƯA XẾP NHÓM', con))
+    return [(ten, ds_t) for ten, ds_t in ds if ds_t]
+
+
 def in_danh_muc():
     import json
-    nhom = [
-        ('GIỚI HẠN NGÀY / TIẾT',
-         ['chi_xep_thu', 'khong_xep_thu', 'chi_xep_tiet', 'khong_xep_tiet',
-          'khong_xep_o', 'co_dinh']),
-        ('QUAN HỆ GIỮA CÁC TIẾT',
-         ['khac_ngay', 'cung_ngay', 'toi_da_tiet_moi_ngay',
-          'toi_da_ngay_moi_tuan', 'khong_ke_nhau', 'phai_ke_nhau']),
-        ('GOM TIẾT', ['gom_tiet']),
-        ('TIÊU CHÍ MỀM (chỉ cộng/trừ điểm)',
-         ['uu_tien_o', 'uu_tien_ke_nhau', 'uu_tien_it_buoi',
-          'uu_tien_trai_deu']),
-    ]
+    nhom = nhom_danh_muc()
     print('=' * 74)
     print(' DANH MỤC QUY TẮC — chép mẫu bên dưới vào mục "quy_tac" của cauhinh.json')
     print('=' * 74)
-    da_in = set()
     for ten_nhom, ds in nhom:
         _in_nhom(ten_nhom, ds)
-        da_in |= set(ds)
-    con = [t for t in DANH_MUC if t not in da_in]
-    if con:                       # loại mới thêm mà quên xếp nhóm thì vẫn hiện
-        _in_nhom('CHƯA XẾP NHÓM', sorted(con))
     print('\n' + '=' * 74)
     print(' Dấu * = khoá bắt buộc. Khoá nào không có trong danh sách trên thì')
     print(' chương trình DỪNG chứ không bỏ qua — bỏ qua sẽ thành quy tắc rỗng.')

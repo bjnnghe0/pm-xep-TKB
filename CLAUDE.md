@@ -357,8 +357,23 @@ sửa gì trong đó.
 | `GET /` · `GET /web/<tệp>` | Trang và tệp tĩnh — danh sách trắng `TINH`, đường dẫn lạ trả 404 |
 | `POST /api/xep` | Bắt đầu một lượt; đang chạy thì trả **409** kèm "Đang xếp, vui lòng đợi." |
 | `GET /api/trang-thai?tu=N` | Tiến độ + nhật ký **từ dòng N trở đi** (đừng gửi lại cả khung log mỗi lần hỏi) |
-| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc / ghi cờ bật-tắt |
-| `GET /api/tai-ve` | Tải `TKB_Khoi12.xlsx` |
+| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file |
+| `GET /api/loai-quy-tac` | Danh mục 17 loại: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
+| `GET /api/gia-tri` | Lớp / GV / môn / nhóm môn / thứ / tiết — đọc từ `cauhinh.json` |
+| `POST /api/them-quy-tac` · `POST /api/xoa-quy-tac` | Chỉ đổi cấu hình **của phiên**, không ghi file |
+| `POST /api/thu-quy-tac` | Xếp thử rút gọn (30 lần thử / 8 giây) để xem còn xếp được không |
+| `GET /api/tai-ve` · `GET /api/tai-web` | Tải `TKB_Khoi12.xlsx` / `tkb_web.html` |
+
+`PHIEN['them']` giữ các quy tắc người dùng thêm ở màn hình Quy tắc — **chỉ trong
+bộ nhớ**. `cau_hinh_phien()` ghép `cauhinh.json` + `PHIEN['them']` và là **nguồn
+duy nhất** cho `/api/quy-tac`, `/api/xep`, `/api/thu-quy-tac`, `/api/luu-quy-tac`.
+Chỉ nút Lưu mới ghi file, ghi xong thì xoá `PHIEN['them']`. Chỉ số quy tắc là chỉ
+số trong danh sách đã ghép; quy tắc từ file không xoá được (dùng công tắc để tắt).
+
+`/api/thu-quy-tac` **giải ngay trong luồng HTTP** — ngoại lệ có chủ ý của quy tắc
+"không giải trong handler", vì nó chặn cứng 30 lần thử / 8 giây (đo được ~2,3 giây)
+chứ không phải ~50 giây như lượt xếp thật. Nó cũng **không đụng vào `TT`** nên
+không ghi đè kết quả đang hiện trên màn hình.
 
 ### Ba chỗ dễ sai, đã xử
 
