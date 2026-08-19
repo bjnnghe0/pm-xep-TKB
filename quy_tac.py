@@ -37,6 +37,75 @@ DANH_MUC = {}
 # Các khoá hợp lệ trong một bộ lọc ("loc", "a", "b", và "tru" lồng bên trong).
 KHOA_LOC = ('mon', 'nhom_mon', 'gv', 'lop', 'la_chuyen_de', 'tru')
 
+# Khoá cấp cao nhất mà quy tắc NÀO cũng nhận. Ngoài ra khoá bắt đầu bằng
+# dấu gạch dưới luôn được bỏ qua — đó là quy ước ghi chú trong cauhinh.json.
+KHOA_CHUNG = ('loai', 'ghi_chu', 'bat')
+
+# Các kiểu dữ liệu dùng trong TRUONG. Form web dựa vào đây để biết nên
+# hiện ô nhập kiểu gì, nên đừng đổi tên kiểu mà không sửa web/app.js.
+KIEU = {
+    'loc':          'bộ lọc: mon / nhom_mon / gv / lop / la_chuyen_de / tru',
+    'ds_thu':       'danh sách thứ, vd [2, 3]',
+    'ds_tiet':      'danh sách số hiệu tiết in trên TKB, vd [9, 10]',
+    'ds_tiet_buoi': 'danh sách thứ tự tiết trong buổi, vd [4, 5]',
+    'so_thu':       'một thứ, vd 6',
+    'so_tiet':      'một số hiệu tiết, vd 10',
+    'so_tiet_buoi': 'một thứ tự tiết trong buổi, vd 5',
+    'ds_o':         'danh sách ô [thứ, tiết], vd [[4, 6], [4, 7]]',
+    'ds_so':        'danh sách số, vd [2, 1]',
+    'so':           'một số nguyên',
+    'chon':         'chọn một trong các giá trị liệt kê ở khoá "chon"',
+    'dung_sai':     'true hoặc false',
+}
+
+
+def truong(ten, kieu, nhan, bat_buoc=False, **them):
+    """Mô tả một khoá cấp cao nhất của quy tắc, dùng cho cả --quy-tac lẫn
+       form nhập trên giao diện web."""
+    d = {'ten': ten, 'kieu': kieu, 'nhan': nhan, 'bat_buoc': bat_buoc}
+    d.update(them)
+    return d
+
+
+T_LOC = truong('loc', 'loc', 'Áp cho những tiết nào')
+T_A = truong('a', 'loc', 'Nhóm A', True)
+T_B = truong('b', 'loc', 'Nhóm B', True)
+T_DIEM = truong('diem', 'so', 'Điểm cộng mỗi lần thoả', True)
+# "tiet" và "tiet_trong_buoi" thay thế nhau: phải có ít nhất một trong hai.
+T_TIET = truong('tiet', 'ds_tiet', 'Theo số hiệu tiết', True, nhom='tiet')
+T_TIET_BUOI = truong('tiet_trong_buoi', 'ds_tiet_buoi',
+                     'Theo thứ tự tiết trong buổi', True, nhom='tiet')
+
+
+def kiem_khoa_quy_tac(r, cls, ghi_chu):
+    """Khoá lạ ở cấp cao nhất thì DỪNG. Bỏ qua lặng lẽ sẽ biến quy tắc
+       thành quy tắc không cấm gì mà vẫn báo ĐẠT."""
+    hop_le = set(KHOA_CHUNG) | {t['ten'] for t in cls.TRUONG}
+    la = [k for k in r if k not in hop_le and not str(k).startswith('_')]
+    if la:
+        bao_loi(ghi_chu, 'quy tắc ' + cls.TEN, [f'"{k}"' for k in la],
+                f'các khoá dùng được cho loại "{cls.TEN}": '
+                + ' / '.join(sorted(hop_le)),
+                goi_y=('      => Khoá lạ bị bỏ qua, nên quy tắc hoá ra KHÔNG cấm '
+                       'gì cả mà vẫn báo ĐẠT.',
+                       '         Xem danh mục đầy đủ: python xep_tkb.py --quy-tac'))
+    nhom = {}
+    for t in cls.TRUONG:
+        if t.get('nhom'):
+            nhom.setdefault(t['nhom'], []).append(t)
+        elif t['bat_buoc'] and t['ten'] not in r:
+            bao_loi(ghi_chu, 'quy tắc ' + cls.TEN, [f'thiếu "{t["ten"]}"'],
+                    f'{t["nhan"]} — {KIEU.get(t["kieu"], t["kieu"])}',
+                    goi_y=(f'      => Loại "{cls.TEN}" bắt buộc phải có khoá '
+                           f'"{t["ten"]}".',))
+    for ten_nhom, ds in nhom.items():
+        if any(t['bat_buoc'] for t in ds) and not any(t['ten'] in r for t in ds):
+            bao_loi(ghi_chu, 'quy tắc ' + cls.TEN,
+                    ['thiếu ' + ' hoặc '.join(f'"{t["ten"]}"' for t in ds)],
+                    'phải có ít nhất một trong hai khoá đó',
+                    goi_y=(f'      => Hai khoá này thay thế nhau, ghi khoá nào '
+                           f'cũng được.',))
+
 
 def bao_loi(ghi_chu, khoa, sai, mo_ta_mien,
             khoa_kia=None, mien_kia=(), mo_ta_kia='', goi_y=()):
@@ -130,6 +199,7 @@ class QuyTac:
     TEN = ''
     MO_TA = ''
     VI_DU = {}
+    TRUONG = ()                      # các khoá cấp cao nhất loại này nhận
     CAN_TRONG_KHI_GIAI = False       # True nếu có dùng cho_phep()/dat()/go()
     CO_GOI_Y = False                 # True nếu có dùng thich()/hoan()
 
@@ -137,6 +207,7 @@ class QuyTac:
         self.r = r
         self.bt = bt
         self.ghi_chu = r.get('ghi_chu') or r.get('_ghichu') or self.MO_TA
+        kiem_khoa_quy_tac(r, type(self), self.ghi_chu)
         for k in ('loc', 'a', 'b'):
             if k in r:
                 kiem_bo_loc(r[k], self.ghi_chu, k)
@@ -324,6 +395,8 @@ class ChiXepThu(QuyTac):
              "ghi_chu": "Vật lý 12B1, 12B2 chỉ Thứ 2 hoặc Thứ 3",
              "loc": {"mon": "Vật lý", "lop": ["12B1", "12B2"]},
              "thu": [2, 3]}
+    TRUONG = (T_LOC,
+              truong('thu', 'ds_thu', 'Chỉ được xếp vào các thứ', True))
 
     def thu_hep_mien(self):
         ok = self.tap_ngay()
@@ -342,6 +415,8 @@ class KhongXepThu(QuyTac):
              "ghi_chu": "Văn cô Duy không xếp Thứ 2",
              "loc": {"gv": "Đ.Duy"},
              "thu": [2]}
+    TRUONG = (T_LOC,
+              truong('thu', 'ds_thu', 'Cấm các thứ', True))
 
     def thu_hep_mien(self):
         cam = self.tap_ngay()
@@ -360,6 +435,7 @@ class ChiXepTiet(QuyTac):
              "ghi_chu": "GDKT-PL luôn ở 2 tiết cuối buổi",
              "loc": {"mon": "GDKT-PL"},
              "tiet_trong_buoi": [4, 5]}
+    TRUONG = (T_LOC, T_TIET, T_TIET_BUOI)
 
     def thu_hep_mien(self):
         ok = self.tap_tiet()
@@ -381,6 +457,7 @@ class KhongXepTiet(QuyTac):
              "ghi_chu": "Sử cô Ngọc Uyên không xếp tiết 4 và tiết 5 của buổi",
              "loc": {"gv": "N.Uyên", "nhom_mon": "Sử"},
              "tiet_trong_buoi": [4, 5]}
+    TRUONG = (T_LOC, T_TIET, T_TIET_BUOI)
 
     def thu_hep_mien(self):
         cam = self.tap_tiet()
@@ -402,6 +479,8 @@ class KhongXepO(QuyTac):
              "ghi_chu": "Thầy Nam bận họp Thứ 4 tiết 6, 7",
              "loc": {"gv": "H.Nam"},
              "o": [[4, 6], [4, 7]]}
+    TRUONG = (T_LOC,
+              truong('o', 'ds_o', 'Các ô bị cấm (thứ + tiết)', True))
 
     def _tap_o(self):
         self._kiem_o()
@@ -428,6 +507,12 @@ class CoDinh(QuyTac):
              "ghi_chu": "SHCN 12B1 cố định Thứ 6 tiết 10",
              "loc": {"mon": "SHCN", "lop": "12B1"},
              "thu": 6, "tiet": 10}
+    TRUONG = (T_LOC,
+              truong('thu', 'so_thu', 'Ghim vào thứ', True),
+              truong('tiet', 'so_tiet', 'Ghim vào tiết (số hiệu thật)',
+                     True, nhom='tiet'),
+              truong('tiet_trong_buoi', 'so_tiet_buoi',
+                     'Ghim vào tiết thứ mấy của buổi', True, nhom='tiet'))
 
     def thu_hep_mien(self):
         bt = self.bt
@@ -461,6 +546,9 @@ class KhacNgay(QuyTac):
              "a": {"gv": "N.Xuân"},
              "b": {"gv": "M.Hùng"},
              "pham_vi": "toan_truong"}
+    TRUONG = (T_A, T_B,
+              truong('pham_vi', 'chon', 'Xét trong phạm vi',
+                     chon=('toan_truong', 'moi_lop')))
     CAN_TRONG_KHI_GIAI = True
 
     def __init__(self, r, bt):
@@ -512,6 +600,7 @@ class CungNgay(QuyTac):
              "ghi_chu": "Chuyên đề Toán học đúng ngày có tiết Toán chính",
              "a": {"mon": "Chuyên đề Toán"},
              "b": {"mon": "Toán học"}}
+    TRUONG = (T_A, T_B)
     CAN_TRONG_KHI_GIAI = True
     CO_GOI_Y = True
 
@@ -560,6 +649,10 @@ class ToiDaTietMoiNgay(QuyTac):
     VI_DU = {"loai": "toi_da_tiet_moi_ngay",
              "ghi_chu": "Mỗi giáo viên dạy tối đa 4 tiết/buổi",
              "loc": {}, "theo": "gv", "so": 4}
+    TRUONG = (T_LOC,
+              truong('theo', 'chon', 'Đếm theo', True,
+                     chon=('gv', 'lop', 'mon_lop')),
+              truong('so', 'so', 'Tối đa bao nhiêu tiết/ngày', True))
     CAN_TRONG_KHI_GIAI = True
 
     def __init__(self, r, bt):
@@ -599,6 +692,9 @@ class ToiDaNgayMoiTuan(QuyTac):
     VI_DU = {"loai": "toi_da_ngay_moi_tuan",
              "ghi_chu": "Cô Ngọc Uyên chỉ lên lớp tối đa 3 buổi/tuần",
              "loc": {"gv": "N.Uyên"}, "theo": "gv", "so": 3}
+    TRUONG = (T_LOC,
+              truong('theo', 'chon', 'Đếm theo', True, chon=('gv', 'lop')),
+              truong('so', 'so', 'Tối đa bao nhiêu buổi/tuần', True))
     CAN_TRONG_KHI_GIAI = True
 
     def __init__(self, r, bt):
@@ -637,6 +733,7 @@ class KhongKeNhau(QuyTac):
              "ghi_chu": "Không xếp Toán ngay sát Vật lý",
              "a": {"nhom_mon": "Toán"},
              "b": {"nhom_mon": "Lý"}}
+    TRUONG = (T_A, T_B)
     CAN_TRONG_KHI_GIAI = True
 
     def lien_quan(self, c):
@@ -679,6 +776,7 @@ class PhaiKeNhau(QuyTac):
              "ghi_chu": "Chuyên đề Toán phải nối tiếp tiết Toán chính",
              "a": {"mon": "Chuyên đề Toán"},
              "b": {"mon": "Toán học"}}
+    TRUONG = (T_A, T_B)
     CAN_TRONG_KHI_GIAI = True
     CO_GOI_Y = True
 
@@ -734,6 +832,8 @@ class GomTiet(QuyTac):
              "ghi_chu": "Riêng 12B5, 12B6 tách Hoá ra 2 buổi",
              "loc": {"mon": "Hoá học", "lop": ["12B5", "12B6"]},
              "cum": [1, 1]}
+    TRUONG = (T_LOC,
+              truong('cum', 'ds_so', 'Cách chia cụm, vd [2, 1]', True))
 
 
 # ==========================================================================
@@ -749,6 +849,11 @@ class UuTienO(QuyTac):
              "loc": {"nhom_mon": ["Toán", "Văn"]},
              "tiet_trong_buoi": [1, 2],
              "diem": 3}
+    TRUONG = (T_LOC,
+              truong('thu', 'ds_thu', 'Ưu tiên các thứ'),
+              dict(T_TIET, bat_buoc=False),
+              dict(T_TIET_BUOI, bat_buoc=False),
+              T_DIEM)
 
     def diem(self):
         ng = self.tap_ngay() if 'thu' in self.r else None
@@ -773,6 +878,10 @@ class UuTienKeNhau(QuyTac):
              "b": {"la_chuyen_de": False},
              "cung_nhom_mon": True,
              "diem": 12}
+    TRUONG = (T_A, T_B,
+              truong('cung_nhom_mon', 'dung_sai',
+                     'Chỉ tính khi cùng một nhóm môn'),
+              T_DIEM)
     CO_GOI_Y = True
 
     def _hop(self, c, k):
@@ -822,6 +931,7 @@ class UuTienItBuoi(QuyTac):
     MO_TA = ('Trừ điểm theo tổng số buổi giáo viên phải lên lớp — càng dồn '
              'buổi cho thầy cô càng được điểm cao.')
     VI_DU = {"loai": "uu_tien_it_buoi", "loc": {}, "diem": 4}
+    TRUONG = (T_LOC, T_DIEM)
 
     def diem(self):
         ng = defaultdict(set)
@@ -835,6 +945,9 @@ class UuTienTraiDeu(QuyTac):
     MO_TA = ('Cộng điểm khi hai buổi học của cùng một môn (trong cùng lớp) '
              'cách nhau từ "cach" ngày trở lên.')
     VI_DU = {"loai": "uu_tien_trai_deu", "loc": {}, "cach": 2, "diem": 3}
+    TRUONG = (T_LOC,
+              truong('cach', 'so', 'Cách nhau ít nhất mấy ngày', True),
+              T_DIEM)
 
     def diem(self):
         cach = self.r.get('cach', 2)
@@ -873,19 +986,39 @@ def in_danh_muc():
     print('=' * 74)
     print(' DANH MỤC QUY TẮC — chép mẫu bên dưới vào mục "quy_tac" của cauhinh.json')
     print('=' * 74)
+    da_in = set()
     for ten_nhom, ds in nhom:
-        print(f'\n### {ten_nhom}')
-        for t in ds:
-            cls = DANH_MUC[t]
-            print(f'\n  ▸ {t}')
-            for dong in _xuong_dong(cls.MO_TA, 68):
-                print(f'      {dong}')
-            print('      ' + _gon(cls.VI_DU).replace('\n', '\n      '))
+        _in_nhom(ten_nhom, ds)
+        da_in |= set(ds)
+    con = [t for t in DANH_MUC if t not in da_in]
+    if con:                       # loại mới thêm mà quên xếp nhóm thì vẫn hiện
+        _in_nhom('CHƯA XẾP NHÓM', sorted(con))
     print('\n' + '=' * 74)
-    print(' Bộ lọc "loc" dùng chung: mon / nhom_mon / gv / lop / la_chuyen_de.')
+    print(' Dấu * = khoá bắt buộc. Khoá nào không có trong danh sách trên thì')
+    print(' chương trình DỪNG chứ không bỏ qua — bỏ qua sẽ thành quy tắc rỗng.')
+    print(' Bộ lọc "loc" dùng chung: mon / nhom_mon / gv / lop / la_chuyen_de / tru.')
     print(' Mỗi khoá nhận 1 giá trị hoặc 1 danh sách. Bỏ trống = áp cho tất cả.')
     print(' Thêm "bat": false để tạm tắt một quy tắc mà không cần xoá.')
     print('=' * 74)
+
+
+def _in_nhom(ten_nhom, ds):
+    print(f'\n### {ten_nhom}')
+    for t in ds:
+        cls = DANH_MUC[t]
+        print(f'\n  ▸ {t}')
+        for dong in _xuong_dong(cls.MO_TA, 68):
+            print(f'      {dong}')
+        for tr in cls.TRUONG:          # đọc thẳng TRUONG, không suy từ VI_DU
+            dau = '*' if tr['bat_buoc'] else ' '
+            mo = KIEU.get(tr['kieu'], tr['kieu'])
+            if tr.get('chon'):
+                mo = 'một trong: ' + ' / '.join(tr['chon'])
+            if tr.get('nhom'):
+                mo += '  (thay thế được cho khoá cùng nhóm)'
+            print(f'      {dau} "{tr["ten"]}"  —  {tr["nhan"]}')
+            print(f'          {mo}')
+        print('      ' + _gon(cls.VI_DU).replace('\n', '\n      '))
 
 
 def _gon(obj):

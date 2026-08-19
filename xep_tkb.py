@@ -166,8 +166,12 @@ class BaiToan:
         ds = []
         for r in self.khai_bao_qt:
             if r.get('loai') == 'gom_tiet':
+                # gom_tiet không đi qua _tao_quy_tac() nên GomTiet.__init__
+                # không chạy — phải tự gọi hai hàm kiểm ở đây.
+                ghi_chu = r.get('ghi_chu', 'gom_tiet')
+                QT.kiem_khoa_quy_tac(r, QT.DANH_MUC['gom_tiet'], ghi_chu)
                 loc = r.get('loc', {})
-                QT.kiem_bo_loc(loc, r.get('ghi_chu', 'gom_tiet'))
+                QT.kiem_bo_loc(loc, ghi_chu)
                 ds.append((loc, r['cum']))
         return ds
 

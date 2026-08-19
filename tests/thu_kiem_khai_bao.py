@@ -109,7 +109,8 @@ def ca_2_hai_to_hop_sai():
     print('  -- bắt lỗi NGAY lúc dựng bài toán, không đợi tới lúc chấm điểm --')
     for loai in ('khong_xep_tiet', 'chi_xep_tiet', 'uu_tien_o'):
         r = qt('tiet_trong_buoi', [9, 10], loai=loai)
-        r['diem'] = 3
+        if loai == 'uu_tien_o':
+            r['diem'] = 3        # chỉ loại mềm mới nhận khoá "diem"
         loi = bat_loi(lambda: dung_bai_toan(r))
         kiem(loi is not None and 'Khai báo sai' in loi,
              f'{loai}: BaiToan() dừng ngay khi dựng quy tắc')

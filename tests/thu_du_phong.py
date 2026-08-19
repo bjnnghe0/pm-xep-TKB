@@ -47,7 +47,12 @@ class QuyTacThuBatLoi(QT.QuyTac):
     """Không ràng buộc gì lúc giải, chỉ báo lỗi sau khi giải: mọi cụm khớp
        bộ lọc mà rơi vào các tiết liệt kê đều bị tính là vi phạm.
        Nhờ vậy bộ giải vẫn xếp thoải mái rồi mới trượt hậu kiểm — đúng tình
-       huống mà nhánh dự phòng sinh ra để xử lý."""
+       huống mà nhánh dự phòng sinh ra để xử lý.
+
+       TRUONG phải khai đủ các khoá loại này nhận, y như mọi loại quy tắc
+       thật — không khai thì kiem_khoa_quy_tac() chặn ngay lúc dựng."""
+
+    TRUONG = (QT.T_LOC, QT.T_TIET, QT.T_TIET_BUOI)
 
     def hau_kiem(self):
         cam = self.tap_tiet()

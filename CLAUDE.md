@@ -27,6 +27,7 @@ python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
 python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
 python tests/thu_web.py                # thử giao diện web
 python tests/thu_xuat_html.py          # thử trang web tĩnh
+python tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
 
 python web.py                          # giao diện web -> http://127.0.0.1:20266
 python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -63,6 +64,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_du_phong.py` | Ép nhánh dự phòng của `main()` xảy ra bằng một lớp quy tắc dùng-một-lần, chỉ đăng ký trong tiến trình thử | Chạy khi sửa `main()` |
 | `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
+| `tests/thu_truong.py` | Mọi loại có `TRUONG`; khoá lạ cấp cao nhất thì DỪNG | Chạy khi thêm loại quy tắc |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
@@ -151,7 +153,7 @@ Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `ta
 `tap_tiet()`, `ten_o(c)`, `_ben(c)` (trả `['a']`/`['b']` cho quy tắc so 2 nhóm),
 `_ke(c, ngay, vitri, k)` (hai cụm có sát nhau không).
 
-### Bốn quy ước SỐNG CÒN khi viết loại quy tắc mới
+### Năm quy ước SỐNG CÒN khi viết loại quy tắc mới
 
 1. **Cờ lớp phải khai đúng.** `CAN_TRONG_KHI_GIAI = True` nếu có dùng
    `cho_phep`/`dat`/`go`; `CO_GOI_Y = True` nếu có dùng `thich`/`hoan`.
@@ -179,7 +181,14 @@ Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `ta
    `_kiem_o()` (khoá `o`, kiểm cả phần thứ lẫn phần tiết). `_ds()` cho phép ghi
    một giá trị lẻ thay cho danh sách.
 
-4. **Tên loại quy tắc mềm phải bắt đầu bằng `uu_tien`.** `xep_tkb.py` phân biệt
+4. **Phải khai `TRUONG`** — danh sách các khoá cấp cao nhất loại đó nhận, mỗi
+   khoá ghi `ten` / `kieu` (xem `QT.KIEU`) / `nhan` tiếng Việt / `bat_buoc`.
+   Hai khoá thay thế nhau thì cho cùng `nhom` (vd `tiet` và `tiet_trong_buoi`).
+   `TRUONG` phục vụ **cả** `--quy-tac` **lẫn** form nhập trên web, nên khai một
+   chỗ là đủ; chép sang JS là chắc chắn lệch. Không khai thì mọi khoá riêng của
+   loại đó đều bị coi là khoá lạ và chương trình DỪNG.
+
+5. **Tên loại quy tắc mềm phải bắt đầu bằng `uu_tien`.** `xep_tkb.py` phân biệt
    quy tắc cứng / tiêu chí mềm bằng đúng `q.TEN.startswith('uu_tien')`
    (ở `hau_kiem()` và ở `main()`). Đặt tên sai → quy tắc mềm bị đem đi hậu kiểm.
 
@@ -496,6 +505,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python tests/thu_web.py`: **48/48 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
+- `python tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
+  thì tụt còn 15/23.
 - `python tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
   `node` — ca thử không đòi hỏi phải cài `node`.
