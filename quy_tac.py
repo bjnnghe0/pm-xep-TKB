@@ -58,8 +58,10 @@ class QuyTac:
         self.r = r
         self.bt = bt
         self.ghi_chu = r.get('ghi_chu') or r.get('_ghichu') or self.MO_TA
+        if 'thu' in r:
+            self._kiem_thu()         # bắt lỗi ngay, đừng đợi tới lúc chấm điểm
         if 'tiet' in r or 'tiet_trong_buoi' in r:
-            self._kiem_tiet()        # bắt lỗi ngay, đừng đợi tới lúc chấm điểm
+            self._kiem_tiet()
         if 'o' in r:
             self._kiem_o()
 
@@ -108,8 +110,8 @@ class QuyTac:
         return [c for c in self.bt.cac_cum if self.khop(c, dk)]
 
     def tap_ngay(self, khoa='thu'):
-        return {self.bt.thu2idx[t] for t in self.r.get(khoa, [])
-                if t in self.bt.thu2idx}
+        self._kiem_thu(khoa)
+        return {self.bt.thu2idx[t] for t in self._ds(khoa)}
 
     def tap_tiet(self):
         """Gộp 'tiet' (số hiệu tiết thật) và 'tiet_trong_buoi' (thứ tự trong buổi).
@@ -126,6 +128,31 @@ class QuyTac:
         """Đọc một khoá, chấp nhận cả 1 giá trị lẻ lẫn 1 danh sách."""
         gt = self.r.get(khoa, [])
         return gt if isinstance(gt, (list, tuple)) else [gt]
+
+    def _mien_thu(self):
+        thu = list(self.bt.cac_thu)
+        return thu, ('số hiệu thứ trong tuần: '
+                     + ', '.join(str(x) for x in thu))
+
+    def _goi_y_thu(self, sai):
+        """Hai kiểu nhầm hay gặp: đếm từ 1, và dùng thứ chưa khai trong cac_thu."""
+        thu = list(self.bt.cac_thu)
+        gy = ['      => "thu" ghi theo SỐ HIỆU THỨ in trên lịch (Thứ 2 ghi là 2), '
+              'KHÔNG phải đếm từ 1.']
+        for t in sai:
+            if isinstance(t, int) and 1 <= t <= len(thu):
+                gy.append(f'         Nếu bạn định nói ngày học thứ {t} của tuần '
+                          f'thì phải ghi là {thu[t - 1]} (Thứ {thu[t - 1]}).')
+            elif isinstance(t, int) and 2 <= t <= 8:
+                gy.append(f'         Thứ {t} chưa được khai trong "khung_gio" -> '
+                          f'"cac_thu". Muốn xếp thì thêm {t} vào đó trước.')
+        return tuple(gy)
+
+    def _kiem_thu(self, khoa='thu'):
+        thu, mo_ta = self._mien_thu()
+        sai = [t for t in self._ds(khoa) if t not in thu]
+        if sai:
+            self._bao_loi(khoa, sai, mo_ta, goi_y=self._goi_y_thu(sai))
 
     def _mien_tiet(self):
         """Hai cách ghi tiết và miền hợp lệ của mỗi cách."""
@@ -168,8 +195,7 @@ class QuyTac:
     def _kiem_o(self):
         """Khoá "o" ghi từng ô cụ thể: [[thứ, tiết], ...]"""
         tb, that, mo_ta_tb, mo_ta_that = self._mien_tiet()
-        thu = list(self.bt.cac_thu)
-        mo_ta_thu = 'số hiệu thứ trong tuần: ' + ', '.join(str(x) for x in thu)
+        thu, mo_ta_thu = self._mien_thu()
         for i, cap in enumerate(self.r.get('o', []), start=1):
             if not isinstance(cap, (list, tuple)) or len(cap) != 2:
                 raise SystemExit(
@@ -180,7 +206,8 @@ class QuyTac:
                     f'      Đang ghi: {cap!r}')
             t, ti = cap
             if t not in thu:
-                self._bao_loi(f'o — ô thứ {i}, phần THỨ', [t], mo_ta_thu)
+                self._bao_loi(f'o — ô thứ {i}, phần THỨ', [t], mo_ta_thu,
+                              goi_y=self._goi_y_thu([t]))
             if ti not in that:
                 gy = ()
                 if ti in tb:

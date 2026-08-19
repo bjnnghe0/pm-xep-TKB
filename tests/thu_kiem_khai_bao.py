@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 ==========================================================================
- CA THỬ: CHƯƠNG TRÌNH PHẢI TỰ BẮT LỖI KHAI SAI KHOÁ TIẾT
+ CA THỬ: CHƯƠNG TRÌNH PHẢI TỰ BẮT LỖI KHAI SAI THỨ / TIẾT
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_kiem_tiet.py
+ Chạy:  python tests/thu_kiem_khai_bao.py
 
  Có hai cách ghi tiết, lệch nhau đúng một khoảng:
      "tiet_trong_buoi"  thứ tự trong buổi, 1..5
@@ -18,6 +18,10 @@
      tiet=[9,10]             -> chạy, cấm vị trí [3, 4]   (y hệt)
      tiet=[4,5]              -> DỪNG, gợi ý dùng "tiet_trong_buoi"
      tiet_trong_buoi=[9,10]  -> DỪNG, gợi ý dùng "tiet"
+
+ Khoá "thu" cũng cùng một kiểu bẫy: ghi theo SỐ HIỆU THỨ (Thứ 2 là 2),
+ không phải đếm từ 1. Ghi "thu": [1] hay [7] (chưa khai trong cac_thu)
+ trước đây cũng bị lặng lẽ bỏ qua.
 ==========================================================================
 """
 import copy
@@ -137,8 +141,52 @@ def ca_3_khong_xep_o():
          'Ô ghi sai dạng [4, 6, 7] — DỪNG, nhắc đúng dạng [thứ, tiết]')
 
 
-def ca_4_khong_hoi_quy():
-    print('\nCA 4 — không hồi quy')
+def ca_4_khoa_thu():
+    print('\nCA 4 — khoá "thu" cũng được kiểm')
+    print('-' * 74)
+
+    def r_thu(loai, gt, **them):
+        r = {'loai': loai, 'ghi_chu': 'Vật lý 12B1, 12B2 chỉ Thứ 2 hoặc Thứ 3',
+             'loc': {'mon': 'Vật lý'}, 'thu': gt}
+        r.update(them)
+        return r
+
+    kiem(bat_loi(lambda: dung_quy_tac(r_thu('chi_xep_thu', [2, 3]))) is None,
+         '"thu": [2, 3] đúng — chạy bình thường')
+    kiem(sorted(dung_quy_tac(r_thu('chi_xep_thu', [2, 3])).tap_ngay()) == [0, 1],
+         '"thu": [2, 3] quy ra đúng chỉ số ngày [0, 1]')
+    kiem(bat_loi(lambda: dung_bai_toan(
+        r_thu('khong_xep_thu', [5], loc={'gv': 'Đ.Duy'}))) is None,
+         'Dựng nguyên bài toán với "thu" đúng: chạy bình thường')
+
+    loi = bat_loi(lambda: dung_quy_tac(r_thu('chi_xep_thu', [1, 2])))
+    kiem(loi is not None, '"thu": [1] (đếm từ 1) — DỪNG chứ không lặng lẽ bỏ qua')
+    kiem(loi and '2, 3, 4, 5, 6' in loi, '  nêu miền hợp lệ 2, 3, 4, 5, 6')
+    kiem(loi and 'KHÔNG phải đếm từ 1' in loi,
+         '  nói thẳng: thu ghi theo số hiệu thứ, không phải đếm từ 1')
+    kiem(loi and 'phải ghi là 2' in loi,
+         '  quy đổi giúp: ngày học thứ 1 của tuần chính là Thứ 2')
+
+    loi = bat_loi(lambda: dung_quy_tac(r_thu('khong_xep_thu', [7])))
+    kiem(loi is not None, '"thu": [7] khi cac_thu chưa có Thứ 7 — DỪNG')
+    kiem(loi and 'cac_thu' in loi and 'thêm 7 vào đó' in loi,
+         '  nhắc phải thêm 7 vào khung_gio.cac_thu trước')
+
+    loi = bat_loi(lambda: dung_bai_toan(
+        {'loai': 'co_dinh', 'ghi_chu': 'Ghim SHCN 12B1',
+         'loc': {'mon': 'SHCN', 'lop': '12B1'}, 'thu': 1, 'tiet': 10}))
+    kiem(loi is not None and 'KHÔNG phải đếm từ 1' in loi,
+         'co_dinh ghi "thu": 1 dạng số lẻ — DỪNG')
+
+    loi = bat_loi(lambda: dung_quy_tac(
+        {'loai': 'khong_xep_o', 'ghi_chu': 'Thầy Nam bận họp',
+         'loc': {'gv': 'H.Nam'}, 'o': [[1, 6]]}))
+    kiem(loi is not None and 'phần THỨ' in loi and 'KHÔNG phải đếm từ 1' in loi,
+         'khong_xep_o ghi "o": [[1, 6]] — DỪNG, cùng một thông báo')
+
+
+def ca_5_khong_hoi_quy():
+    print('\nCA 5 — không hồi quy')
     print('-' * 74)
     kiem(bat_loi(lambda: X.BaiToan(copy.deepcopy(GOC))) is None,
          'cauhinh.json thật vẫn dựng được, không báo lỗi oan')
@@ -154,14 +202,15 @@ def ca_4_khong_hoi_quy():
 
 if __name__ == '__main__':
     print('=' * 74)
-    print(' THỬ KIỂM TRA MIỀN GIÁ TRỊ CỦA KHOÁ TIẾT')
+    print(' THỬ KIỂM TRA MIỀN GIÁ TRỊ CỦA KHOÁ THỨ / TIẾT')
     print('=' * 74)
     print(f'  Khung giờ đang dùng: buổi {NEN.buoi}, tiết {NEN.cac_tiet} '
           f'-> tiet_trong_buoi 1..{NEN.SO_TIET}')
     ca_1_hai_to_hop_dung()
     ca_2_hai_to_hop_sai()
     ca_3_khong_xep_o()
-    ca_4_khong_hoi_quy()
+    ca_4_khoa_thu()
+    ca_5_khong_hoi_quy()
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')

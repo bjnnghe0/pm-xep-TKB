@@ -21,7 +21,7 @@ python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
 python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
 python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
-python tests/thu_kiem_tiet.py          # thử việc bắt lỗi khai sai khoá tiết
+python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
 ```
 
 ### Môi trường Python trên máy này (Linux)
@@ -53,7 +53,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `TKB_Khoi12.xlsx` | Kết quả (3 sheet) | File sinh ra, ghi đè mỗi lần chạy |
 | `tu_kiem_tra.py` | Chạy thử từng loại quy tắc | Chạy sau mỗi thay đổi |
 | `tests/thu_du_phong.py` | Ép nhánh dự phòng của `main()` xảy ra bằng một lớp quy tắc dùng-một-lần, chỉ đăng ký trong tiến trình thử | Chạy khi sửa `main()` |
-| `tests/thu_kiem_tiet.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi` + khoá `o` | Chạy khi sửa `tap_tiet()` |
+| `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -154,14 +154,15 @@ Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `ta
    `tap_tiet()` và `_kiem_o()` dừng chương trình bằng `SystemExit` kèm thông báo
    chỉ đích danh quy tắc, khoá, giá trị sai, miền hợp lệ và **đoán khoá người
    dùng định dùng**. `QuyTac.__init__` gọi sẵn hai hàm này khi quy tắc có khoá
-   `tiet`/`tiet_trong_buoi`/`o`, nên lỗi lộ ra ngay lúc dựng `BaiToan`, không đợi
-   tới lúc chấm điểm. Loại quy tắc mới đọc thêm khoá số nào từ `cauhinh.json`
-   thì cũng phải kiểm như vậy — bỏ qua âm thầm biến quy tắc sai thành quy tắc
-   không cấm gì mà vẫn báo ĐẠT.
+   `thu`/`tiet`/`tiet_trong_buoi`/`o`, nên lỗi lộ ra ngay lúc dựng `BaiToan`,
+   không đợi tới lúc chấm điểm. Loại quy tắc mới đọc thêm khoá số nào từ
+   `cauhinh.json` thì cũng phải kiểm như vậy — bỏ qua âm thầm biến quy tắc sai
+   thành quy tắc không cấm gì mà vẫn báo ĐẠT.
 
-   *Còn sót:* khoá `thu` chưa được kiểm — `tap_ngay()` (dùng bởi `chi_xep_thu`,
-   `khong_xep_thu`) và khoá `thu` dạng số lẻ của `co_dinh` vẫn lặng lẽ bỏ qua giá
-   trị lạ. Cùng một kiểu bẫy, chưa làm.
+   Ba hàm kiểm dùng chung `_bao_loi()`: `_kiem_thu()` (khoá `thu`, cả dạng danh
+   sách lẫn số lẻ của `co_dinh`), `_kiem_tiet()` (`tiet` / `tiet_trong_buoi`),
+   `_kiem_o()` (khoá `o`, kiểm cả phần thứ lẫn phần tiết). `_ds()` cho phép ghi
+   một giá trị lẻ thay cho danh sách.
 
 4. **Tên loại quy tắc mềm phải bắt đầu bằng `uu_tien`.** `xep_tkb.py` phân biệt
    quy tắc cứng / tiêu chí mềm bằng đúng `q.TEN.startswith('uu_tien')`
@@ -327,8 +328,9 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   đã có sẵn trong `cauhinh.json`.
 - `python tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
   dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.
-- `python tests/thu_kiem_tiet.py`: **31/31 mục ĐẠT** (~3s). Lùi phần kiểm miền về
-  bản im lặng cũ thì tụt còn 10/21 — ca thử có biết đỏ.
+- `python tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
+  khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
+  còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
 - 21 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 9 quy tắc cứng.
 
 ---

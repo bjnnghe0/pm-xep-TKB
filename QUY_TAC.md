@@ -41,7 +41,7 @@ mỗi khoá là một bộ lọc y hệt trên.
 
 ## Cách ghi thứ và tiết
 
-- `thu`: số hiệu thứ trong tuần — `[2, 3]` = Thứ 2 và Thứ 3.
+- `thu`: **số hiệu thứ trong tuần** — `[2, 3]` = Thứ 2 và Thứ 3. Không đếm từ 1.
 - `tiet`: **số hiệu tiết thật** như in trên TKB — `[9, 10]`.
 - `tiet_trong_buoi`: **thứ tự trong buổi**, `1` = tiết đầu buổi.
 - `o`: danh sách ô cụ thể `[[thứ, tiết], ...]` — VD `[[4, 6], [4, 7]]`.
@@ -87,6 +87,11 @@ Viết theo số hiệu tiết in trên TKB thì **cho kết quả y hệt**, ch
 >
 > Khoá `o` của `khong_xep_o` cũng được kiểm y như vậy, cả phần thứ lẫn phần tiết.
 > Ghi `"o": [[4, 4]]` sẽ được nhắc: *"tiết thứ 4 của buổi" thì phải ghi là tiết 9*.
+>
+> **Khoá `thu` cũng vậy.** Ghi `"thu": [1]` vì tưởng Thứ 2 đếm là 1 thì chương
+> trình dừng và nhắc *"ngày học thứ 1 của tuần thì phải ghi là 2 (Thứ 2)"*. Ghi
+> `"thu": [7]` trong khi `khung_gio` → `cac_thu` chưa có Thứ 7 thì được nhắc phải
+> thêm `7` vào đó trước.
 
 ---
 
