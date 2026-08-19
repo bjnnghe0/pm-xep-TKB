@@ -291,7 +291,8 @@ ngoẵng: ô ghi chú `B45` từng giãn thành **11 dòng** và đẩy khối k
 
 ## Ràng buộc nghiệp vụ đang khai trong `cauhinh.json`
 
-**9 quy tắc cứng:** SHCN tiết cuối buổi · Vật lý 12B1,12B2 chỉ Thứ 2/3 ·
+**10 quy tắc cứng:** SHCN tiết cuối buổi **trừ lớp cô N.Uyên chủ nhiệm** ·
+SHCN lớp cô N.Uyên xếp tiết 6 hoặc 7 · Vật lý 12B1,12B2 chỉ Thứ 2/3 ·
 Sinh học 12B3,12B4 chỉ Thứ 2/3 · Sinh học 12B5,12B6 chỉ Thứ 2/3 ·
 Hoá 12B1–12B4 không Thứ 3,5 · Văn cô Đ.Duy không Thứ 2 · Sử cô N.Uyên không
 tiết 4,5 của buổi · Toán thầy M.Tuấn 12B2 khác ngày Toán thầy M.Hùng 12B4 ·
@@ -358,8 +359,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 
 ## Trạng thái đã kiểm chứng (19/8/2026)
 
-- `python xep_tkb.py`: 392 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
-  **−21** (điểm mềm 192 / −240 / 27), **21/21 quy tắc ĐẠT**, xuất `TKB_Khoi12.xlsx`
+- `python xep_tkb.py`: 396 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
+  **−26**, **22/22 quy tắc ĐẠT**, xuất `TKB_Khoi12.xlsx`
   đủ 3 sheet, 144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
   New Roman + viền `thin` nguyên vẹn.
 - `python tu_kiem_tra.py`: 17 loại quy tắc đã đăng ký, ca CƠ SỞ + 11 ca thử đều
@@ -374,7 +375,9 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
 - `python tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
   chỗ lọc thì tụt còn 5/25.
-- 21 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 9 quy tắc cứng.
+- 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
+  **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
+  Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
 
 ---
 

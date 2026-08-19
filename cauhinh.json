@@ -122,9 +122,14 @@
   "quy_tac": [
 
     { "loai": "chi_xep_tiet",
-      "ghi_chu": "SHCN luôn ở tiết cuối buổi",
-      "loc": { "nhom_mon": "SHCN" },
+      "ghi_chu": "SHCN ở tiết cuối buổi (trừ lớp do cô N.Uyên chủ nhiệm)",
+      "loc": { "nhom_mon": "SHCN", "tru": { "gv": "N.Uyên" } },
       "tiet_trong_buoi": [5] },
+
+    { "loai": "chi_xep_tiet",
+      "ghi_chu": "SHCN lớp cô N.Uyên chủ nhiệm xếp tiết 6 hoặc tiết 7",
+      "loc": { "nhom_mon": "SHCN", "gv": "N.Uyên" },
+      "tiet_trong_buoi": [1, 2] },
 
     { "loai": "chi_xep_thu",
       "ghi_chu": "Vật lý 12B1, 12B2 chỉ Thứ 2 hoặc Thứ 3",

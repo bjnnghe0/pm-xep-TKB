@@ -222,7 +222,11 @@ def ca_2_khong_hoi_quy(thu_muc):
     kiem(m is not None and int(m.group(1)) == diem_max,
          f'Vẫn giữ phương án điểm mềm CAO NHẤT: {m.group(1) if m else "?"} '
          f'= {diem_max}')
-    kiem('Tổng: 21/21 quy tắc ĐẠT.' in out, 'Vẫn 21/21 quy tắc ĐẠT')
+    # Đừng ghim cứng con số: thêm một quy tắc vào cauhinh.json là vỡ ngay.
+    # Điều cần khẳng định là MỌI quy tắc đều ĐẠT, bao nhiêu cái cũng được.
+    m3 = re.search(r'Tổng: (\d+)/(\d+) quy tắc ĐẠT', out)
+    kiem(m3 is not None and m3.group(1) == m3.group(2),
+         f'Mọi quy tắc đều ĐẠT — {m3.group(0) if m3 else "không tìm thấy dòng Tổng"}')
 
 
 # --------------------------------------------------------------------------
