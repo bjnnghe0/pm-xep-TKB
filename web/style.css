@@ -69,3 +69,34 @@ button:disabled { opacity: .55; cursor: not-allowed; }
        padding: 1px 7px; font-size: 11.5px; }
 .loai { font-family: Consolas, monospace; font-size: 12px; color: #33506e; }
 tr.tat { opacity: .5; }
+
+/* ---- form thêm quy tắc ---- */
+.mo-ta { margin: 10px 0 0; padding: 9px 11px; background: #f2f6fb;
+         border-left: 3px solid #1a6fc4; border-radius: 0 5px 5px 0;
+         font-size: 13px; color: #33404f; }
+.bao-loi { margin: 12px 0 0; padding: 11px; background: #fdf3f3;
+           border: 1px solid #e0b4b4; border-radius: 6px; color: #8a1f1f;
+           font-size: 12.5px; white-space: pre-wrap;
+           font-family: Consolas, "DejaVu Sans Mono", monospace; }
+.o-truong { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.truong { border: 1px solid #dde3ea; border-radius: 7px; padding: 10px 12px;
+          background: #fbfcfd; min-width: 210px; }
+.truong > .ten { font-size: 13px; font-weight: 600; color: #33404f;
+                 display: block; margin-bottom: 6px; }
+.truong .kieu { font-size: 11.5px; color: #7a8593; display: block;
+                margin-bottom: 6px; }
+.truong.bat-buoc > .ten::after { content: " *"; color: #c0392b; }
+.thay-the { border-color: #d9c08a; background: #fdfaf1; }
+.thay-the .nhac { font-size: 11.5px; color: #8a6d1f; display: block;
+                  margin-bottom: 6px; }
+select[multiple] { min-height: 92px; font-size: 13px; }
+.loc-o { display: flex; flex-wrap: wrap; gap: 10px; }
+.loc-o label { font-size: 12px; }
+.loc-o select, .loc-o input { font-size: 13px; }
+.tru-hop { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cfd8e3; }
+.moi { background: #fff3cd; color: #7a5c00; border-radius: 9px;
+       padding: 1px 7px; font-size: 11.5px; margin-left: 6px; }
+.nut-xoa { padding: 3px 9px; font-size: 12px; }
+.thu-ok { background: #dff3e3; border: 1px solid #a9d9b5; color: #14601f; }
+.thu-canh-bao { background: #fdf3f3; border: 1px solid #e0b4b4; color: #8a1f1f; }
+.thu-hop { margin-top: 12px; padding: 11px; border-radius: 6px; font-size: 13px; }

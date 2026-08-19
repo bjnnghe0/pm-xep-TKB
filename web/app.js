@@ -15,7 +15,7 @@ function moMan(ten) {
   document.querySelectorAll('.man').forEach((x) => x.classList.add('an'));
   nut.classList.add('dang-chon');
   $(ten).classList.remove('an');
-  if (ten === 'man-quytac') napQuyTac();
+  if (ten === 'man-quytac') { napQuyTac(); napDanhMuc(); }
 }
 
 document.querySelectorAll('.tab').forEach((nut) => {
@@ -158,12 +158,275 @@ function veQuyTac() {
       `<tr class="${r.bat ? '' : 'tat'}">`
       + `<td><label class="cong-tac"><input type="checkbox" data-k="${k}" `
       + `${r.bat ? 'checked' : ''}> ${r.bat ? 'Bật' : 'Tắt'}</label></td>`
-      + `<td>${ma(r.ghi_chu)}${r.mem ? ' <span class="mem">tiêu chí mềm</span>' : ''}</td>`
-      + `<td class="loai">${ma(r.loai)}</td></tr>`).join('');
+      + `<td>${ma(r.ghi_chu)}${r.mem ? ' <span class="mem">tiêu chí mềm</span>' : ''}`
+      + `${r.moi ? ' <span class="moi">chưa lưu</span>' : ''}</td>`
+      + `<td class="loai">${ma(r.loai)}`
+      + (r.moi ? ` <button class="nut-xoa" data-xoa="${r.i}">Xoá</button>` : '')
+      + '</td></tr>').join('');
   $('bang-quy-tac').querySelectorAll('input[type=checkbox]').forEach((o) => {
     o.onchange = () => { quyTac[+o.dataset.k].bat = o.checked; veQuyTac(); };
   });
+  $('bang-quy-tac').querySelectorAll('[data-xoa]').forEach((o) => {
+    o.onclick = async () => {
+      const tl = await fetch('/api/xoa-quy-tac', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ i: +o.dataset.xoa }),
+      });
+      const kq = await tl.json();
+      if (!tl.ok) { baoLoi(kq.loi || 'Không xoá được.'); return; }
+      quyTac = kq.quy_tac.map((r) => ({ ...r }));
+      veQuyTac();
+    };
+  });
 }
+
+// ---- form thêm quy tắc: dựng ô nhập từ TRUONG, không chép tay danh sách khoá ----
+let DM = null;      // danh mục loại quy tắc, lấy từ /api/loai-quy-tac
+let GT = null;      // giá trị chọn được, lấy từ /api/gia-tri
+
+async function napDanhMuc() {
+  if (DM) return;
+  DM = await (await fetch('/api/loai-quy-tac')).json();
+  GT = await (await fetch('/api/gia-tri')).json();
+  $('o-loai').innerHTML = DM.nhom.map((n) =>
+    `<optgroup label="${ma(n.nhom)}">`
+    + n.loai.map((l) => `<option value="${ma(l.ten)}">${ma(l.ten)}</option>`).join('')
+    + '</optgroup>').join('');
+  $('o-loai').onchange = veTruong;
+  veTruong();
+}
+
+function loaiDangChon() {
+  const t = $('o-loai').value;
+  for (const n of DM.nhom) for (const l of n.loai) if (l.ten === t) return l;
+  return null;
+}
+
+/* Ô chọn nhiều giá trị — không cho gõ tay, vì gõ sai giờ làm chương trình dừng. */
+function oNhieu(ds, daChon, khoa) {
+  const c = [].concat(daChon === undefined ? [] : daChon).map(String);
+  return `<select multiple data-o="${khoa}">`
+    + ds.map((x) => `<option value="${ma(x)}"${c.includes(String(x)) ? ' selected' : ''}>`
+        + `${ma(x)}</option>`).join('') + '</select>';
+}
+
+function oMot(ds, daChon, khoa, trong) {
+  return `<select data-o="${khoa}"><option value="">${ma(trong || '— bỏ trống —')}</option>`
+    + ds.map((x) => `<option value="${ma(x)}"${String(x) === String(daChon)
+        ? ' selected' : ''}>${ma(x)}</option>`).join('') + '</select>';
+}
+
+/* Bộ lọc dùng chung cho "loc", "a", "b" và cho cả "tru" lồng bên trong. */
+function veLoc(khoa, gt, cho_tru) {
+  gt = gt || {};
+  const h = ['<div class="loc-o">'
+    + '<label>Môn' + oNhieu(GT.mon, gt.mon, khoa + '.mon') + '</label>'
+    + '<label>Nhóm môn' + oNhieu(GT.nhom_mon, gt.nhom_mon, khoa + '.nhom_mon') + '</label>'
+    + '<label>Giáo viên' + oNhieu(GT.gv, gt.gv, khoa + '.gv') + '</label>'
+    + '<label>Lớp' + oNhieu(GT.lop, gt.lop, khoa + '.lop') + '</label>'
+    + '<label>Chuyên đề'
+    + oMot(['true', 'false'], gt.la_chuyen_de === undefined ? '' : String(gt.la_chuyen_de),
+           khoa + '.la_chuyen_de', '— cả hai —') + '</label>'
+    + '</div>'];
+  if (cho_tru) {
+    const t = gt.tru || null;
+    h.push('<div class="tru-hop"><label class="cong-tac">'
+      + `<input type="checkbox" data-tru="${khoa}"${t ? ' checked' : ''}> `
+      + 'Trừ ra một số trường hợp (khoá "tru")</label>'
+      + `<div data-tru-hop="${khoa}"${t ? '' : ' class="an"'}>`
+      + veLoc(khoa + '.tru', t, false) + '</div></div>');
+  }
+  return h.join('');
+}
+
+function veTruong() {
+  const l = loaiDangChon();
+  if (!l) return;
+  $('mo-ta-loai').textContent = l.mo_ta;
+  if (!$('o-ghi-chu').value.trim()) $('o-ghi-chu').value = l.vi_du.ghi_chu || '';
+  const nhomDa = {};
+  $('o-truong').className = 'o-truong';
+  $('o-truong').innerHTML = l.truong.map((tr) => {
+    const gt = l.vi_du[tr.ten];
+    const co = gt !== undefined;
+    let than = '';
+    if (tr.kieu === 'loc') than = veLoc(tr.ten, gt, true);
+    else if (tr.kieu === 'ds_thu') than = oNhieu(GT.thu, gt, tr.ten);
+    else if (tr.kieu === 'ds_tiet') than = oNhieu(GT.tiet, gt, tr.ten);
+    else if (tr.kieu === 'ds_tiet_buoi') than = oNhieu(GT.tiet_trong_buoi, gt, tr.ten);
+    else if (tr.kieu === 'so_thu') than = oMot(GT.thu, gt, tr.ten);
+    else if (tr.kieu === 'so_tiet') than = oMot(GT.tiet, gt, tr.ten);
+    else if (tr.kieu === 'so_tiet_buoi') than = oMot(GT.tiet_trong_buoi, gt, tr.ten);
+    else if (tr.kieu === 'chon') than = oMot(tr.chon || [], gt, tr.ten);
+    else if (tr.kieu === 'dung_sai')
+      than = `<label class="cong-tac"><input type="checkbox" data-o="${tr.ten}"`
+           + `${gt ? ' checked' : ''}> có</label>`;
+    else if (tr.kieu === 'so')
+      than = `<input type="number" data-o="${tr.ten}" value="${co ? gt : ''}">`;
+    else if (tr.kieu === 'ds_so')
+      than = `<input type="text" data-o="${tr.ten}" data-ds-so="1" `
+           + `value="${co ? gt.join(', ') : ''}" placeholder="vd 2, 1">`;
+    else if (tr.kieu === 'ds_o')
+      than = veDsO(tr.ten, gt);
+    const nhac = tr.nhom
+      ? '<span class="nhac">Chọn MỘT trong hai cách ghi tiết — bỏ trống cách kia.</span>'
+      : '';
+    if (tr.nhom) nhomDa[tr.nhom] = true;
+    return `<div class="truong${tr.bat_buoc && !tr.nhom ? ' bat-buoc' : ''}`
+      + `${tr.nhom ? ' thay-the' : ''}" data-truong="${tr.ten}" `
+      + `data-kieu="${tr.kieu}">`
+      + `<span class="ten">${ma(tr.nhan)}</span>${nhac}`
+      + `<span class="kieu">"${ma(tr.ten)}" — ${ma(DM.kieu[tr.kieu] || tr.kieu)}</span>`
+      + than + '</div>';
+  }).join('');
+  $('o-truong').querySelectorAll('input[data-tru]').forEach((o) => {
+    o.onchange = () => {
+      const h = $('o-truong').querySelector(`[data-tru-hop="${o.dataset.tru}"]`);
+      h.classList.toggle('an', !o.checked);
+    };
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const n = e.target.closest && e.target.closest('[data-them-o]');
+  if (!n) return;
+  const hop = $('o-truong').querySelector(`[data-ds-o="${n.dataset.themO}"]`);
+  const d = document.createElement('div');
+  d.className = 'loc-o';
+  d.style.marginBottom = '6px';
+  d.innerHTML = '<label>Thứ' + oMot(GT.thu, GT.thu[0], '', '—') + '</label>'
+              + '<label>Tiết' + oMot(GT.tiet, GT.tiet[0], '', '—') + '</label>';
+  hop.appendChild(d);
+});
+
+function veDsO(khoa, gt) {
+  const ds = gt && gt.length ? gt : [[GT.thu[0], GT.tiet[0]]];
+  return `<div data-ds-o="${khoa}">` + ds.map((c) =>
+    '<div class="loc-o" style="margin-bottom:6px">'
+    + '<label>Thứ' + oMot(GT.thu, c[0], '', '—') + '</label>'
+    + '<label>Tiết' + oMot(GT.tiet, c[1], '', '—') + '</label></div>').join('')
+    + '</div><button type="button" class="nut-xoa" data-them-o="' + khoa
+    + '">+ thêm một ô</button>';
+}
+
+/* Gom giá trị trên form thành đúng khối JSON của một quy tắc. */
+function docForm() {
+  const l = loaiDangChon();
+  const r = { loai: l.ten, ghi_chu: $('o-ghi-chu').value.trim() };
+  l.truong.forEach((tr) => {
+    const hop = $('o-truong').querySelector(`[data-truong="${tr.ten}"]`);
+    if (!hop) return;
+    if (tr.kieu === 'loc') {
+      const v = docLoc(hop, tr.ten);
+      if (v) r[tr.ten] = v;
+    } else if (tr.kieu === 'ds_o') {
+      const ds = [];
+      hop.querySelectorAll('[data-ds-o] .loc-o').forEach((d) => {
+        const o = d.querySelectorAll('select');
+        if (o[0].value && o[1].value) ds.push([+o[0].value, +o[1].value]);
+      });
+      if (ds.length) r[tr.ten] = ds;
+    } else {
+      const o = hop.querySelector(`[data-o="${tr.ten}"]`);
+      if (!o) return;
+      if (o.type === 'checkbox') { if (o.checked) r[tr.ten] = true; return; }
+      if (o.multiple) {
+        const v = [...o.selectedOptions].map((x) => so(x.value));
+        if (v.length) r[tr.ten] = v;
+        return;
+      }
+      if (o.dataset.dsSo !== undefined) {
+        const v = o.value.split(',').map((x) => +x.trim()).filter((x) => x > 0);
+        if (v.length) r[tr.ten] = v;
+        return;
+      }
+      if (o.value !== '') r[tr.ten] = so(o.value);
+    }
+  });
+  return r;
+}
+
+function docLoc(hop, tien) {
+  const d = {};
+  ['mon', 'nhom_mon', 'gv', 'lop'].forEach((k) => {
+    const o = hop.querySelector(`[data-o="${tien}.${k}"]`);
+    if (!o) return;
+    const v = [...o.selectedOptions].map((x) => x.value);
+    if (v.length) d[k] = v.length === 1 ? v[0] : v;
+  });
+  const cd = hop.querySelector(`[data-o="${tien}.la_chuyen_de"]`);
+  if (cd && cd.value) d.la_chuyen_de = cd.value === 'true';
+  const t = hop.querySelector(`[data-tru="${tien}"]`);
+  if (t && t.checked) {
+    const con = docLoc(hop.querySelector(`[data-tru-hop="${tien}"]`), tien + '.tru');
+    if (con) d.tru = con;
+  }
+  return Object.keys(d).length ? d : null;
+}
+
+function so(v) { return /^-?\d+$/.test(v) ? +v : v; }
+
+function baoLoi(chu) {
+  $('chu-them').textContent = chu;
+  $('chu-them').classList.toggle('an', !chu);
+}
+
+$('nut-them').onclick = async () => {
+  baoLoi('');
+  $('ket-qua-thu').classList.add('an');
+  if (!$('o-ghi-chu').value.trim()) {
+    baoLoi('Chưa điền "Nội dung quy tắc". Câu này hiện trên bảng đối chiếu '
+         + 'nên không được để trống.');
+    return;
+  }
+  const tl = await fetch('/api/them-quy-tac', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quy_tac: docForm() }),
+  });
+  const kq = await tl.json();
+  if (!tl.ok) { baoLoi(kq.loi || 'Không thêm được.'); return; }
+  quyTac = kq.quy_tac.map((r) => ({ ...r }));
+  veQuyTac();
+  $('o-ghi-chu').value = '';
+  $('chu-luu').textContent = 'Đã thêm vào danh sách (chưa lưu xuống file).';
+};
+
+$('nut-thu').onclick = async () => {
+  baoLoi('');
+  const n = $('nut-thu');
+  n.disabled = true; n.textContent = 'Đang thử...';
+  try {
+    const tl = await fetch('/api/thu-quy-tac', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quy_tac: docForm(),
+                             tat: quyTac.filter((r) => !r.bat).map((r) => r.i) }),
+    });
+    const kq = await tl.json();
+    if (!tl.ok) { baoLoi(kq.loi || 'Không thử được.'); return; }
+    const h = $('ket-qua-thu');
+    h.classList.remove('an');
+    if (kq.xep_duoc) {
+      h.className = 'thu-hop thu-ok';
+      h.innerHTML = `<b>Vẫn xếp được.</b> ${kq.so_hop_le}/${kq.so_lan} lần thử ra `
+        + `phương án hợp lệ trong ${kq.giay} giây, điểm mềm ${kq.diem}.`;
+    } else if (kq.co_loi_giai) {
+      h.className = 'thu-hop thu-canh-bao';
+      h.innerHTML = '<b>Xếp ra được nhưng không phương án nào thoả hết quy tắc.</b>'
+        + `<br>${kq.so_lan} lần thử, 0 phương án hợp lệ. Đang vi phạm:<ul>`
+        + kq.vi_pham.map((v) => `<li>${ma(v.ten)}</li>`).join('') + '</ul>'
+        + 'Nên nới bớt một trong những quy tắc trên. Vẫn thêm được nếu bạn muốn.';
+    } else {
+      h.className = 'thu-hop thu-canh-bao';
+      h.innerHTML = '<b>KHÔNG xếp được lần nào.</b> '
+        + `${kq.so_lan} lần thử đều không ra lời giải.<br>`
+        + 'Quy tắc này nhiều khả năng mâu thuẫn với quy tắc đang có — nên nới bớt '
+        + 'điều kiện (ít lớp hơn, nhiều thứ/tiết hơn), hoặc tắt tạm một quy tắc '
+        + 'khác ở bảng trên. Vẫn thêm được nếu bạn muốn giữ lại.';
+    }
+  } finally {
+    n.disabled = false; n.textContent = 'Thử quy tắc này';
+  }
+};
 
 $('nut-luu').onclick = async () => {
   const tat = quyTac.filter((r) => !r.bat).map((r) => r.i);

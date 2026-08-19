@@ -84,6 +84,32 @@
     <p id="chu-luu" class="ghi-chu"></p>
   </div>
   <table id="bang-quy-tac" class="bang"></table>
+
+  <h2>Thêm quy tắc mới</h2>
+  <div class="hop">
+    <div class="dong-nhap">
+      <label>Loại quy tắc
+        <select id="o-loai"></select>
+      </label>
+      <label style="flex:1 1 320px">Nội dung quy tắc <b>(bắt buộc)</b>
+        <input id="o-ghi-chu" type="text"
+               placeholder="câu này hiện trên bảng đối chiếu">
+      </label>
+    </div>
+    <p id="mo-ta-loai" class="mo-ta"></p>
+
+    <div id="o-truong"></div>
+
+    <div class="dong-nhap" style="margin-top:12px">
+      <button id="nut-them" class="chinh">Thêm vào danh sách</button>
+      <button id="nut-thu">Thử quy tắc này</button>
+      <span class="ghi-chu">"Thử" chỉ xếp rút gọn để xem có kẹt không,
+        không đụng vào kết quả ở màn hình 1.</span>
+    </div>
+
+    <pre id="chu-them" class="bao-loi an"></pre>
+    <div id="ket-qua-thu" class="an"></div>
+  </div>
 </section>
 
 <!-- ================= 4. LỊCH GIÁO VIÊN ================= -->
