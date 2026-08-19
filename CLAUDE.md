@@ -222,12 +222,13 @@ dòng 43. Vị trí bảng lấy từ `thong_tin.vi_tri_bang`
 - Sheet kết quả: **Khối 12** (từ mẫu) + **TKB giáo viên** + **Kiểm tra quy tắc**
   (hai sheet sau do chương trình tạo mới, xoá và vẽ lại mỗi lần chạy).
 
-### Bản in — đã kiểm 19/8/2026, KHÔNG cần chỉnh gì
+### Bản in — đã kiểm 19/8/2026
 
-Mẫu đã sẵn `landscape` + khổ A4 + `fitToPage=True` + `fitToWidth=1`,
-`fitToHeight=0`, lề 0.95/0.7/0.5/0.5 inch. Sheet "Khối 12" in **vừa đúng 1 trang
-A4 ngang**, đủ 6 cột lớp, dòng 43 (sáu ô đều bằng 24) và khối ký tên. Kiểm bằng
-cách xuất PDF thật rồi đếm trang, lặp lại được:
+Sheet "Khối 12" in **vừa đúng 1 trang A4 ngang**, đủ 6 cột lớp, dòng 43 (sáu ô
+đều bằng 24) và khối ký tên. Page setup trong `mau_tkb.xlsx`: `landscape`, khổ
+A4, `fitToPage=True`, `fitToWidth=1`, **`fitToHeight=1`**, lề
+0.95/0.7/**0.35**/**0.35** inch. Kiểm bằng cách xuất PDF thật rồi đếm trang,
+lặp lại được:
 
 ```bash
 python -c "import openpyxl; wb=openpyxl.load_workbook('TKB_Khoi12.xlsx'); \
@@ -237,14 +238,26 @@ pdfinfo /tmp/in.pdf | grep -E 'Pages|Page size'     # phải là: Pages 1, A4
 pdftoppm -png -r 110 /tmp/in.pdf /tmp/trang         # xem tận mắt
 ```
 
-Chỗ trống dưới đáy chỉ còn khoảng 0,15 inch, nên **đừng thêm dòng nào bên dưới
-khối ký tên** — thêm là tràn sang trang 2.
+Đo bằng `pdftotext -bbox`: chữ cuối cùng cách mép vùng in **0,07 inch** — trang
+đã gần như kín. Vì `fitToHeight=1`, thêm dòng bên dưới khối ký tên sẽ **không**
+tràn sang trang 2 nữa mà **âm thầm thu nhỏ cả bảng**. Thêm rồi thì phải xuất PDF
+xem lại, đừng đinh ninh là vẫn đọc được.
 
-> **Lỗi có sẵn trong mẫu, chưa sửa:** dòng 6 (tên lớp + phòng học) và ô ghi chú
-> `B45` đều bật `wrap_text` nhưng bị ghim `customHeight=True` ở 12.75pt, trong
-> khi nội dung dài 2 dòng → chữ bị **cắt mất một phần** khi in. Sửa được bằng
-> cách cho hai dòng đó tự giãn (`customHeight=False`), không đụng tới bề rộng
-> cột hay cỡ chữ — nhưng phải sửa trong `mau_tkb.xlsx` nên cần nhà trường đồng ý.
+> **Dòng 6 đã sửa; ô ghi chú `B45` thì chưa.** Cả hai đều bật `wrap_text` nhưng
+> bị ghim `customHeight=True` ở 12.75pt trong khi nội dung dài hơn một dòng, nên
+> chữ bị cắt khi in.
+> - **Dòng 6** (tên lớp + phòng học): đã bỏ ghim, cho tự giãn — giờ hiện đủ ba
+>   dòng. Đây là chỗ đáng sửa nhất vì nó chứa tên lớp.
+> - **`B45`** (ghi chú giờ vào lớp): **cố ý để nguyên**. Cột B chỉ rộng 7.29 nên
+>   cho tự giãn thì câu ghi chú xếp thành **11 dòng dọc**, đẩy khối ký tên sang
+>   trang 2 — đã thử và đo. Muốn chữa đúng thì phải gộp `B45:I45` rồi mới cho tự
+>   giãn, hoặc tắt `wrap_text` để câu đó tràn ngang qua các cột; cả hai đều là
+>   đổi bố cục mẫu nên cần nhà trường đồng ý.
+>
+> Sửa `mau_tkb.xlsx` thì **đừng dùng openpyxl để ghi đè cả file** — nó ghi lại
+> toàn bộ workbook. Cách đã dùng: mở như file zip, sửa đúng thuộc tính cần trong
+> `xl/worksheets/sheet1.xml`, đóng lại, rồi đối chiếu mọi phần còn lại phải giống
+> hệt từng byte.
 
 ---
 
