@@ -75,8 +75,9 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 > hai bản `cauhinh.json` / `quy_tac.py` / `xep_tkb.py` trong cùng một repo —
 > đúng cái bẫy sửa nhầm file mà lần dọn này giải quyết.
 >
-> Lưu ý kèm theo: tag `v1.0-khoi12` trỏ vào `defbd59` nên `git checkout
-> v1.0-khoi12` **sẽ kéo `files/` trở lại**; quay lui xong nhớ xoá đi.
+> Tag `v1.0-khoi12` lúc đầu trỏ vào `defbd59`, tức bản còn `files/`. Tag đã được
+> **dời sang commit sau khi dọn**, nên `git checkout v1.0-khoi12` giờ cho cây làm
+> việc sạch, không kéo `files/` về nữa.
 
 ---
 
