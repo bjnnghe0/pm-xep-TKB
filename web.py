@@ -433,6 +433,61 @@ class May(BaseHTTPRequestHandler):
         self._tra(ma, 'application/json',
                   json.dumps(obj, ensure_ascii=False))
 
+    # ---------------- chỉ nhận yêu cầu phát từ CHÍNH TRANG NÀY ----------------
+    def _ten_may_cho_phep(self):
+        cong = self.server.server_address[1]
+        return {f'127.0.0.1:{cong}', f'localhost:{cong}', f'[::1]:{cong}',
+                '127.0.0.1', 'localhost'}
+
+    def _nguon_cho_phep(self):
+        cong = self.server.server_address[1]
+        return {f'http://127.0.0.1:{cong}', f'http://localhost:{cong}',
+                f'http://[::1]:{cong}'}
+
+    def _kiem_nguon_goc(self, co_than):
+        """Chặn trang web lạ sai khiến máy chủ này.
+
+           Đã đo trên máy chủ thật: một trang bất kỳ mà thầy cô mở chỉ cần
+           chạy fetch('/api/luu-quy-tac', {method:'POST',
+           headers:{'Content-Type':'text/plain'}, body:'{"tat":[0,...,9]}'})
+           là tắt sạch 10 quy tắc cứng và GHI ĐÈ cauhinh.json — máy chủ trả
+           200. 'text/plain' là "simple request" nên trình duyệt gửi thẳng,
+           không hỏi preflight; máy chủ lại json.loads bất kể Content-Type.
+
+           Thêm đăng nhập bằng cookie sẽ làm lỗ này NẶNG HƠN chứ không nhẹ
+           đi — cookie tự đính kèm, trang lạ mượn luôn quyền của người đang
+           đăng nhập. Vì vậy phải vá TRƯỚC khi đặt cổng đăng nhập.
+
+           Ba lớp, mỗi lớp chặn một kiểu:
+             Host        — chặn DNS rebinding (tên miền lạ trỏ về 127.0.0.1)
+             Origin      — chặn yêu cầu phát từ trang khác
+             Content-Type— buộc application/json, kiểu này KHÔNG gửi được
+                           bằng "simple request", phải qua preflight, mà
+                           preflight lại mang Origin nên bị lớp trên chặn.
+        """
+        host = (self.headers.get('Host') or '').strip().lower()
+        if host not in self._ten_may_cho_phep():
+            raise SystemExit(
+                f'[LỖI] Yêu cầu gửi tới tên máy lạ: {host!r}\n'
+                f'      Máy chủ này chỉ phục vụ 127.0.0.1 và localhost.\n'
+                f'      Hãy mở bằng http://127.0.0.1:'
+                f'{self.server.server_address[1]}')
+
+        org = self.headers.get('Origin')
+        if org is not None and org.strip().lower() not in self._nguon_cho_phep():
+            raise SystemExit(
+                f'[LỖI] Yêu cầu phát đi từ một trang khác: {org!r}\n'
+                f'      Máy chủ chỉ nhận lệnh từ chính trang xếp thời khoá '
+                f'biểu, không nhận từ trang web nào khác.')
+
+        if co_than:
+            kieu = (self.headers.get('Content-Type') or '')
+            kieu = kieu.split(';')[0].strip().lower()
+            if kieu != 'application/json':
+                raise SystemExit(
+                    f'[LỖI] Kiểu nội dung không nhận được: {kieu or "(trống)"}\n'
+                    f'      Đường này chỉ nhận "application/json".')
+
     def _than_json(self, bat_buoc=False):
         """Đọc thân JSON của yêu cầu.
 
@@ -482,6 +537,7 @@ class May(BaseHTTPRequestHandler):
     def do_GET(self):
         duong = self.path.split('?')[0]
         try:
+            self._kiem_nguon_goc(co_than=False)
             if duong in ('/', '/index.html'):
                 return self._tinh('index.html')
             if duong.startswith('/web/'):
@@ -561,6 +617,7 @@ class May(BaseHTTPRequestHandler):
     def do_POST(self):
         duong = self.path.split('?')[0]
         try:
+            self._kiem_nguon_goc(co_than=True)
             if duong == '/api/xep':
                 return self._xep()
             if duong == '/api/luu-quy-tac':

@@ -105,8 +105,69 @@ def ca_a2_than_di_dang(tm):
 
 
 # ==========================================================================
+def ca_a1_nguon_goc(tm):
+    print('\nCA A1 — chỉ nhận yêu cầu từ chính trang này')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a1')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+
+    with MayChuTam(dd) as (k, (dia, cong)):
+        k.js('/api/luu-quy-tac', {'tat': [1, 2]})
+        goc = so_tat(dd)
+        kiem(goc == [1, 2], f'Dựng sẵn trạng thái: quy tắc {goc} bị tắt')
+
+        # --- Content-Type: ba kiểu "simple request" phải bị chặn hết ---
+        for kieu in ('text/plain', 'application/x-www-form-urlencoded',
+                     'multipart/form-data; boundary=x'):
+            ma, _ = k.post('/api/luu-quy-tac', {'tat': []}, kieu=kieu)
+            kiem(ma == 400, f'Content-Type {kieu.split(";")[0]} bị chặn — {ma}')
+            kiem(so_tat(dd) == goc, f'  tệp không đổi sau khi bị chặn')
+
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': []}, kieu=None)
+        kiem(ma == 400, f'Không khai Content-Type cũng bị chặn — {ma}')
+
+        # --- Origin của trang khác phải bị chặn ---
+        for org in ('https://trang-quang-cao.example', 'http://127.0.0.1:1',
+                    'null'):
+            ma, _ = k.post('/api/luu-quy-tac', {'tat': []},
+                           them={'Origin': org})
+            kiem(ma == 400, f'Origin lạ {org[:32]} bị chặn — {ma}')
+            kiem(so_tat(dd) == goc, '  tệp không đổi sau khi bị chặn')
+
+        # --- Host lạ (DNS rebinding) phải bị chặn, cả GET ---
+        for h in ('trang-la.example', 'trang-la.example:%d' % cong):
+            ma, _ = k.get('/api/gia-tri', them={'Host': h})
+            kiem(ma == 400, f'Host lạ "{h}" bị chặn ở GET — {ma}')
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': []},
+                       them={'Host': 'trang-la.example'})
+        kiem(ma == 400 and so_tat(dd) == goc, 'Host lạ bị chặn ở POST')
+
+        # --- những thứ ĐÚNG vẫn phải chạy được ---
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': [4]},
+                       kieu='application/json; charset=utf-8')
+        kiem(ma == 200 and so_tat(dd) == [4],
+             f'Content-Type có charset vẫn nhận — {ma}, {so_tat(dd)}')
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': [5]},
+                       them={'Origin': f'http://127.0.0.1:{cong}'})
+        kiem(ma == 200 and so_tat(dd) == [5],
+             f'Origin của chính trang này vẫn nhận — {ma}')
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': [6]},
+                       them={'Host': f'localhost:{cong}',
+                             'Origin': f'http://localhost:{cong}'})
+        kiem(ma == 200 and so_tat(dd) == [6],
+             f'Vào bằng localhost vẫn dùng được — {ma}')
+        kiem(k.get('/')[0] == 200, 'GET / bình thường vẫn 200')
+        kiem(k.get('/api/gia-tri')[0] == 200, 'GET /api/gia-tri vẫn 200')
+        ma, _ = k.get('/api/tai-ve')
+        kiem(ma in (200, 404),
+             f'Đường tải tệp (điều hướng cả trang, không có Origin) vẫn qua — {ma}')
+
+
+# ==========================================================================
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
+    ca_a1_nguon_goc(tm)
 
 
 if __name__ == '__main__':

@@ -138,8 +138,10 @@ class Khach:
             than = json.dumps(than, ensure_ascii=False).encode()
         elif isinstance(than, str):
             than = than.encode()
-        d = [f'{cach} {duong} HTTP/1.1', f'Host: {self.host}:{self.cong}',
-             'Connection: close']
+        them = dict(them or {})
+        # cho phép ca thử tự đặt Host (ca DNS rebinding) — đừng gửi hai dòng Host
+        host = them.pop('Host', f'{self.host}:{self.cong}')
+        d = [f'{cach} {duong} HTTP/1.1', f'Host: {host}', 'Connection: close']
         if than is not None:
             d.append(f'Content-Length: {len(than)}')
             if kieu:
