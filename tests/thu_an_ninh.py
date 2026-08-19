@@ -30,6 +30,7 @@
 import io
 import json
 import os
+import socket
 import sys
 import tempfile
 import threading
@@ -174,6 +175,466 @@ def ca_a1_nguon_goc(tm):
         ma, _ = k.get('/api/tai-ve')
         kiem(ma in (200, 404),
              f'Đường tải tệp (điều hướng cả trang, không có Origin) vẫn qua — {ma}')
+
+        # ------------------------------------------------------------------
+        # BẢNG Host — lái bằng dữ liệu, để ai đó "cải tiến" phép so khớp
+        # chính xác thành startswith / endswith / in là ĐỎ ngay.
+        #
+        # Cột "mong" ghi cả những chuỗi PHẢI cho 200: mấy dòng đó canh chiều
+        # ngược lại, chống siết quá tay (bỏ .lower() hay .strip() là đỏ).
+        # ------------------------------------------------------------------
+        P = cong
+        BANG_HOST = [
+            (f'127.0.0.1:{P}',                 200, 'đường đi chuẩn'),
+            (f'localhost:{P}',                 200, 'app.js mở được cả hai tên'),
+            (f'[::1]:{P}',                     200, 'loopback IPv6'),
+            (f'LOCALHOST:{P}',                 200, 'DNS không phân biệt hoa/thường'),
+            (f'  127.0.0.1:{P}  ',             200, 'HTTP cho phép khoảng trắng quanh giá trị'),
+            ('127.0.0.1',                      200, 'tên loopback trơ, cố ý nhận'),
+            ('localhost',                      200, 'như trên'),
+            ('evil.com',                       400, 'DNS rebinding — cái A1 sinh ra để chặn'),
+            (f'evil.com:{P}',                  400, 'rebinding có cổng'),
+            (f'127.0.0.1:{P}.tenlakhac.com',   400, 'HẬU TỐ — bẫy của startswith'),
+            (f'xx127.0.0.1:{P}',               400, 'TIỀN TỐ — bẫy của endswith'),
+            ('localhost.evil.com',             400, 'hậu tố tên miền — bẫy của in'),
+            (f'evil.com.127.0.0.1:{P}',        400, 'bẫy của endswith phía kia'),
+            (f'evil.com@127.0.0.1:{P}',        400, 'userinfo không hợp lệ trong Host'),
+            (f'127.0.0.1:{P}@evil.com',        400, 'userinfo phía sau'),
+            (f'localhost.:{P}',                400, 'chấm cuối FQDN — cố ý KHÔNG nới'),
+            (f'127.000.000.001:{P}',           400, 'cùng IP khác chuỗi, so chuỗi chặt là đúng'),
+            (f'2130706433:{P}',                400, 'IP dạng số nguyên'),
+            (f'[::ffff:127.0.0.1]:{P}',        400, 'IPv4 lồng trong IPv6'),
+            (f'127.0.0.1:0{P}',                400, 'cổng có số 0 đứng đầu'),
+            ('',                               400, 'Host rỗng'),
+        ]
+        sai = []
+        for h, mong, vi_sao in BANG_HOST:
+            ma, _ = k.get('/api/gia-tri', them={'Host': h})
+            if ma != mong:
+                sai.append(f'{h!r} cho {ma}, mong {mong} ({vi_sao})')
+        kiem(not sai,
+             f'Bảng {len(BANG_HOST)} chuỗi Host khớp hết — lệch: {sai}')
+
+        # --- tiêu đề TRÙNG LẶP: dòng thật trước, dòng giả sau ---
+        # self.headers.get() chỉ lấy dòng ĐẦU, nên bản cũ cho 200. Một công cụ
+        # trung gian có thể chọn dòng khác ta -> đúng kiểu lệch mà A1 chặn.
+        nen = [('Connection', 'close')]
+        ma, _, _ = k.tho_dong('GET', '/api/gia-tri',
+                              [('Host', f'127.0.0.1:{P}'),
+                               ('Host', 'evil.com')] + nen)
+        kiem(ma == 400, f'Hai dòng Host (thật trước) bị chặn — {ma}')
+        ma, _, _ = k.tho_dong('GET', '/api/gia-tri',
+                              [('Host', 'evil.com'),
+                               ('Host', f'127.0.0.1:{P}')] + nen)
+        kiem(ma == 400, f'Hai dòng Host (giả trước) bị chặn — {ma}')
+        ma, _, _ = k.tho_dong('GET', '/api/gia-tri',
+                              [('Host', f'127.0.0.1:{P}'),
+                               ('Origin', f'http://127.0.0.1:{P}'),
+                               ('Origin', 'https://trang-la.example')] + nen)
+        kiem(ma == 400, f'Hai dòng Origin bị chặn — {ma}')
+        than = json.dumps({'tat': []}).encode()
+        ma, _, _ = k.tho_dong('POST', '/api/luu-quy-tac',
+                              [('Host', f'127.0.0.1:{P}'),
+                               ('Content-Type', 'application/json'),
+                               ('Content-Length', str(len(than))),
+                               ('Content-Length', str(len(than)))] + nen, than)
+        kiem(ma == 400 and so_tat(dd) == [6],
+             f'Hai dòng Content-Length bị chặn, tệp không đổi — {ma}')
+
+        # --- Content-Length phải là chữ số ASCII thuần ---
+        # Đã đo: int('1_0') = 10, int(' +10 ') = 10, int('١٠') = 10.
+        # Đây là con số quyết định việc cấp phát bộ nhớ, không được dễ dãi.
+        for tho in ('1_0', ' +10 ', '١٠', '0x10', '10.0'):
+            ma, _, _ = k.tho_dong('POST', '/api/luu-quy-tac',
+                                  [('Host', f'127.0.0.1:{P}'),
+                                   ('Content-Type', 'application/json'),
+                                   ('Content-Length', tho)] + nen,
+                                  b'{"tat":[]}')
+            kiem(ma == 400,
+                 f'Content-Length {tho!r} bị từ chối — {ma}')
+        kiem(so_tat(dd) == [6], 'Tệp vẫn không đổi sau loạt Content-Length lạ')
+
+
+# ==========================================================================
+def ca_a9_tran_than(tm):
+    print('\nCA A9 — thân yêu cầu có TRẦN, và không nuốt vào bộ nhớ')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a9')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+
+    import web as W
+    tran = W.TRAN_THAN
+
+    # Dụng cụ đo: bọc rfile.read để ghi lại ĐỐI SỐ LỚN NHẤT từng được yêu cầu.
+    # Đây mới là chứng cứ "không đọc hết vào bộ nhớ" — mã 413 một mình không
+    # chứng minh được gì, máy chủ vẫn có thể đã nuốt 20 MB rồi mới trả lời.
+    that = W.May._doc_than_co_tran
+    do = {'lon_nhat': 0}
+
+    def dem(self, n):
+        goc_read = self.rfile.read
+
+        def read_dem(k=-1):
+            do['lon_nhat'] = max(do['lon_nhat'], k if k is not None else 0)
+            return goc_read(k)
+        self.rfile.read = read_dem
+        try:
+            return that(self, n)
+        finally:
+            self.rfile.read = goc_read
+
+    W.May._doc_than_co_tran = dem
+    try:
+        with MayChuTam(dd) as (k, (dia, cong)):
+            k.js('/api/luu-quy-tac', {'tat': [3]})
+            kiem(so_tat(dd) == [3], 'Dựng sẵn trạng thái: quy tắc [3] bị tắt')
+
+            # --- thân ĐÚNG CỠ vẫn phải chạy: canh không-hồi-quy ---
+            do['lon_nhat'] = 0
+            ma, _ = k.js('/api/luu-quy-tac', {'tat': [2]})
+            kiem(ma == 200 and so_tat(dd) == [2],
+                 f'Thân bình thường vẫn ghi được — {ma}, {so_tat(dd)}')
+            kiem(0 < do['lon_nhat'] <= 65536,
+                 f'  và đọc theo mẩu ≤ 64 KB — mẩu lớn nhất {do["lon_nhat"]}')
+
+            # --- sát trần: off-by-one ---
+            do['lon_nhat'] = 0
+            dem_byte = tran - 200
+            than = {'tat': [2], 'rac': 'A' * dem_byte}
+            n = len(json.dumps(than, ensure_ascii=False).encode())
+            ma, _ = k.js('/api/luu-quy-tac', than)
+            kiem(n <= tran, f'  (thân thử dài {n:,} byte, dưới trần {tran:,})')
+            kiem(ma == 200, f'Thân sát trần vẫn nhận — {ma}')
+
+            # --- quá trần ---
+            #
+            # Hai ca này KHÁC KỲ VỌNG NHAU, và không thể gộp. Máy chủ cố ý
+            # ngừng đọc rồi đóng, nên với thân RẤT lớn thì sendall() phía khách
+            # gãy giữa chừng (BrokenPipe) và phản hồi có thể mất — đó là hành vi
+            # ĐÚNG, không phải lỗi. Gộp hai ca thành một khẳng định "luôn đọc
+            # được 413" sẽ đỏ ngẫu nhiên theo kích thước bộ đệm socket của máy.
+            #
+            #   lỡ tay   — hơi quá trần: PHẢI đọc được 413 (việc _doc_bo phục vụ)
+            #   tấn công — 20 MB:        ĐƯỢC PHÉP mất phản hồi, nhưng tuyệt đối
+            #                            không được đọc thân và không đổi tệp
+            for nhan, co, doi_413 in (('lỡ tay', tran + 40_000, True),
+                                      ('tấn công', 20_000_000, False)):
+                do['lon_nhat'] = 0
+                than = json.dumps({'tat': [], 'rac': 'A' * co}).encode()
+                ma, _, t = k.yeu_cau('POST', '/api/luu-quy-tac', than)
+                if doi_413:
+                    kiem(ma == 413,
+                         f'[{nhan}] thân {len(than):,} byte -> ĐỌC ĐƯỢC 413 — {ma}')
+                    kiem('KB' in t.decode('utf-8', 'replace'),
+                         '  và câu lỗi nói rõ trần')
+                else:
+                    kiem(ma in (413, None),
+                         f'[{nhan}] thân {len(than):,} byte -> 413 hoặc mất '
+                         f'phản hồi (đều đúng) — {ma}')
+                    kiem(k.gay_khi_gui or ma == 413,
+                         '  máy chủ ngắt sớm chứ không nuốt hết 20 MB')
+                kiem(do['lon_nhat'] == 0,
+                     f'  KHÔNG đọc byte nào của thân — read() lớn nhất '
+                     f'{do["lon_nhat"]}')
+                kiem(so_tat(dd) == [2],
+                     '  và tệp cấu hình không đổi')
+
+            # --- Content-Length nói dối rất lớn: chặn theo lời khai ---
+            do['lon_nhat'] = 0
+            ma, _, t = k.tho_dong(
+                'POST', '/api/luu-quy-tac',
+                [('Host', f'127.0.0.1:{cong}'),
+                 ('Content-Type', 'application/json'),
+                 ('Content-Length', '524288000'),
+                 ('Connection', 'close')], b'{"tat":[]}')
+            kiem(ma == 413, f'Content-Length khai 500 MB -> 413 — {ma}')
+            kiem(do['lon_nhat'] == 0, '  và không đọc byte nào')
+            kiem(so_tat(dd) == [2], '  và tệp cấu hình không đổi')
+    finally:
+        W.May._doc_than_co_tran = that
+
+    # --- kết nối im lặng không được giữ luồng vĩnh viễn ---
+    # Đo được: BaseHTTPRequestHandler.timeout mặc định là None.
+    # Hạ timeout xuống cho ca thử chạy trong ~2 giây thay vì 30.
+    kiem(W.May.timeout is not None,
+         f'Lớp May có đặt timeout — {W.May.timeout}')
+    cu = W.May.timeout
+    W.May.timeout = 1
+    try:
+        with MayChuTam(dd) as (k2, (dia, cong)):
+            s = socket.create_connection((dia, cong), timeout=10)
+            try:
+                s.sendall(f'POST /api/luu-quy-tac HTTP/1.1\r\n'
+                          f'Host: 127.0.0.1:{cong}\r\n'
+                          f'Content-Type: application/json\r\n'
+                          f'Content-Length: 50\r\n\r\n'.encode())
+                t0 = time.time()
+                ra = b''
+                while True:                     # rồi im lặng, không gửi thân
+                    m = s.recv(65536)
+                    if not m:
+                        break
+                    ra += m
+                giay = time.time() - t0
+            finally:
+                s.close()
+            kiem(giay < 8,
+                 f'Kết nối im lặng bị đóng sau {giay:.1f}s, luồng được thu hồi')
+            kiem(k2.get('/api/gia-tri')[0] == 200,
+                 'Máy chủ vẫn phục vụ bình thường sau đó')
+    finally:
+        W.May.timeout = cu
+
+
+# ==========================================================================
+def ca_a10_tieu_de(tm):
+    print('\nCA A10 — mọi tiêu đề đi qua MỘT phễu, không chèn được đầu HTTP')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a10')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+
+    def dat_file_xuat(ten):
+        cfg = doc_an_toan(dd)
+        cfg['thong_tin']['file_xuat'] = ten
+        with io.open(dd, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False)
+
+    # 1. CHUỖI TẤN CÔNG — đã dựng lại được trên bản cũ:
+    #    set-cookie: a=b" và x-chen-vao: co-that đi ra thật.
+    AC = 'TKB.xlsx"\r\nX-Chen-Vao: co-that\r\nSet-Cookie: phien=bikiem'
+    with MayChuTam(dd) as (k, _):
+        dat_file_xuat(AC)
+        try:
+            with io.open(os.path.join(tmx, AC), 'wb') as f:
+                f.write(b'PK\x03\x04gia')
+        except OSError:
+            pass                     # hệ tệp không cho tên như vậy — vẫn thử tiếp
+        ma, td, than = k.yeu_cau('GET', '/api/tai-ve')
+        kiem('x-chen-vao' not in td,
+             f'KHÔNG chèn được tiêu đề lạ — thấy {sorted(td)}')
+        kiem('set-cookie' not in td,
+             'KHÔNG chèn được Set-Cookie (đây là mồi cố định phiên khi có cookie)')
+        kiem(ma == 400, f'Tên tệp có xuống dòng -> 400 — {ma}')
+        kiem('file_xuat' in than.decode('utf-8', 'replace'),
+             'Câu lỗi chỉ ĐÍCH DANH thong_tin.file_xuat')
+        kiem(td.get('content-type', [''])[0].startswith('text/plain'),
+             f'Lỗi ở đường TẢI trả text/plain, không phải JSON trần — '
+             f'{td.get("content-type")}')
+
+        # 2. TÊN CÓ DẤU TIẾNG VIỆT — lỗi hay gặp hơn hẳn, không cần kẻ tấn công.
+        #    Bản cũ: mã 200 với server/date/content-type mỗi thứ HAI LẦN, và
+        #    trình duyệt tải về .xlsx chứa JSON báo lỗi.
+        TEN_DAU = 'TKB_Khối 12.xlsx'
+        dat_file_xuat(TEN_DAU)
+        with io.open(os.path.join(tmx, TEN_DAU), 'wb') as f:
+            f.write(b'PK\x03\x04noidungthat')
+        ma, td, than = k.yeu_cau('GET', '/api/tai-ve')
+        kiem(ma == 200, f'Tên tệp CÓ DẤU tải về được — {ma}')
+        lap = sorted(x for x, v in td.items() if len(v) > 1)
+        kiem(not lap, f'Mỗi tiêu đề xuất hiện ĐÚNG MỘT LẦN — lặp: {lap}')
+        kiem(than == b'PK\x03\x04noidungthat',
+             f'Thân là nội dung tệp thật, không phải câu báo lỗi — {than[:40]!r}')
+        bt = td.get('content-disposition', [''])[0]
+        kiem("filename*=UTF-8''" in bt,
+             f'Có filename* dạng RFC 5987 — {bt!r}')
+        kiem('%E1%BB%91' in bt, f'  và mã hoá đúng chữ "ố" — {bt!r}')
+        kiem('filename="' in bt, f'  vẫn kèm bản ASCII dự phòng — {bt!r}')
+
+        # 3. tên tệp bình thường: canh KHÔNG HỒI QUY
+        dat_file_xuat('TKB_Khoi12.xlsx')
+        with io.open(os.path.join(tmx, 'TKB_Khoi12.xlsx'), 'wb') as f:
+            f.write(b'PK\x03\x04binhthuong')
+        ma, td, than = k.yeu_cau('GET', '/api/tai-ve')
+        bt = td.get('content-disposition', [''])[0]
+        kiem(ma == 200 and 'filename="TKB_Khoi12.xlsx"' in bt,
+             f'Tên ASCII bình thường giữ nguyên — {bt!r}')
+
+        # 4. tên hiểm khác
+        dat_file_xuat('../../khong-ton-tai.xlsx')
+        ma, _, _ = k.yeu_cau('GET', '/api/tai-ve')
+        kiem(ma == 404,
+             f'Tên có "../" bị basename() rút gọn rồi báo không có tệp — {ma}')
+        dat_file_xuat('a"b.xlsx')
+        ma, td, _ = k.yeu_cau('GET', '/api/tai-ve')
+        kiem(ma == 400 and 'set-cookie' not in td,
+             f'Tên có dấu nháy kép -> 400 — {ma}')
+
+        # 5. đường tải trang web (tên là HẰNG) vẫn chạy
+        dat_file_xuat('TKB_Khoi12.xlsx')
+        with io.open(os.path.join(tmx, 'tkb_web.html'), 'wb') as f:
+            f.write(b'<!doctype html>')
+        ma, td, _ = k.yeu_cau('GET', '/api/tai-web')
+        lap = sorted(x for x, v in td.items() if len(v) > 1)
+        kiem(ma == 200 and not lap, f'/api/tai-web vẫn 200, không lặp — {ma}')
+
+        # 6. không phản hồi nào có hai dòng trạng thái, và không khoe phiên bản
+        khoe = []
+        for duong in ('/', '/api/gia-tri', '/khong-co', '/api/tai-ve',
+                      '/api/tai-web'):
+            ma, td, _ = k.yeu_cau('GET', duong)
+            if len(td.get('server', [])) > 1 or any(
+                    'Python' in v for v in td.get('server', [])):
+                khoe.append((duong, td.get('server')))
+        kiem(not khoe,
+             f'Mọi đường: tiêu đề Server đúng một dòng và KHÔNG khoe phiên bản '
+             f'Python — lệch: {khoe}')
+
+    # 7. CA THỬ CẤU TRÚC — không lạc hậu khi thêm đường mới.
+    #    Chỉ canh send_header là bỏ lọt đúng cái bẫy hai-dòng-trạng-thái, nên
+    #    canh cả send_response.
+    ma_nguon = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
+    than_pheu = ma_nguon.split('def _tra_byte')[1].split('# ---------------- tiện ích')[0]
+    ngoai = ma_nguon.replace(than_pheu, '')
+    for goi in ('self.send_header(', 'self.send_response(', 'self.end_headers('):
+        kiem(ngoai.count(goi) == 0,
+             f'Ngoài _tra_byte không còn chỗ nào gọi {goi[:-1]} — '
+             f'đếm được {ngoai.count(goi)}')
+
+
+# ==========================================================================
+def ca_a11_ben_vung(tm):
+    print('\nCA A11 — ghi tệp bền: fsync đúng thứ tự, không có trạng thái giữa')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a11')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    import web as W
+    import stat as _stat
+
+    # ---- (a) GHIM THỨ TỰ ----
+    # Bọc os.fsync / os.replace để ghi lại dãy thao tác thật, rồi bắn MỘT yêu
+    # cầu Lưu qua HTTP thật. Rẻ, chạy được cả Linux lẫn Windows, và lùi vá ra
+    # là đỏ ngay.
+    that_fsync, that_replace = os.fsync, os.replace
+    nhat_ky = []
+
+    def fsync_ghi(fd):
+        try:
+            la_thu_muc = _stat.S_ISDIR(os.fstat(fd).st_mode)
+        except OSError:
+            la_thu_muc = False
+        nhat_ky.append(('fsync-thu-muc' if la_thu_muc else 'fsync-tep', fd))
+        return that_fsync(fd)
+
+    def replace_ghi(a, b):
+        nhat_ky.append(('replace', os.path.basename(str(b))))
+        return that_replace(a, b)
+
+    os.fsync, os.replace = fsync_ghi, replace_ghi
+    try:
+        with MayChuTam(dd) as (k, _):
+            del nhat_ky[:]
+            ma, _ = k.js('/api/luu-quy-tac', {'tat': [1]})
+            kiem(ma == 200 and so_tat(dd) == [1], f'Lưu lần đầu OK — {ma}')
+            ten = [x for x, _ in nhat_ky]
+
+            def vi_tri(x):
+                """Chỉ số của thao tác, -1 nếu KHÔNG có.
+
+                   Dùng thay ten.index(): khi lùi bản vá ra thì thao tác biến
+                   mất, và .index() sẽ ném ValueError — ca thử CHẾT GIỮA CHỪNG
+                   thay vì báo đỏ, nên mọi ca sau nó không bao giờ được chạy.
+                   Ca thử phải biết đỏ, không phải biết vỡ.
+                """
+                return ten.index(x) if x in ten else -1
+
+            kiem(ten.count('fsync-tep') >= 1, f'Có fsync tệp — {ten}')
+            kiem('replace' in ten, f'Có os.replace — {ten}')
+            kiem(0 <= vi_tri('fsync-tep') < vi_tri('replace'),
+                 f'fsync tệp tạm chạy TRƯỚC os.replace — {ten}')
+            if os.name == 'posix':
+                kiem('fsync-thu-muc' in ten,
+                     f'Có fsync THƯ MỤC CHA — {ten}')
+                kiem(0 <= vi_tri('replace') < vi_tri('fsync-thu-muc'),
+                     f'fsync thư mục chạy SAU os.replace — {ten}')
+                # lần lưu ĐẦU còn ghi cauhinh.bak.goc.json -> 3 tệp
+                kiem(ten.count('fsync-tep') == 3,
+                     f'Lần Lưu đầu: fsync 3 tệp (tam + bak.goc + bak) — '
+                     f'đếm {ten.count("fsync-tep")}')
+            else:
+                kiem(True, 'Không phải POSIX — bỏ qua mục fsync thư mục')
+
+            # lần lưu THỨ HAI: bak.goc không ghi lại nữa -> 2 tệp.
+            # ĐỪNG ghim một con số cho mọi lần lưu: nó khác nhau theo lần.
+            del nhat_ky[:]
+            k.js('/api/luu-quy-tac', {'tat': [2]})
+            ten2 = [x for x, _ in nhat_ky]
+            if os.name == 'posix':
+                kiem(ten2.count('fsync-tep') == 2,
+                     f'Lần Lưu sau: fsync 2 tệp (tam + bak) — '
+                     f'đếm {ten2.count("fsync-tep")}')
+    finally:
+        os.fsync, os.replace = that_fsync, that_replace
+
+    # ---- (b) CẮT NGANG bằng ngoại lệ có chủ ý, ở 4 mốc ----
+    # Mạnh hơn (a) vì bắt được cả lỗi thứ tự sao lưu / replace.
+    tmy = os.path.join(tm, 'a11b')
+    os.makedirs(tmy, exist_ok=True)
+    dd2 = cau_hinh_tam(tmy)
+    with MayChuTam(dd2) as (k, _):
+        k.js('/api/luu-quy-tac', {'tat': [0]})       # dựng sẵn bak.goc + bak
+    goc_truoc = so_tat(dd2)
+
+    class NoGiua(Exception):
+        pass
+
+    MOC = [('sau khi ghi tệp tạm', 'dong_bo_tep'),
+           ('trước khi sao lưu', 'xoay'),
+           ('sau sao lưu, trước replace', 'replace'),
+           ('sau replace, trước fsync thư mục', 'thu_muc')]
+    for ten_moc, dau in MOC:
+        that_map = {
+            'dong_bo_tep': W._dong_bo_tep,
+            'xoay': W._xoay_sao_luu,
+            'replace': os.replace,
+            'thu_muc': W._dong_bo_thu_muc,
+        }
+
+        def no(*a, **kw):
+            raise NoGiua(ten_moc)
+
+        if dau == 'replace':
+            os.replace = no
+        else:
+            setattr(W, '_' + dau if dau != 'xoay' else '_xoay_sao_luu', no)
+        try:
+            with MayChuTam(dd2) as (k, _):
+                ma, _ = k.js('/api/luu-quy-tac', {'tat': [1, 2, 3]})
+        except Exception:
+            ma = None
+        finally:
+            os.replace = that_map['replace']
+            W._dong_bo_tep = that_map['dong_bo_tep']
+            W._xoay_sao_luu = that_map['xoay']
+            W._dong_bo_thu_muc = that_map['thu_muc']
+
+        cfg = doc_an_toan(dd2)
+        kiem(cfg is not None,
+             f'Cắt ngang "{ten_moc}": cauhinh.json vẫn ĐỌC ĐƯỢC')
+        if cfg is not None:
+            hien = [i for i, r in enumerate(cfg['quy_tac']) if r.get('bat') is False]
+            kiem(hien in (goc_truoc, [1, 2, 3]),
+                 f'  và là bản CŨ trọn vẹn hoặc bản MỚI trọn vẹn — {hien}')
+        # phao cứu sinh phải luôn còn
+        con = [t for t in os.listdir(tmy)
+               if t.startswith('cauhinh.bak') and t.endswith('.json')
+               and doc_an_toan(os.path.join(tmy, t)) is not None]
+        kiem(con, f'  và còn ít nhất một bản sao lưu đọc được — {con}')
+
+    kiem(W._dong_bo_thu_muc(tmy) == (os.name == 'posix'),
+         f'_dong_bo_thu_muc trả bool đúng theo hệ điều hành ({os.name})')
+    kiem(W._dong_bo_thu_muc(os.path.join(tmy, 'khong-co-thu-muc-nay')) is False,
+         'Thư mục không tồn tại thì trả False, không làm hỏng lượt Lưu')
+
+    # GIỚI HẠN CỦA HAI CA NÀY, nói thẳng ra:
+    # chúng ghim THỨ TỰ và bất biến "không có trạng thái ở giữa".
+    # Chúng KHÔNG chứng minh độ bền vật lý khi mất điện — muốn vậy phải cắt
+    # điện thật hoặc dùng dm-flakey. Cách "biến fsync thành lệnh rỗng rồi đọc
+    # lại" là VÔ DỤNG: trong cùng một máy, đọc lại luôn thấy dữ liệu qua bộ nhớ
+    # đệm, nên ca thử sẽ xanh cả trên mã hỏng.
+    kiem(True, 'Ghi chú: ca này ghim THỨ TỰ, không chứng minh chống mất điện')
 
 
 # ==========================================================================
@@ -367,6 +828,70 @@ def ca_a4_mot_luot(tm):
 
 
 # ==========================================================================
+def ca_a4b_thu_quy_tac(tm):
+    print('\nCA A4b — /api/thu-quy-tac cũng phải một-lúc-một-người')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a4b')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    import web as W
+
+    with MayChuTam(dd) as (k, (dia, cong)):
+        # 1. Dữ liệu sai phải cho 400 kèm câu tiếng Việt, KHÔNG phải 500 + mã
+        #    sự cố. Đường này trước đây tự viết [int(x) for x in ...] thay vì
+        #    dùng chung _tap_chi_so() với bốn đường kia.
+        ma, t = k.post('/api/thu-quy-tac', {'tat': ['a']})
+        kiem(ma == 400, f'"tat" có giá trị lạ -> 400, không phải 500 — {ma}')
+        kiem('không phải số' in t,
+             f'  và câu lỗi chỉ đúng chỗ sai — {t[:70]!r}')
+        kiem('mã sự cố' not in t, '  không phải mã sự cố 6 ký tự vô nghĩa')
+
+        # 2. ĐO THẲNG số lần giải cùng sống — không đếm mã 200.
+        #    (Bài học A4: bộ giải giữ GIL nên luồng HTTP đói, đếm 200 báo sai.)
+        that = W.thu_quy_tac
+        dem = {'dang': 0, 'dinh': 0}
+        kh = threading.Lock()
+
+        def bao(*a, **kw):
+            with kh:
+                dem['dang'] += 1
+                dem['dinh'] = max(dem['dinh'], dem['dang'])
+            try:
+                return that(*a, **kw)
+            finally:
+                with kh:
+                    dem['dang'] -= 1
+
+        W.thu_quy_tac = bao
+        try:
+            kq = []
+            kh2 = threading.Lock()
+
+            def ban():
+                ma = Khach(cong).post('/api/thu-quy-tac', {'tat': []})[0]
+                with kh2:
+                    kq.append(ma)
+
+            ls = [threading.Thread(target=ban) for _ in range(4)]
+            for t2 in ls:
+                t2.start()
+            for t2 in ls:
+                t2.join()
+        finally:
+            W.thu_quy_tac = that
+
+        kiem(dem['dinh'] == 1,
+             f'KHÔNG lúc nào có hai lượt thử cùng sống — cao nhất '
+             f'{dem["dinh"]} (mã trả về: {sorted(kq)})')
+        kiem(200 in kq, f'  và vẫn có người được phục vụ — {sorted(kq)}')
+        kiem(409 in kq, f'  người còn lại nhận 409 kèm lời nhắn — {sorted(kq)}')
+
+        # 3. xong rồi thì phải nhả ra, không kẹt
+        ma, _ = k.post('/api/thu-quy-tac', {'tat': []})
+        kiem(ma == 200, f'Thử lại sau đó vẫn được phục vụ, không kẹt — {ma}')
+
+
+# ==========================================================================
 def ca_a3_khong_lo_traceback(tm):
     print('\nCA A3 — không trả dấu vết lỗi Python ra ngoài')
     print('-' * 74)
@@ -543,8 +1068,12 @@ def ca_a8_khong_thanh_cong_thuc(tm):
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
+    ca_a9_tran_than(tm)
+    ca_a10_tieu_de(tm)
+    ca_a11_ben_vung(tm)
     ca_a7_sao_luu_xoay_vong(tm)
     ca_a4_mot_luot(tm)
+    ca_a4b_thu_quy_tac(tm)
     ca_a3_khong_lo_traceback(tm)
     ca_a8_khong_thanh_cong_thuc(tm)
 

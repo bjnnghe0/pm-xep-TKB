@@ -99,8 +99,15 @@ class Khach:
     def tho(self, tho_bytes, doc_het=True, cho=15):
         """Gửi đúng chuỗi byte này, trả về (ma, tieu_de, than)."""
         s = socket.create_connection((self.host, self.cong), timeout=cho)
+        self.gay_khi_gui = False
         try:
-            s.sendall(tho_bytes)
+            try:
+                s.sendall(tho_bytes)
+            except (BrokenPipeError, ConnectionResetError):
+                # Máy chủ đã trả lời và đóng trước khi ta gửi xong — chuyện
+                # BÌNH THƯỜNG khi thân vượt trần (nó cố ý không nuốt hết).
+                # Vẫn đọc tiếp: phản hồi có thể đã nằm sẵn trong bộ đệm nhận.
+                self.gay_khi_gui = True
             goi = b''
             while True:
                 try:
@@ -181,6 +188,23 @@ class Khach:
             return ma, json.loads(t)
         except ValueError:
             return ma, None
+
+    def tho_dong(self, cach, duong, dong, than=None, doc_het=True):
+        """Gửi yêu cầu với DANH SÁCH dòng tiêu đề, cho phép TRÙNG TÊN.
+
+           yeu_cau() nhận `them` là dict nên không thể gửi hai dòng "Host" hay
+           hai dòng "Content-Length" — mà đó đúng là thứ cần thử. Hàm này nhận
+           danh sách cặp (tên, giá trị) nên gửi được bao nhiêu dòng tuỳ ý, kể cả
+           trùng tên. Người gọi tự lo mọi dòng, kể cả Host.
+        """
+        if isinstance(than, (dict, list)):
+            than = json.dumps(than, ensure_ascii=False).encode()
+        elif isinstance(than, str):
+            than = than.encode()
+        d = [f'{cach} {duong} HTTP/1.1']
+        d += [f'{k}: {v}' for k, v in dong]
+        goi = ('\r\n'.join(d) + '\r\n\r\n').encode() + (than or b'')
+        return self.tho(goi, doc_het=doc_het)
 
     # ---------------- yêu cầu DỊ DẠNG (dành cho ca thử an ninh) ----------------
     def chunked(self, duong, than, kieu='application/json'):

@@ -68,8 +68,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
 | `tests/thu_truong.py` | Mọi loại có `TRUONG`; khoá lạ cấp cao nhất thì DỪNG | Chạy khi thêm loại quy tắc |
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
-| `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**) | Hạ tầng dùng chung của mọi ca thử web |
-| `tests/thu_an_ninh.py` | 7 lỗi an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
+| `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
@@ -395,22 +395,46 @@ dòng, không bấm nổi.
 > trang thật để đo. Nó bắt được việc khai sai cỡ, **không** bắt được lỗi bố cục
 > kiểu chữ tràn ra ngoài khung. Muốn chắc thì vẫn phải mở trình duyệt xem.
 
-### Bảy bất biến an ninh — ĐỪNG làm hồi quy
+### Mười bất biến an ninh — ĐỪNG làm hồi quy
 
-Vá 19/8/2026, trước khi thêm đăng nhập. Cả bảy đều **hỏng ngay khi chạy cục bộ**,
-không phải rủi ro lý thuyết chờ tới lúc mở Internet. Mỗi mục có ca thử riêng
-trong `tests/thu_an_ninh.py`; con số trong ngoặc là kết quả khi lùi lại bản cũ.
+A1–A8 vá 19/8/2026 trước khi thêm đăng nhập; A9–A11 vá cùng ngày, ở **Đợt 1 của
+Giai đoạn 2** — cũng trước khi thêm đăng nhập, và đó là điều kiện tiên quyết:
+thêm cookie vào một máy chủ còn lỗ chèn đầu HTTP là làm an ninh **kém đi**, vì
+cookie tự đính kèm nên mọi lỗ cũ đều mượn được quyền của người vừa đăng nhập.
+
+Cả mười đều **hỏng ngay khi chạy cục bộ**, không phải rủi ro lý thuyết chờ tới
+lúc mở Internet. Mỗi mục có ca thử riêng trong `tests/thu_an_ninh.py`; con số
+trong ngoặc là kết quả khi lùi lại bản cũ.
 
 | # | Bất biến | Chỗ cài |
 |---|---|---|
 | A2 | Thân yêu cầu **dị dạng ≠ thân rỗng**. `Transfer-Encoding`, thiếu/sai `Content-Length` → 400. Ba đường GHI dùng `_than_json(bat_buoc=True)` | `web.py` `_than_json()` (2/10) |
-| A1 | Chỉ nhận yêu cầu từ **chính trang này**: `Host` + `Origin` + `Content-Type: application/json` | `web.py` `_kiem_nguon_goc()` (17/33) |
+| A1 | Chỉ nhận yêu cầu từ **chính trang này**: `Host` + `Origin` + `Content-Type: application/json`. `Host`/`Origin`/`Content-Length` mỗi thứ chỉ được **một dòng**, và `Content-Length` phải khớp `[0-9]{1,15}` | `web.py` `_kiem_nguon_goc()`, `_mot_dong_duy_nhat()` (17/33 · 159/165) |
 | A7 | `cauhinh.bak.goc.json` giữ bản **đầu tiên**, không bao giờ đè; thêm 5 bản xoay vòng | `web.py` `_xoay_sao_luu()` (41/49) |
 | — | Ghi `cauhinh.json` **nguyên tử**: dựng chuỗi → tệp tạm → đọc lại → sao lưu → `os.replace()`. Cả hàm trong `KHOA_GHI` | `web.py` `luu_quy_tac()` |
 | A4 | Kiểm cờ + xoá trạng thái + đặt cờ trong **CÙNG một lần giữ khoá** | `web.py` `gianh_luot()` (11 lượt chồng nhau) |
 | A3 | Dấu vết lỗi ra **cửa sổ dòng lệnh**, người dùng chỉ thấy mã 6 ký tự. `SystemExit` vẫn hiện **nguyên văn** | `web.py` `_bao_su_co()` (70/78) |
 | A8 | Mọi chỗ ghi ô Excel đi qua `_dat_o()` — chuỗi đầu `=` bị ép `data_type='s'` | `xep_tkb.py` `_dat_o()` (9 thẻ `<f>` thay vì 7) |
+| A9 | Thân yêu cầu có **trần cứng** `TRAN_THAN` = 256 KB. Chặn theo `Content-Length` **trước** khi đọc, chặn lại theo mẩu 64 KB **khi** đọc → 413 | `web.py` `_than_json()` + `_doc_than_co_tran()` (156/165) |
+| A10 | **Mọi** tiêu đề đi qua `_tra_byte()` — kiểm xong hết rồi mới `send_response()` | `web.py` `_tra_byte()` (151/165) |
+| A11 | Ghi tệp **bền**: `fsync` tệp tạm → sao lưu (cũng `fsync`) → `os.replace` → `fsync` thư mục cha | `web.py` `luu_quy_tac()`, `_chep_ben()`, `_dong_bo_thu_muc()` (159/165) |
 
+> **Thêm chỗ phát tiêu đề HTTP mới thì PHẢI đi qua `_tra_byte(mã, [(tên, giá
+> trị)…], thân)`, đừng gọi thẳng `send_header()`.** Lý do không phải chỉ là gọn:
+> `send_header()` của thư viện chuẩn chỉ gọi được **sau** `send_response()`, nên
+> một hàm bọc kiểm-tại-chỗ vẫn để lại dòng trạng thái trong bộ đệm rồi ném — và
+> ta được đúng cái phản hồi **hai dòng trạng thái**. Đo được trên bản cũ: đặt
+> `file_xuat = 'TKB_Khối12.xlsx'` (tên có dấu, chuyện rất dễ xảy ra) thì máy chủ
+> trả **200** với `server`/`date`/`content-type` mỗi thứ **hai lần**, và trình
+> duyệt tải về một tệp `.xlsx` thật ra chứa câu báo lỗi JSON. Không một chữ giải
+> thích. Vì vậy `_tra_byte()` nhận **cả danh sách** tiêu đề và kiểm xong hết rồi
+> mới phát dòng trạng thái đầu tiên.
+>
+> Tên tệp thì qua `_ten_tep_an_toan()`: ký tự điều khiển và `"` → **DỪNG** (400,
+> chỉ đích danh `thong_tin.file_xuat`); chữ có dấu tiếng Việt → **giữ**, phát
+> kèm `filename*=UTF-8''…` theo RFC 6266. Khác `_dat_o()` ở đúng chỗ này: Excel
+> còn một cách lưu khác giữ nguyên được từng ký tự, HTTP thì không.
+>
 > **Thêm chỗ ghi ô Excel mới thì PHẢI dùng `_dat_o(ws, hàng, cột, giá_trị)`,
 > đừng gọi thẳng `ws.cell(...)`.** Kiểm kê được 25 chỗ ghi, 17 giá trị rơi vào
 > **đầu ô**, trong đó 2 đường sửa được qua HTTP: `thong_tin.tuan` (→ `Khối 12!A4`)
@@ -634,9 +658,12 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   chỗ lọc thì tụt còn 5/25.
 - `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
-- `python tests/thu_web.py`: **48/48 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
+- `python tests/thu_an_ninh.py`: **172/172 mục ĐẠT** (~90s), 10 ca A1–A11. Lùi từng
+  bản vá ra thì tụt đúng phần của nó và **chỉ** phần của nó: A9 → 156/165 ·
+  A10 → 151/165 · A11 → 159/165 · phần tiêu đề trùng của A1 → 159/165.
 - `python tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
 - `python tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
@@ -647,6 +674,23 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
+
+---
+
+## Việc treo
+
+```
+[ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
+[ ] Bật cờ Secure cho cookie khi có TLS
+[ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+```
+
+> **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
+> thêm `--host`" thì máy chủ vĩnh viễn chạy `http://127.0.0.1`, mà trên `http://`
+> trình duyệt **vứt** cookie có cờ `Secure` — bật lẻ cờ đó là không ai đăng nhập
+> được, và thông báo lỗi sẽ không hề nhắc tới nó. Vì vậy Giai đoạn 2 **cố ý chưa
+> thêm cờ vào mã**: thêm một công tắc chỉ có thể sai chứ không bao giờ đúng là
+> tự đặt bẫy. Khi nào thật sự có proxy TLS thì làm cả ba dòng cùng lúc.
 
 ---
 

@@ -28,6 +28,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import quy_tac as QT
@@ -39,6 +40,32 @@ TINH = {'index.html': 'text/html', 'style.css': 'text/css',
         'app.js': 'application/javascript'}
 
 DUONG_DAN_CAUHINH = os.path.join(THU_MUC, 'cauhinh.json')
+
+# --------------------------------------------------------------------------
+# Trần kích thước thân yêu cầu (bất biến A9).
+#
+# MỘT hằng duy nhất, không lập bảng theo từng đường. Thân lớn nhất mà giao
+# diện từng gửi là {"tat":[...]} cho vài chục quy tắc — khoảng 200 byte; một
+# quy tắc mới cỡ 1 KB. 256 KB đã rộng gấp hàng trăm lần, mà chỉ còn đúng một
+# con số phải giải thích. Bảng nhiều mức chỉ mua được câu lỗi đẹp hơn, đổi lại
+# một bảng phải bảo trì mỗi lần thêm đường.
+TRAN_THAN = 256 * 1024
+
+# Sau khi trả 413 thì đọc bỏ phần thân còn lại, NHƯNG CÓ CHẶN — xem _doc_bo().
+TRAN_DOC_BO = 256 * 1024
+GIAY_DOC_BO = 0.5
+
+# Một kết nối im lặng giữa chừng sẽ giữ luồng bao lâu. Đo được:
+# BaseHTTPRequestHandler.timeout mặc định là None, tức GIỮ MÃI MÃI.
+GIAY_CHO_KET_NOI = 30
+
+
+class ThanQuaLon(Exception):
+    """Thân yêu cầu vượt trần -> 413.
+
+       Phải là ngoại lệ RIÊNG, không mượn SystemExit: SystemExit đã bị ánh xạ
+       cứng thành 400 ở cả do_GET lẫn do_POST, mượn nó là mất mã 413.
+    """
 
 
 def thu_muc_cauhinh():
@@ -55,6 +82,10 @@ KHOA = threading.Lock()
 # tích tắc) vì việc ghi tệp lâu hơn nhiều — dùng chung một khoá sẽ làm thanh
 # tiến độ đứng hình mỗi lần có người bấm Lưu.
 KHOA_GHI = threading.Lock()
+# Khoá cho /api/thu-quy-tac, đường DUY NHẤT cố ý giải ngay trong luồng HTTP.
+# Tách riêng vì nó không được đụng vào TT (làm vậy là xoá mất kết quả đang hiện
+# trên màn hình người khác), mà vẫn phải là một-lúc-một-người.
+KHOA_THU = threading.Semaphore(1)
 TT = {}
 
 # Quy tắc người dùng thêm ở màn hình Quy tắc — CHỈ nằm trong bộ nhớ của phiên
@@ -140,6 +171,156 @@ def _bao_su_co(noi=''):
 def _loi_su_co(ma):
     return (f'[LỖI] Máy chủ gặp sự cố bất ngờ (mã sự cố {ma}).\n'
             f'      Chi tiết đã ghi ra cửa sổ dòng lệnh đang chạy web.py.')
+
+
+# ==========================================================================
+# 1b. TIÊU ĐỀ HTTP — MỘT PHỄU DUY NHẤT (bất biến A10)
+# ==========================================================================
+#  Đây là _dat_o() của xep_tkb.py, đặt ở tầng HTTP. Cùng một lý lẽ: rất nhiều
+#  chỗ ghi, chỉ một chỗ kiểm.
+#
+#  Vì sao phải có: send_header() của thư viện chuẩn nối thẳng chuỗi
+#      ("%s: %s\r\n" % (keyword, value)).encode('latin-1', 'strict')
+#  KHÔNG lọc \r \n gì cả. Đã đo trên máy chủ thật: đặt
+#      thong_tin.file_xuat = 'TKB.xlsx"\r\nX-Chen-Vao: co-that\r\nSet-Cookie: a=b'
+#  rồi GET /api/tai-ve thì phản hồi mọc ra ĐÚNG hai tiêu đề đó, kể cả Set-Cookie.
+#
+#  Và 'latin-1' STRICT còn gây một lỗi thứ hai, KHÔNG cần kẻ tấn công nào —
+#  đây mới là lỗi hay gặp: cô giáo đổi file_xuat thành tên có dấu tiếng Việt
+#      thong_tin.file_xuat = 'TKB_Khối12.xlsx'
+#  thì send_header ném UnicodeEncodeError ở GIỮA CHỪNG, khi dòng trạng thái 200
+#  đã nằm trong _headers_buffer. except Exception lại gọi _json(...500), tức
+#  send_response(500) NỐI THÊM một dòng trạng thái nữa vào cùng bộ đệm. Đã đo:
+#  máy chủ trả mã 200 với server/date/content-type mỗi thứ HAI LẦN, và trình
+#  duyệt tải về một tệp .xlsx thật ra chứa câu báo lỗi JSON. Không một chữ
+#  giải thích.
+#
+#  => Luật rút ra, và là lý do _tra_byte() nhận CẢ DANH SÁCH tiêu đề:
+#     MỌI KIỂM TRA PHẢI XONG TRƯỚC LỜI GỌI send_response() ĐẦU TIÊN.
+#     Bọc từng lời gọi send_header() là chưa đủ — lúc đó đã muộn rồi.
+
+def _kiem_tieu_de(ten, gt):
+    """Giá trị này có đặt vào tiêu đề HTTP được không? Không thì DỪNG."""
+    gt = str(gt)
+    for c in gt:
+        if ord(c) < 0x20 or ord(c) == 0x7F:
+            raise SystemExit(
+                f'[LỖI] Giá trị của tiêu đề "{ten}" có ký tự điều khiển '
+                f'({c!r}).\n'
+                f'      Ký tự xuống dòng trong tiêu đề HTTP cho phép chèn thêm '
+                f'tiêu đề giả,\n'
+                f'      nên máy chủ từ chối hẳn chứ không lặng lẽ bỏ ký tự đi.\n'
+                f'      Hãy mở cauhinh.json, sửa mục "thong_tin".')
+    try:
+        gt.encode('latin-1')
+    except UnicodeEncodeError:
+        # Chốt chặn cuối. Mọi đường đi đúng đều đã đổi chữ có dấu sang dạng
+        # RFC 5987 trước khi tới đây, nên gặp lỗi này là mã sai — nhưng thà
+        # dừng sạch bằng một câu tiếng Việt còn hơn để lọt vào send_header
+        # rồi nhận về phản hồi hai-dòng-trạng-thái.
+        raise SystemExit(
+            f'[LỖI] Giá trị của tiêu đề "{ten}" có chữ không thuộc bảng mã '
+            f'latin-1.\n'
+            f'      Tiêu đề HTTP không mang được chữ có dấu ở dạng thô.')
+    return gt
+
+
+def _ten_tep_an_toan(ten, khoa='thong_tin.file_xuat'):
+    """Dựng giá trị Content-Disposition an toàn cho một tên tệp.
+
+       Trả về chuỗi đã ghép sẵn, mang HAI tham số như RFC 6266 khuyến nghị:
+
+           attachment; filename="TKB_Kh_i12.xlsx";
+                       filename*=UTF-8''TKB_Kh%E1%BB%91i12.xlsx
+
+       - filename=  bản dự phòng, chỉ [A-Za-z0-9._-], cho máy cũ.
+       - filename*= bản thật, giữ nguyên dấu tiếng Việt. Mọi trình duyệt hiện
+         đại ưu tiên tham số này.
+
+       Hai loại ký tự, hai cách xử KHÁC NHAU, có chủ ý:
+
+       - Ký tự điều khiển và dấu nháy kép -> DỪNG HẲN. Không có cách viết đúng
+         nào cho chúng ở đây, mà lọc âm thầm là sửa dữ liệu người dùng rồi vẫn
+         phục vụ — giấu mất cái sai trong cauhinh.json (quy ước số 3).
+       - Chữ có dấu tiếng Việt -> KHÔNG từ chối, mã hoá RFC 5987. Tên tệp có
+         dấu là hợp lệ và nhà trường sẽ dùng; từ chối ở đây là bắt giáo viên bỏ
+         dấu, tức bắt nhầm người.
+
+       (Khác _dat_o() của Excel ở đúng chỗ này: ở Excel còn một "cách lưu" khác
+       giữ nguyên được từng ký tự, ở HTTP thì không.)
+    """
+    ten = os.path.basename(str(ten))
+    for c in ten:
+        if ord(c) < 0x20 or ord(c) == 0x7F or c == '"':
+            raise SystemExit(
+                f'[LỖI] Tên tệp khai ở "{khoa}" có ký tự không dùng được: {c!r}\n'
+                f'      Tên tệp không được chứa dấu nháy kép hay ký tự xuống '
+                f'dòng — chúng cho phép\n'
+                f'      chèn thêm tiêu đề giả vào phản hồi HTTP.\n'
+                f'      Hãy mở cauhinh.json và sửa lại mục "{khoa}".')
+    du_phong = ''.join(c if (c.isascii() and (c.isalnum() or c in '._-')) else '_'
+                       for c in ten)
+    du_phong = du_phong.strip('_') or 'tai-ve'
+    ma_hoa = urllib.parse.quote(ten, safe='')
+    return f"attachment; filename=\"{du_phong}\"; filename*=UTF-8''{ma_hoa}"
+
+
+# ==========================================================================
+# 1c. GHI TỆP BỀN (bất biến A11)
+# ==========================================================================
+#  os.replace() nguyên tử về CÁI TÊN, nhưng không nói gì về việc DỮ LIỆU đã
+#  xuống đĩa hay chưa. Mất điện ngay sau đó thì cái tên đã trỏ sang tệp mới mà
+#  nội dung còn nằm trong bộ nhớ đệm của hệ điều hành -> cauhinh.json thành 0
+#  byte. Đúng thứ mà A7 đã bỏ công bảo vệ, chỉ ở tầng thấp hơn một bậc.
+#
+#  Đo được: cả mẫu ghi nguyên tử ĐẦY ĐỦ (ghi + fsync tệp + replace + fsync thư
+#  mục) mất trung vị 1,1 ms cho tệp ~4 KB — nút Lưu không chậm đi.
+
+def _dong_bo_tep(f):
+    """Ép nội dung tệp đang mở xuống đĩa thật."""
+    f.flush()
+    os.fsync(f.fileno())
+
+
+def _dong_bo_thu_muc(tm):
+    """Ép CÁI TÊN vừa đổi xuống đĩa. Trả True nếu đã làm được.
+
+       Trả về bool chứ không nuốt im lặng, để ca thử khẳng định được.
+
+       Trên Windows os.open() không mở được thư mục nên bước này bỏ qua —
+       nói thẳng ra đây chứ không giấu: phần đổi tên trên NTFS đi qua nhật ký
+       siêu dữ liệu nên tương đối bền, còn RỦI RO CÒN LẠI thì vẫn còn. Bước
+       fsync tệp tạm ở trên mới là bước quan trọng nhất, và bước đó chạy trên
+       cả hai hệ điều hành.
+    """
+    if os.name != 'posix':
+        return False
+    try:
+        fd = os.open(tm, os.O_RDONLY)
+    except OSError:
+        return False
+    try:
+        os.fsync(fd)
+        return True
+    except OSError:
+        return False                 # vài hệ tệp không cho fsync thư mục
+    finally:
+        os.close(fd)
+
+
+def _chep_ben(nguon, dich):
+    """shutil.copy() nhưng ép xuống đĩa.
+
+       Vì sao bản sao lưu cũng phải fsync: mất điện ngay sau khi bấm Lưu thì
+       cauhinh.json mới đã bền, nhưng cauhinh.bak.json có thể rỗng — tức mất
+       đúng cái phao cứu sinh, trong khi người dùng đinh ninh là có. Đó là kiểu
+       hỏng tệ nhất của dự án này: im lặng và mất dữ liệu.
+    """
+    with open(nguon, 'rb') as f:
+        dl = f.read()
+    with open(dich, 'wb') as f:
+        f.write(dl)
+        _dong_bo_tep(f)
 
 
 # ==========================================================================
@@ -469,7 +650,7 @@ def _xoay_sao_luu(tm):
     """
     goc = os.path.join(tm, 'cauhinh.bak.goc.json')
     if not os.path.exists(goc):                       # chỉ ghi MỘT LẦN
-        shutil.copy(DUONG_DAN_CAUHINH, goc)
+        _chep_ben(DUONG_DAN_CAUHINH, goc)
     for i in range(SO_BAN_SAO_LUU, 1, -1):
         cu = os.path.join(tm, f'cauhinh.bak.{i - 1}.json')
         if os.path.exists(cu):
@@ -477,7 +658,10 @@ def _xoay_sao_luu(tm):
     bak = os.path.join(tm, 'cauhinh.bak.json')
     if os.path.exists(bak):
         shutil.move(bak, os.path.join(tm, 'cauhinh.bak.1.json'))
-    shutil.copy(DUONG_DAN_CAUHINH, bak)
+    # Chỉ hai bản này đi qua _chep_ben (sinh dữ liệu mới nên phải ép xuống đĩa).
+    # cauhinh.bak.1..5 chỉ là shutil.move, tức đổi tên — phần siêu dữ liệu đó do
+    # lần _dong_bo_thu_muc() ở cuối luu_quy_tac() lo, không cần fsync riêng.
+    _chep_ben(DUONG_DAN_CAUHINH, bak)
     return bak
 
 
@@ -513,11 +697,18 @@ def luu_quy_tac(tat):
         # 1. dựng xong chuỗi TRƯỚC, chưa đụng vào tệp nào
         chuoi = _gon_json(cfg) + '\n'
 
-        # 2. ghi ra tệp tạm rồi đọc lại — hỏng thì bỏ tệp tạm, tệp thật y nguyên
+        # 2. ghi ra tệp tạm, ÉP XUỐNG ĐĨA, rồi đọc lại — hỏng thì bỏ tệp tạm,
+        #    tệp thật y nguyên.
+        #
+        #    fsync phải nằm ở ĐÂY, trước os.replace ở bước 4. Đọc lại bằng
+        #    doc_cau_hinh() KHÔNG thay thế được nó: phép đọc đó đi qua bộ nhớ
+        #    đệm của hệ điều hành nên chỉ khẳng định "chuỗi hợp lệ", không
+        #    khẳng định "đã nằm trên đĩa".
         tm = thu_muc_cauhinh()
         tam = os.path.join(tm, 'cauhinh.tam.json')
         with open(tam, 'w', encoding='utf-8') as f:
             f.write(chuoi)
+            _dong_bo_tep(f)
         try:
             X.doc_cau_hinh(tam)
         except BaseException:
@@ -527,6 +718,9 @@ def luu_quy_tac(tat):
         # 3. sao lưu xoay vòng, rồi 4. thay thế nguyên tử
         sao_luu = _xoay_sao_luu(tm)
         os.replace(tam, DUONG_DAN_CAUHINH)
+
+        # 5. ép CÁI TÊN vừa đổi xuống đĩa nốt
+        _dong_bo_thu_muc(tm)
 
         PHIEN['them'].clear()                         # đã nằm trong file rồi
         return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
@@ -538,24 +732,60 @@ def luu_quy_tac(tat):
 
 class May(BaseHTTPRequestHandler):
     server_version = 'XepTKB'
+    sys_version = ''            # đừng khoe 'Python/3.12.3' ra ngoài
+    timeout = GIAY_CHO_KET_NOI  # StreamRequestHandler.setup() tự gọi settimeout
 
     def log_message(self, *a):
         pass                                          # đừng làm bẩn màn hình
 
-    # ---------------- tiện ích ----------------
-    def _tra(self, ma, kieu, than):
+    def version_string(self):
+        # Mặc định là server_version + ' ' + sys_version, tức 'XepTKB ' với
+        # một dấu cách thừa khi sys_version rỗng. Trả thẳng cho gọn.
+        return self.server_version
+
+    # ---------------- PHỄU PHÁT PHẢN HỒI ----------------
+    def _tra_byte(self, ma, tieu_de, than):
+        """Nơi DUY NHẤT được gọi send_response() và send_header().
+
+           tieu_de là danh sách [(tên, giá trị), ...] — nhận cả danh sách chứ
+           không nhận từng cái, vì phải KIỂM XONG HẾT rồi mới được phát dòng
+           trạng thái đầu tiên. Xem ghi chú dài ở mục 1b: kiểm sau send_response
+           là để lại một phản hồi có HAI dòng trạng thái.
+
+           Ca thử canh bất biến này bằng grep: trong cả web.py không được còn
+           self.send_header( LẪN self.send_response( nào ngoài thân hàm này.
+        """
         if isinstance(than, str):
             than = than.encode('utf-8')
-        self.send_response(ma)
-        self.send_header('Content-Type', f'{kieu}; charset=utf-8')
-        self.send_header('Content-Length', str(len(than)))
-        self.send_header('Cache-Control', 'no-store')
-        self.end_headers()
+        dong = list(tieu_de) + [('Content-Length', str(len(than)))]
+        for ten, gt in dong:                 # 1. KIỂM HẾT — có thể ném
+            _kiem_tieu_de(ten, gt)
+        self.send_response(ma)               # 2. giờ mới phát dòng trạng thái
+        for ten, gt in dong:                 # 3.
+            self.send_header(ten, gt)
+        self.end_headers()                   # 4.
         self.wfile.write(than)
+
+    # ---------------- tiện ích ----------------
+    def _tra(self, ma, kieu, than):
+        self._tra_byte(ma, [('Content-Type', f'{kieu}; charset=utf-8'),
+                            ('Cache-Control', 'no-store')], than)
 
     def _json(self, obj, ma=200):
         self._tra(ma, 'application/json',
                   json.dumps(obj, ensure_ascii=False))
+
+    def _bao_loi(self, duong, chu, ma=400):
+        """Trả một câu lỗi, ĐÚNG KIỂU cho từng đường.
+
+           Hai đường tải tệp được mở bằng ĐIỀU HƯỚNG CẢ TRANG
+           (app.js: window.location = '/api/tai-ve'), không phải fetch. Trả JSON
+           ở đó là đẩy giáo viên ra một tab trắng chỉ có {"loi": ...} trần, mất
+           luôn màn hình đang xem và không có nút quay lại rõ ràng.
+        """
+        if duong in ('/api/tai-ve', '/api/tai-web'):
+            return self._tra(ma, 'text/plain', chu)
+        return self._json({'loi': chu}, ma)
 
     # ---------------- chỉ nhận yêu cầu phát từ CHÍNH TRANG NÀY ----------------
     def _ten_may_cho_phep(self):
@@ -589,7 +819,7 @@ class May(BaseHTTPRequestHandler):
                            bằng "simple request", phải qua preflight, mà
                            preflight lại mang Origin nên bị lớp trên chặn.
         """
-        host = (self.headers.get('Host') or '').strip().lower()
+        host = (self._mot_dong_duy_nhat('Host') or '').strip().lower()
         if host not in self._ten_may_cho_phep():
             raise SystemExit(
                 f'[LỖI] Yêu cầu gửi tới tên máy lạ: {host!r}\n'
@@ -597,7 +827,7 @@ class May(BaseHTTPRequestHandler):
                 f'      Hãy mở bằng http://127.0.0.1:'
                 f'{self.server.server_address[1]}')
 
-        org = self.headers.get('Origin')
+        org = self._mot_dong_duy_nhat('Origin')
         if org is not None and org.strip().lower() not in self._nguon_cho_phep():
             raise SystemExit(
                 f'[LỖI] Yêu cầu phát đi từ một trang khác: {org!r}\n'
@@ -611,6 +841,84 @@ class May(BaseHTTPRequestHandler):
                 raise SystemExit(
                     f'[LỖI] Kiểu nội dung không nhận được: {kieu or "(trống)"}\n'
                     f'      Đường này chỉ nhận "application/json".')
+
+    def _mot_dong_duy_nhat(self, ten):
+        """Tiêu đề này chỉ được xuất hiện ĐÚNG MỘT LẦN. Trả về giá trị, hoặc None.
+
+           Đã đo: gửi hai dòng "Host" (dòng thật trước, dòng giả sau) thì máy chủ
+           cho 200 — vì self.headers.get() chỉ lấy dòng ĐẦU TIÊN. Hôm nay chưa
+           khai thác được (HTTP/1.0, không keep-alive, không proxy), nhưng đây
+           đúng là kiểu lệch-cách-hiểu mà A1 sinh ra để chặn: một công cụ trung
+           gian có thể chọn dòng khác với dòng ta chọn.
+
+           Áp cho cả Content-Length vì tiêu đề đó trùng lặp chính là nền của
+           request smuggling, nếu ngày nào đó ai bật HTTP/1.1.
+        """
+        ds = self.headers.get_all(ten) or []
+        if len(ds) > 1:
+            raise SystemExit(
+                f'[LỖI] Yêu cầu mang {len(ds)} dòng "{ten}".\n'
+                f'      Tiêu đề này chỉ được xuất hiện đúng một lần.')
+        return ds[0] if ds else None
+
+    def _doc_than_co_tran(self, n):
+        """Đọc đúng n byte thân, theo từng mẩu 64 KB, không bao giờ quá trần.
+
+           Đây là LỚP THỨ HAI. Lớp thứ nhất — so Content-Length với trần trước
+           khi đọc — đã chặn được mọi ca hôm nay và là lớp rẻ nhất. Lớp này vẫn
+           phải có vì nó là bất biến sống sót qua thay đổi: ngày nào đó ai mở
+           lại Transfer-Encoding hoặc thêm một đường tải tệp lên, lớp thứ nhất
+           lặng lẽ thành vô nghĩa còn lớp này vẫn đúng.
+        """
+        goi = bytearray()
+        con = n
+        while con > 0:
+            m = self.rfile.read(min(65536, con))
+            if not m:
+                break
+            goi += m
+            con -= len(m)
+            if len(goi) > TRAN_THAN:
+                raise ThanQuaLon(
+                    f'[LỖI] Thân yêu cầu vượt quá {TRAN_THAN // 1024} KB.')
+        return bytes(goi)
+
+    def _doc_bo(self):
+        """Sau khi trả 413: đọc bỏ phần thân còn lại, NHƯNG CÓ CHẶN.
+
+           Vì sao phải đọc bỏ chút ít: đóng socket trong lúc bên kia còn đang
+           ghi sẽ gây RST, và nhiều client (kể cả trình duyệt) MẤT LUÔN phản hồi
+           413 — người dùng chỉ thấy "network error", không thấy câu tiếng Việt
+           mình vừa viết.
+
+           Vì sao không đọc hết: đọc hết là thua ngay mục đích, 20 MB vẫn phải
+           nuốt. Chặn ở 256 KB / 0,5 giây là đủ để bộ đệm gửi của người lỡ tay
+           thoát ra, còn kẻ tấn công thì không ép được ta đọc thêm.
+
+           Đọc thẳng từ self.connection chứ không qua self.rfile: rfile là
+           BufferedReader, một lần đọc hết giờ giữa chừng làm mất số byte đã
+           đệm và không lấy lại được — ca thử sẽ đo ra số lung tung.
+        """
+        da, t0, cu = 0, time.monotonic(), None
+        try:
+            cu = self.connection.gettimeout()
+            self.connection.settimeout(0.1)
+            while da < TRAN_DOC_BO and time.monotonic() - t0 < GIAY_DOC_BO:
+                try:
+                    m = self.connection.recv(65536)
+                except OSError:
+                    break
+                if not m:
+                    break
+                da += len(m)
+        except OSError:
+            pass
+        finally:
+            try:
+                self.connection.settimeout(cu)
+            except OSError:
+                pass
+        return da
 
     def _than_json(self, bat_buoc=False):
         """Đọc thân JSON của yêu cầu.
@@ -630,27 +938,35 @@ class May(BaseHTTPRequestHandler):
             raise SystemExit(
                 '[LỖI] Máy chủ không nhận yêu cầu kiểu "Transfer-Encoding".\n'
                 '      Hãy gửi kèm "Content-Length".')
-        tho = self.headers.get('Content-Length')
+        tho = self._mot_dong_duy_nhat('Content-Length')
         if tho is None or str(tho).strip() == '':
             if bat_buoc:
                 raise SystemExit(
                     '[LỖI] Yêu cầu thiếu phần thân.\n'
                     '      Đường này ghi xuống tệp nên bắt buộc phải có thân.')
             return {}
-        try:
-            n = int(tho)
-            if n < 0:
-                raise ValueError
-        except ValueError:
+        # int() của Python quá dễ dãi để dùng cho một con số quyết định việc
+        # cấp phát bộ nhớ. Đã đo: int('1_0') = 10, int(' +10 ') = 10, và
+        # int('١٠') = 10 (chữ số Ả Rập). Ép đúng dạng chữ số ASCII.
+        if not re.fullmatch(r'[0-9]{1,15}', str(tho).strip()):
             raise SystemExit(f'[LỖI] "Content-Length" không phải số: {tho!r}')
+        n = int(str(tho).strip())
         if n == 0:
             if bat_buoc:
                 raise SystemExit(
                     '[LỖI] Yêu cầu thiếu phần thân.\n'
                     '      Đường này ghi xuống tệp nên bắt buộc phải có thân.')
             return {}
+        # LỚP 1: chặn theo lời khai, TRƯỚC khi đọc một byte nào.
+        # Đây là chỗ quyết định của bất biến A9. Đã đo trên bản cũ: thân
+        # 20.000.022 byte cho 200 OK, vì rfile.read(n) cấp phát n byte trước
+        # mọi kiểm tra.
+        if n > TRAN_THAN:
+            raise ThanQuaLon(
+                f'[LỖI] Thân yêu cầu quá lớn: {n:,} byte.\n'
+                f'      Máy chủ chỉ nhận tối đa {TRAN_THAN // 1024} KB.')
         try:
-            d = json.loads(self.rfile.read(n).decode('utf-8'))
+            d = json.loads(self._doc_than_co_tran(n).decode('utf-8'))
         except (ValueError, UnicodeDecodeError) as e:
             raise SystemExit(f'[LỖI] Thân yêu cầu không phải JSON hợp lệ: {e}')
         if not isinstance(d, dict):
@@ -682,7 +998,13 @@ class May(BaseHTTPRequestHandler):
         except SystemExit as e:
             # Khai báo sai là lỗi của dữ liệu người dùng gửi lên -> 400,
             # không phải máy chủ hỏng.
-            self._json({'loi': str(e)}, 400)
+            self._bao_loi(duong, str(e), 400)
+        except (TimeoutError, ConnectionError):
+            # Kết nối im lặng hoặc bị ngắt giữa chừng KHÔNG phải sự cố phần
+            # mềm. Để nó rơi vào except Exception là mỗi lần lại in nguyên một
+            # traceback kèm mã sự cố ra cửa sổ dòng lệnh của cô giáo — màn hình
+            # đầy chữ đỏ, tưởng phần mềm hỏng.
+            return
         except Exception:
             self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
                        500)
@@ -715,20 +1037,20 @@ class May(BaseHTTPRequestHandler):
 
     def _tai_ve(self):
         ten = X.doc_cau_hinh(DUONG_DAN_CAUHINH)['thong_tin']['file_xuat']
+        # Dựng giá trị tiêu đề TRƯỚC khi mở tệp: khai sai thì dừng sạch bằng
+        # một câu tiếng Việt, đừng để lọt tới lúc đã phát dòng trạng thái.
+        bo_tri = _ten_tep_an_toan(ten)
         dd = os.path.join(thu_muc_cauhinh(), os.path.basename(ten))
         if not os.path.exists(dd):
             return self._tra(404, 'text/plain',
                              'Chưa có file kết quả. Hãy xếp thời khoá biểu trước.')
         with open(dd, 'rb') as f:
             than = f.read()
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/vnd.openxmlformats-'
-                                         'officedocument.spreadsheetml.sheet')
-        self.send_header('Content-Disposition',
-                         f'attachment; filename="{os.path.basename(dd)}"')
-        self.send_header('Content-Length', str(len(than)))
-        self.end_headers()
-        self.wfile.write(than)
+        self._tra_byte(200, [
+            ('Content-Type', 'application/vnd.openxmlformats-'
+                             'officedocument.spreadsheetml.sheet'),
+            ('Content-Disposition', bo_tri),
+            ('Cache-Control', 'no-store')], than)
 
     def _tai_web(self):
         dd = os.path.join(thu_muc_cauhinh(), 'tkb_web.html')
@@ -737,13 +1059,12 @@ class May(BaseHTTPRequestHandler):
                              'Chưa có trang web. Hãy xếp thời khoá biểu trước.')
         with open(dd, 'rb') as f:
             than = f.read()
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html; charset=utf-8')
-        self.send_header('Content-Disposition',
-                         'attachment; filename="tkb_web.html"')
-        self.send_header('Content-Length', str(len(than)))
-        self.end_headers()
-        self.wfile.write(than)
+        # Tên ở đây là HẰNG CHUỖI nên vốn không có lỗ. Vẫn đi qua đúng phễu như
+        # mọi đường khác — biến cái may thành cấu trúc.
+        self._tra_byte(200, [
+            ('Content-Type', 'text/html; charset=utf-8'),
+            ('Content-Disposition', _ten_tep_an_toan('tkb_web.html')),
+            ('Cache-Control', 'no-store')], than)
 
     # ---------------- POST ----------------
     def do_POST(self):
@@ -762,10 +1083,14 @@ class May(BaseHTTPRequestHandler):
             if duong == '/api/thu-quy-tac':
                 return self._thu()
             self._tra(404, 'text/plain', 'Không có trang này')
+        except ThanQuaLon as e:
+            # Trả 413 TRƯỚC, rồi mới đọc bỏ chút ít — xem _doc_bo().
+            self._json({'loi': str(e)}, 413)
+            self._doc_bo()
         except SystemExit as e:
-            # Khai báo sai là lỗi của dữ liệu người dùng gửi lên -> 400,
-            # không phải máy chủ hỏng.
-            self._json({'loi': str(e)}, 400)
+            self._bao_loi(duong, str(e), 400)
+        except (TimeoutError, ConnectionError):
+            return
         except Exception:
             self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
                        500)
@@ -797,8 +1122,22 @@ class May(BaseHTTPRequestHandler):
         if ban:
             return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
         d = self._than_json()
-        tat = [int(x) for x in d.get('tat', [])]
-        return self._json(thu_quy_tac(d.get('quy_tac'), tat))
+        # Dùng CHUNG _tap_chi_so() với bốn đường kia. Trước đây đường này tự
+        # viết [int(x) for x in ...], nên {"tat":["a"]} cho 500 kèm mã sự cố,
+        # trong khi đúng dữ liệu đó ở /api/luu-quy-tac lại cho 400 kèm câu
+        # tiếng Việt chỉ đích danh chỗ sai.
+        tat = sorted(_tap_chi_so(d.get('tat', [])))
+        # Đường này GIẢI NGAY trong luồng HTTP. Cờ dang_chay ở trên chỉ ngăn nó
+        # chồng lên một lượt xếp thật, KHÔNG ngăn hai lời gọi thử chồng nhau —
+        # mà bộ giải là Python thuần nên hai bộ giải cùng chạy chỉ chia đôi một
+        # lõi, cả hai cùng chậm. Một chỗ duy nhất được thử tại một thời điểm.
+        if not KHOA_THU.acquire(blocking=False):
+            return self._json({'loi': 'Đang thử một quy tắc khác, đợi vài giây '
+                                      'rồi bấm lại.'}, 409)
+        try:
+            return self._json(thu_quy_tac(d.get('quy_tac'), tat))
+        finally:
+            KHOA_THU.release()
 
     def _luu(self):
         d = self._than_json(bat_buoc=True)
