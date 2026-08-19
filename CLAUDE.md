@@ -22,6 +22,7 @@ python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không s�
 python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
 python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
 python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
+python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
 ```
 
 ### Môi trường Python trên máy này (Linux)
@@ -54,6 +55,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tu_kiem_tra.py` | Chạy thử từng loại quy tắc | Chạy sau mỗi thay đổi |
 | `tests/thu_du_phong.py` | Ép nhánh dự phòng của `main()` xảy ra bằng một lớp quy tắc dùng-một-lần, chỉ đăng ký trong tiến trình thử | Chạy khi sửa `main()` |
 | `tests/thu_kiem_khai_bao.py` | Bảng 4 tổ hợp `tiet` / `tiet_trong_buoi`, khoá `thu`, khoá `o` | Chạy khi sửa `tap_tiet()` / `tap_ngay()` |
+| `tests/thu_loc_tru.py` | Khoá `tru` ở cả `khop()` lẫn `_cum_cua()` | Chạy khi sửa bộ lọc |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
 
@@ -170,6 +172,18 @@ Tiện ích có sẵn trong `QuyTac`: `loc()`, `khop(c, dk)`, `cac_cum(dk)`, `ta
 
 Ngoài ra: `gom_tiet` là **ngoại lệ**, không có hook nào — nó được đọc sớm ở
 `BaiToan._map_gom_tiet()` trước khi cắt cụm, và bị `_tao_quy_tac()` bỏ qua.
+
+> **⚠ CÓ HAI CHỖ LỌC, phải sửa cả hai.** `QuyTac.khop()` (`quy_tac.py`) dùng cho
+> mọi loại quy tắc; `BaiToan._cum_cua()` (`xep_tkb.py`) là bản cài **riêng** của
+> `gom_tiet`, chạy trong `_tao_cum()` tức trước khi có đối tượng `Cum` nên không
+> gọi `khop()` được. Thêm khoá lọc mới mà quên một trong hai chỗ là cùng một bộ
+> lọc cho hai kết quả khác nhau tuỳ loại quy tắc.
+>
+> Hai chỗ này **đã lệch sẵn**: `_cum_cua()` không hiểu `la_chuyen_de`, còn
+> `khop()` thì có. Cách chữa gốc là tách phần lọc thành một hàm thuần ở
+> `quy_tac.py` nhận `(dk, mon, nhom, gv, lop, la_cd)` rồi cho cả hai chỗ gọi
+> chung — **đã đề xuất, đang chờ duyệt, chưa làm**. Phần kiểm khai báo thì đã
+> dùng chung: `quy_tac.bao_loi()` và `quy_tac.kiem_tru()` ở mức module.
 
 Thêm loại mới thì nhớ đủ 5 việc: `MO_TA` + `VI_DU` (chép thẳng vào `cauhinh.json`
 là chạy được) → thêm vào đúng nhóm trong `in_danh_muc()` → thêm ca thử vào
@@ -358,6 +372,8 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
   khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
+- `python tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
+  chỗ lọc thì tụt còn 5/25.
 - 21 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 9 quy tắc cứng.
 
 ---

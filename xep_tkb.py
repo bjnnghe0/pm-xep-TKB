@@ -165,18 +165,31 @@ class BaiToan:
         ds = []
         for r in self.khai_bao_qt:
             if r.get('loai') == 'gom_tiet':
-                ds.append((r.get('loc', {}), r['cum']))
+                ds.append((r.get('loc', {}), r['cum'],
+                           r.get('ghi_chu', 'gom_tiet')))
         return ds
 
     def _cum_cua(self, lop, mon, gv, ghi_de):
-        for loc, cum in ghi_de:
+        # Bộ lọc riêng của gom_tiet: chạy TRƯỚC khi có đối tượng Cum nên không
+        # dùng được QuyTac.khop(). Phải hiểu "tru" y hệt khop(), nếu không thì
+        # cùng một bộ lọc lại cho kết quả khác nhau giữa gom_tiet và các loại
+        # quy tắc khác.
+        def khop(loc, ghi_chu):
+            QT.kiem_tru(loc, ghi_chu)
+
             def co(k, v):
                 if k not in loc:
                     return True
                 x = loc[k]
                 return v in (x if isinstance(x, list) else [x])
-            if (co('lop', lop) and co('mon', mon) and co('gv', gv)
+
+            if not (co('lop', lop) and co('mon', mon) and co('gv', gv)
                     and co('nhom_mon', self.dinh_muc[mon]['nhom'])):
+                return False
+            return not ('tru' in loc and khop(loc['tru'], ghi_chu))
+
+        for loc, cum, ghi_chu in ghi_de:
+            if khop(loc, ghi_chu):
                 return cum
         return self.dinh_muc[mon]['cum']
 

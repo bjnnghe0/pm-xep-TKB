@@ -31,6 +31,7 @@ Ba khoá dùng chung cho mọi quy tắc:
 | `gv` | `"N.Uyên"` hoặc `["N.Uyên", "N.Xuân"]` |
 | `lop` | `"12B1"` hoặc `["12B1", "12B2"]` |
 | `la_chuyen_de` | `true` = chỉ tiết chuyên đề, `false` = chỉ tiết chính |
+| `tru` | `{ "gv": "N.Uyên" }` — áp cho tất cả **trừ** những gì khớp bộ lọc con này |
 
 Khoá nào **không ghi** thì coi như không lọc theo khoá đó. `"loc": {}` = áp cho tất cả.
 Ghi nhiều khoá thì phải thoả **đồng thời** (VD `{"mon":"Hoá học","lop":["12B1","12B2"]}`
@@ -38,6 +39,24 @@ Ghi nhiều khoá thì phải thoả **đồng thời** (VD `{"mon":"Hoá học"
 
 Riêng loại quy tắc so sánh hai nhóm thì thay `loc` bằng hai khoá `a` và `b`,
 mỗi khoá là một bộ lọc y hệt trên.
+
+### `tru` — áp cho tất cả TRỪ một trường hợp
+
+```json
+"loc": { "nhom_mon": "SHCN", "tru": { "gv": "N.Uyên" } }
+```
+= mọi tiết SHCN, **trừ** lớp do cô N.Uyên chủ nhiệm. `tru` nhận đúng các khoá như
+`loc`, dùng được cả trong `a` và `b`, và lồng `tru` trong `tru` cũng được.
+
+**Nên dùng `tru` thay vì liệt kê tay những trường hợp còn lại.** Nếu ghi
+`"lop": ["12B1","12B2","12B3","12B4","12B5"]` thì sang năm mở thêm lớp 12B7, tiết
+SHCN của lớp đó **không bị ràng buộc gì mà chương trình vẫn báo ĐẠT** — đúng kiểu
+lỗi im lặng khó phát hiện. Ghi `tru` thì lớp mới tự động nằm trong ràng buộc.
+
+> **⚠ `"tru": {}` rỗng thì loại trừ TẤT CẢ**, tức quy tắc không áp cho ai — chương
+> trình **DỪNG** và báo lỗi chứ không im lặng. Muốn tắt hẳn quy tắc thì thêm
+> `"bat": false`. Khoá lạ trong `tru` (viết `giao_vien` thay vì `gv` chẳng hạn)
+> cũng bị DỪNG, vì khoá lạ bị bỏ qua thì `tru` lại hoá ra loại trừ tất cả.
 
 ## Cách ghi thứ và tiết
 

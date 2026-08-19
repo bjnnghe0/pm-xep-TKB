@@ -34,6 +34,51 @@ from collections import defaultdict
 
 DANH_MUC = {}
 
+# Các khoá hợp lệ trong một bộ lọc ("loc", "a", "b", và "tru" lồng bên trong).
+KHOA_LOC = ('mon', 'nhom_mon', 'gv', 'lop', 'la_chuyen_de', 'tru')
+
+
+def bao_loi(ghi_chu, khoa, sai, mo_ta_mien,
+            khoa_kia=None, mien_kia=(), mo_ta_kia='', goi_y=()):
+    """Dừng chương trình, nói đủ để người dùng tự sửa cauhinh.json.
+       Để ở mức module vì xep_tkb.py cũng cần báo lỗi đúng khuôn này."""
+    ds = ', '.join(str(x) for x in sai)
+    dong = ['[LỖI] Khai báo sai trong cauhinh.json',
+            f'      Quy tắc : {ghi_chu}',
+            f'      Khoá    : "{khoa}"',
+            f'      Giá trị : {ds}   -> KHÔNG hợp lệ',
+            f'      Miền hợp lệ: {mo_ta_mien}']
+    if khoa_kia and all(x in mien_kia for x in sai):
+        dong.append(f'      => Có phải bạn định dùng khoá "{khoa_kia}" không? '
+                    f'Giá trị {ds} hợp lệ với khoá đó.')
+        dong.append(f'         Miền của "{khoa_kia}": {mo_ta_kia}')
+    dong.extend(goi_y)
+    dong.append('      Sửa lại rồi chạy: python xep_tkb.py')
+    raise SystemExit('\n'.join(dong))
+
+
+def kiem_tru(dk, ghi_chu):
+    """Kiểm khoá "tru" của một bộ lọc. Gọi từ QuyTac.khop() và từ
+       xep_tkb._cum_cua() — hai chỗ lọc khác nhau nhưng phải hiểu "tru"
+       giống hệt nhau."""
+    if not isinstance(dk, dict) or 'tru' not in dk:
+        return
+    tru = dk['tru']
+    if not isinstance(tru, dict) or not tru:
+        bao_loi(ghi_chu, 'tru', [repr(tru)],
+                'phải nêu ít nhất một trong: '
+                + ' / '.join(k for k in KHOA_LOC if k != 'tru'),
+                goi_y=('      => "tru" rỗng thì loại trừ TẤT CẢ, tức quy tắc '
+                       'không áp cho ai cả.',
+                       '         Muốn tắt hẳn quy tắc thì thêm "bat": false, '
+                       'đừng để "tru" rỗng.'))
+    la = [k for k in tru if k not in KHOA_LOC]
+    if la:
+        bao_loi(ghi_chu, 'tru', [f'"{k}"' for k in la],
+                'các khoá dùng được: ' + ' / '.join(KHOA_LOC),
+                goi_y=('      => Khoá lạ trong "tru" bị bỏ qua, mà bỏ qua hết '
+                       'thì "tru" loại trừ TẤT CẢ.',))
+
 
 def dang_ky(ten):
     def deco(cls):
@@ -58,6 +103,8 @@ class QuyTac:
         self.r = r
         self.bt = bt
         self.ghi_chu = r.get('ghi_chu') or r.get('_ghichu') or self.MO_TA
+        for k in ('loc', 'a', 'b'):
+            kiem_tru(r.get(k), self.ghi_chu)
         if 'thu' in r:
             self._kiem_thu()         # bắt lỗi ngay, đừng đợi tới lúc chấm điểm
         if 'tiet' in r or 'tiet_trong_buoi' in r:
@@ -104,6 +151,11 @@ class QuyTac:
             return False
         if 'la_chuyen_de' in dk and bool(dk['la_chuyen_de']) != c.la_cd:
             return False
+        # "tru": khớp bộ lọc con này thì coi như KHÔNG khớp quy tắc
+        if 'tru' in dk:
+            kiem_tru(dk, self.ghi_chu)
+            if self.khop(c, dk['tru']):
+                return False
         return True
 
     def cac_cum(self, dk=None):
@@ -164,22 +216,8 @@ class QuyTac:
                       + ', '.join(str(x) for x in that))
         return tb, that, mo_ta_tb, mo_ta_that
 
-    def _bao_loi(self, khoa, sai, mo_ta_mien,
-                 khoa_kia=None, mien_kia=(), mo_ta_kia='', goi_y=()):
-        """Dừng chương trình, nói đủ để người dùng tự sửa cauhinh.json."""
-        ds = ', '.join(str(x) for x in sai)
-        dong = ['[LỖI] Khai báo sai trong cauhinh.json',
-                f'      Quy tắc : {self.ghi_chu}',
-                f'      Khoá    : "{khoa}"',
-                f'      Giá trị : {ds}   -> KHÔNG hợp lệ',
-                f'      Miền hợp lệ: {mo_ta_mien}']
-        if khoa_kia and all(x in mien_kia for x in sai):
-            dong.append(f'      => Có phải bạn định dùng khoá "{khoa_kia}" không? '
-                        f'Giá trị {ds} hợp lệ với khoá đó.')
-            dong.append(f'         Miền của "{khoa_kia}": {mo_ta_kia}')
-        dong.extend(goi_y)
-        dong.append('      Sửa lại rồi chạy: python xep_tkb.py')
-        raise SystemExit('\n'.join(dong))
+    def _bao_loi(self, *a, **k):
+        bao_loi(self.ghi_chu, *a, **k)
 
     def _kiem_tiet(self):
         tb, that, mo_ta_tb, mo_ta_that = self._mien_tiet()
