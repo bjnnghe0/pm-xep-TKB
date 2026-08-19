@@ -152,9 +152,10 @@
       "thu": [2] },
 
     { "loai": "khong_xep_tiet",
-      "ghi_chu": "Sử cô Ngọc Uyên không xếp tiết 4 và tiết 5 của buổi (tiết 9, 10)",
+      "ghi_chu": "Sử cô Ngọc Uyên không xếp 2 tiết cuối buổi (tiết 9 và tiết 10)",
       "loc": { "gv": "N.Uyên", "nhom_mon": "Sử" },
-      "tiet_trong_buoi": [4, 5] },
+      "tiet_trong_buoi": [4, 5],
+      "_doc": "tiet_trong_buoi đếm theo THỨ TỰ TRONG BUỔI (1 = tiết đầu buổi); còn khoá tiet thì đếm theo SỐ HIỆU TIẾT in trên TKB. Khối 12 chỉ học buổi chiều nên tiet_trong_buoi 1..5 ứng với tiết 6..10, tức [4, 5] ở đây chính là tiết 9 và tiết 10. Viết \"tiet\": [9, 10] cho kết quả y hệt." },
 
     { "loai": "khac_ngay",
       "ghi_chu": "Toán thầy Tuấn 12B2 không cùng ngày với Toán thầy Hùng 12B4",

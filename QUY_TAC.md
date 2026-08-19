@@ -43,9 +43,38 @@ mỗi khoá là một bộ lọc y hệt trên.
 
 - `thu`: số hiệu thứ trong tuần — `[2, 3]` = Thứ 2 và Thứ 3.
 - `tiet`: **số hiệu tiết thật** như in trên TKB — `[9, 10]`.
-- `tiet_trong_buoi`: **thứ tự trong buổi**, `1` = tiết đầu buổi. Buổi chiều bắt đầu
-  từ tiết 6 nên `tiet_trong_buoi: [4,5]` chính là tiết 9 và 10.
+- `tiet_trong_buoi`: **thứ tự trong buổi**, `1` = tiết đầu buổi.
 - `o`: danh sách ô cụ thể `[[thứ, tiết], ...]` — VD `[[4, 6], [4, 7]]`.
+
+Khối 12 chỉ học **buổi chiều**, buổi bắt đầu từ tiết 6, nên hai cách đếm lệch nhau
+đúng 5:
+
+| `tiet_trong_buoi` | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| `tiet` — in trên TKB | 6 | 7 | 8 | **9** | **10** |
+
+Lấy đúng một quy tắc đang chạy làm ví dụ — *"Sử cô Ngọc Uyên không xếp 2 tiết cuối
+buổi"*. Viết theo thứ tự trong buổi:
+
+```json
+{ "loai": "khong_xep_tiet",
+  "ghi_chu": "Sử cô Ngọc Uyên không xếp 2 tiết cuối buổi (tiết 9 và tiết 10)",
+  "loc": { "gv": "N.Uyên", "nhom_mon": "Sử" },
+  "tiet_trong_buoi": [4, 5] }
+```
+
+Viết theo số hiệu tiết in trên TKB thì **cho kết quả y hệt**, chỉ đổi đúng một dòng:
+
+```json
+  "tiet": [9, 10]
+```
+
+> **⚠ Nhầm hai khoá này là lỗi hay gặp nhất, mà lại KHÔNG báo lỗi.** Ghi
+> `"tiet": [4, 5]` thì chương trình **không cấm gì cả** — buổi chiều làm gì có
+> tiết 4, tiết 5. Ngược lại `"tiet_trong_buoi": [9, 10]` cũng không cấm gì, vì
+> buổi chỉ có 5 tiết. Cả hai trường hợp đều chạy trót lọt, báo ĐẠT, rồi cho ra
+> một TKB không hề tôn trọng yêu cầu của thầy cô. Đặt xong nhớ mở sheet "Kiểm tra
+> quy tắc" xem cột Ghi chú có đúng tiết mình muốn không.
 
 ---
 
