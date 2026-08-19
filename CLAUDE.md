@@ -57,6 +57,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | File | Chứa gì | Nguyên tắc |
 |---|---|---|
 | `cauhinh.json` | Dữ liệu (lớp, GV, số tiết) + toàn bộ danh sách quy tắc | Người dùng cuối sửa. Không phá cấu trúc. |
+| `cauhinh_may_chu.json` | Danh sách `host_cho_phep` / `origin_cho_phep`. **Đã gitignore**, mỗi máy một khác | Thiếu thì mặc định chỉ 127.0.0.1. Sửa xong phải chạy lại `web.py` |
 | `cauhinh.khoi12.goc.json` | **Bản gốc chỉ có khối 12**, đóng băng ở tag `v1.0-khoi12` | **KHÔNG được sửa.** Chỉ để đối chiếu |
 | `quy_tac.py` | 17 loại quy tắc, registry `DANH_MUC` | **Mọi logic nghiệp vụ nằm ở đây** |
 | `xep_tkb.py` | Mô hình dữ liệu, bộ giải, hậu kiểm, xuất Excel | **Không được hardcode quy tắc nghiệp vụ** |
@@ -409,7 +410,7 @@ trong ngoặc là kết quả khi lùi lại bản cũ.
 | # | Bất biến | Chỗ cài |
 |---|---|---|
 | A2 | Thân yêu cầu **dị dạng ≠ thân rỗng**. `Transfer-Encoding`, thiếu/sai `Content-Length` → 400. Ba đường GHI dùng `_than_json(bat_buoc=True)` | `web.py` `_than_json()` (2/10) |
-| A1 | Chỉ nhận yêu cầu từ **chính trang này**: `Host` + `Origin` + `Content-Type: application/json`. `Host`/`Origin`/`Content-Length` mỗi thứ chỉ được **một dòng**, và `Content-Length` phải khớp `[0-9]{1,15}` | `web.py` `_kiem_nguon_goc()`, `_mot_dong_duy_nhat()` (17/33 · 159/165) |
+| A1 | Chỉ nhận yêu cầu từ **nguồn đã khai**: `Host` + `Origin` + `Content-Type: application/json`. `Host`/`Origin`/`Content-Length` mỗi thứ chỉ được **một dòng**, `Content-Length` phải khớp `[0-9]{1,15}`, và danh sách tên máy đọc từ `cauhinh_may_chu.json` — **fail-closed** | `web.py` `_kiem_nguon_goc()`, `_mot_dong_duy_nhat()`, `nap_cau_hinh_may_chu()` (17/33 · 166/172 · 197/202) |
 | A7 | `cauhinh.bak.goc.json` giữ bản **đầu tiên**, không bao giờ đè; thêm 5 bản xoay vòng | `web.py` `_xoay_sao_luu()` (41/49) |
 | — | Ghi `cauhinh.json` **nguyên tử**: dựng chuỗi → tệp tạm → đọc lại → sao lưu → `os.replace()`. Cả hàm trong `KHOA_GHI` | `web.py` `luu_quy_tac()` |
 | A4 | Kiểm cờ + xoá trạng thái + đặt cờ trong **CÙNG một lần giữ khoá** | `web.py` `gianh_luot()` (11 lượt chồng nhau) |
@@ -418,6 +419,92 @@ trong ngoặc là kết quả khi lùi lại bản cũ.
 | A9 | Thân yêu cầu có **trần cứng** `TRAN_THAN` = 256 KB. Chặn theo `Content-Length` **trước** khi đọc, chặn lại theo mẩu 64 KB **khi** đọc → 413 | `web.py` `_than_json()` + `_doc_than_co_tran()` (156/165) |
 | A10 | **Mọi** tiêu đề đi qua `_tra_byte()` — kiểm xong hết rồi mới `send_response()` | `web.py` `_tra_byte()` (151/165) |
 | A11 | Ghi tệp **bền**: `fsync` tệp tạm → sao lưu (cũng `fsync`) → `os.replace` → `fsync` thư mục cha | `web.py` `luu_quy_tac()`, `_chep_ben()`, `_dong_bo_thu_muc()` (159/165) |
+
+### Danh sách tên máy: `cauhinh_may_chu.json`
+
+Từ khi đặt sau Tailscale Serve, trình duyệt gửi `Host: admin.tail7dc28e.ts.net`
+và `Origin: https://admin.tail7dc28e.ts.net`, nên phép kiểm ghim cứng
+`127.0.0.1:20266` từ chối sạch. Danh sách nay đọc từ tệp — **tệp RIÊNG, không
+phải `cauhinh.json`**: `cauhinh.json` là tệp thầy cô mở bằng Notepad để sửa dữ
+liệu nhà trường và có thể đem đi chỗ khác, còn tên máy trong mạng riêng thì mỗi
+máy một khác và không việc gì phải đi theo tệp dữ liệu. Tệp nằm **cạnh `web.py`,
+KHÔNG đi theo `--cauhinh`** — nếu không thì `--cauhinh khac.json` sẽ âm thầm đổi
+luôn cả danh sách máy được phép gọi vào. Đã `.gitignore`.
+
+**Máy chủ vẫn chỉ `bind('127.0.0.1', 20266)`.** Không có `--host`, không
+`0.0.0.0`. Đường vào từ ngoài là do proxy chuyển tiếp, không phải do đổi chỗ nghe.
+
+| Tình huống | Xử lý |
+|---|---|
+| Không có tệp | Mặc định loopback, **im lặng** — đây là cài đặt thường |
+| Tệp hỏng / sai kiểu / có ký tự điều khiển | Mặc định loopback, **kêu to** ra cửa sổ dòng lệnh |
+| Cả hai danh sách rỗng | Mặc định loopback, kêu to |
+| Hợp lệ | Danh sách đó **THAY THẾ** mặc định, và in ra màn hình |
+
+#### Cổng gác NHỮNG đường nào — đã đo, không suy luận
+
+`_kiem_nguon_goc()` được gọi ở **dòng đầu tiên** của cả `do_GET` lẫn `do_POST`,
+**trước** mọi phép so đường dẫn. Nên nó gác **tất cả**, đọc lẫn ghi. Đo bằng cách
+bắn `Host: evil.com` vào từng đường qua HTTP thật:
+
+| Nhóm | Đường | `Host` lạ | `Origin` trang lạ |
+|---|---|---|---|
+| Tĩnh | `/` · `/index.html` · `/web/app.js` · `/web/style.css` | 400 | — |
+| Đọc | `/api/trang-thai` · `/api/quy-tac` · `/api/loai-quy-tac` · `/api/gia-tri` · `/api/tai-ve` · `/api/tai-web` | 400 | — |
+| **Ghi** | `/api/xep` · `/api/luu-quy-tac` · `/api/them-quy-tac` · `/api/xoa-quy-tac` · `/api/thu-quy-tac` | **400** | **400** |
+
+15/15 đường bị chặn, **0 đường lọt**, và `cauhinh.json` không bị đụng tới.
+Chiều ngược lại cũng đo: `Host` + `Origin` đúng thì cổng không chặn oan đường nào.
+Ca thử `ca_a1c_moi_duong_deu_bi_gac` **bóc danh sách đường thẳng từ `web.py`** rồi
+so với tập đã biết, nên thêm đường mới là nó ĐỎ trước — buộc người thêm phải ngó
+lại xem đã gác chưa.
+
+> **Vì sao KHÔNG bắt buộc phải có dòng `Origin` ở đường ghi — cố ý, không phải
+> bỏ sót.** Kiểm `Origin` chỉ chặn được **trình duyệt bị một trang lạ sai
+> khiến**, vì trình duyệt không cho trang web nói dối `Origin`. Một chương trình
+> gọi thẳng (`curl`, script) tự đặt `Origin` nào cũng được, nên bắt buộc phải có
+> `Origin` **không thêm được một chút an toàn nào** trước nó — chỉ thêm rủi ro từ
+> chối oan một khách hợp lệ. Khi có dòng `Origin` thì nó vẫn bị kiểm chặt (đo
+> được: cả 5 đường ghi trả 400 với `Origin` trang lạ).
+>
+> Hàng rào đối với khách gọi thẳng là **đăng nhập**, không phải `Origin`. Điều
+> này quan trọng hơn từ khi có Tailscale: trước kia "khách gọi thẳng" nghĩa là
+> người đã ngồi trước máy; nay là **mọi thiết bị trong tailnet**. Trong lúc chưa
+> có cổng đăng nhập (Đợt 2), ranh giới thật đang là chính tailnet — ai vào được
+> tailnet thì ghi được `cauhinh.json`. Biết mà chấp nhận, không phải không biết.
+
+> **Thay thế, không cộng thêm.** Có tệp rồi thì `localhost:20266`, `[::1]:20266`
+> đều bị chặn. Đặt máy chủ sau proxy có TLS mà vẫn để chúng lọt là giữ lại đúng
+> những cửa mình tưởng đã đóng. Ai cần thì viết vào tệp — một chỗ, nhìn là thấy.
+
+> **Host và Origin là HAI bảng riêng, khai hai lần.** Đừng ghép
+> `'https://' + host` cho đỡ phải khai: làm vậy là tự tay nhận cả `http://` lẫn
+> `https://` cho cùng một tên, tức mở lại đúng cái mà việc đặt sau TLS định đóng.
+> Ca thử có mục riêng: đúng tên máy mà sai giao thức vẫn phải 400.
+
+> **Quyết định về `:443` — KHÔNG tự nhận, và đây là lý do.** Trình duyệt **bỏ**
+> `:443` khi gửi `Host` cho HTTPS, nên chuỗi cần khai là
+> `admin.tail7dc28e.ts.net` không kèm cổng. Máy chủ **không** tự chấp nhận thêm
+> dạng `admin.tail7dc28e.ts.net:443`. Tự suy ra một biến thể mà người quản trị
+> không hề viết chính là bước đầu của lối "chuẩn hoá cho dễ khớp" đã đẻ ra mọi
+> dòng bẫy trong bảng ca thử. Ai thật sự cần dạng có cổng thì thêm đúng chuỗi đó
+> vào danh sách — nó là một dãy, thêm bao nhiêu cũng được. Đổi lại, phép so khớp
+> chỉ có đúng một luật: **so cả chuỗi, chỉ bỏ qua hoa/thường**.
+
+> **Chuẩn hoá CHỈ hạ chữ thường — cố ý bỏ `.strip()`.** Đã đo: bộ phân tích tiêu
+> đề của thư viện chuẩn tự bỏ khoảng trắng **đầu** nhưng **giữ nguyên** khoảng
+> trắng cuối (`'Host: 127.0.0.1:20266   '` → `'127.0.0.1:20266   '`). Cắt hộ cho
+> dễ khớp là nới lỏng phép so. Bảng ca thử A1 có một dòng đã **đổi từ 200 sang
+> 400** vì việc này — đổi có chủ ý, không phải hồi quy.
+
+> **Chỗ đề bài đòi chặn mà KHÔNG chặn được, đã kiểm:** gửi
+> `Host: <tên hợp lệ>\r\nX-Gia: 1` thì `\r\n` **không** nằm lại trong giá trị
+> `Host`. Đo bằng `email.parser`: nó tách thành **hai dòng tiêu đề**, và `Host`
+> còn lại là chuỗi hợp lệ → máy chủ cho qua, và như vậy là **đúng**. Chặn ở đây
+> cũng vô nghĩa: khách chèn thêm tiêu đề vào yêu cầu của chính nó thì chẳng được
+> gì. Dạng thật sự mang `\r\n` vào giá trị là **obs-fold** (dòng nối tiếp bắt
+> đầu bằng khoảng trắng) — dạng đó bị chặn, có ca thử riêng. Mối nguy còn lại là
+> chiều ngược lại, ta phát `\r\n` ra **phản hồi**, và đó là A10.
 
 > **Thêm chỗ phát tiêu đề HTTP mới thì PHẢI đi qua `_tra_byte(mã, [(tên, giá
 > trị)…], thân)`, đừng gọi thẳng `send_header()`.** Lý do không phải chỉ là gọn:
@@ -661,9 +748,15 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
-- `python tests/thu_an_ninh.py`: **172/172 mục ĐẠT** (~90s), 10 ca A1–A11. Lùi từng
-  bản vá ra thì tụt đúng phần của nó và **chỉ** phần của nó: A9 → 156/165 ·
-  A10 → 151/165 · A11 → 159/165 · phần tiêu đề trùng của A1 → 159/165.
+- `python tests/thu_an_ninh.py`: **202/202 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
+  vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
+  A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
+  tiêu đề trùng → 166 (6× CA A1). Danh sách tên máy đo trên bộ 202 mục:
+  ghim cứng → 198 · gộp Host/Origin → 200 · thêm lại `.strip()` → 200 ·
+  **fail-open khi tệp hỏng → 197** · `endswith` → 200 · bỏ kiểm ký tự điều khiển → 201.
+  Cổng gác mọi đường đo trên bộ 211 mục: thêm đường ghi mới mà quên gác → 210 ·
+  bỏ cổng ở `do_POST` → 192 · bỏ cổng ở `do_GET` → 194 ·
+  **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.
 - `python tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
 - `python tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`

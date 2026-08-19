@@ -61,13 +61,20 @@ class MayChuTam:
                ma, than = k.get('/api/quy-tac')
     """
 
-    def __init__(self, duong_dan_cauhinh):
+    def __init__(self, duong_dan_cauhinh, may_chu=None):
         self.dd = duong_dan_cauhinh
+        self.may_chu = may_chu          # đường dẫn cauhinh_may_chu.json, hoặc None
 
     def __enter__(self):
         web.DUONG_DAN_CAUHINH = os.path.abspath(self.dd)
         web.PHIEN['them'].clear()
         web.dat_lai_trang_thai()
+        # LUÔN nạp lại, kể cả khi không truyền gì: nap_cau_hinh_may_chu() tự
+        # đặt hai danh sách về None trước. Thiếu dòng này thì danh sách của ca
+        # trước còn sót lại, và kết quả ca sau phụ thuộc THỨ TỰ chạy — đỏ oan,
+        # hoặc tệ hơn là xanh giả.
+        self.ghi_chu = web.nap_cau_hinh_may_chu(self.may_chu or os.path.join(
+            os.path.dirname(os.path.abspath(self.dd)), 'khong-co-tep-nay.json'))[2]
         self.may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
         self.may.daemon_threads = True
         self.luong = threading.Thread(target=self.may.serve_forever, daemon=True)

@@ -42,6 +42,23 @@ TINH = {'index.html': 'text/html', 'style.css': 'text/css',
 DUONG_DAN_CAUHINH = os.path.join(THU_MUC, 'cauhinh.json')
 
 # --------------------------------------------------------------------------
+# Cấu hình MẠNG của máy chủ — tệp RIÊNG, cố ý không nằm trong cauhinh.json.
+#
+# Vì sao tách hẳn ra: cauhinh.json là tệp thầy cô mở bằng Notepad để sửa dữ
+# liệu nhà trường, và nó có thể được đem đi chỗ khác. Tên máy trong mạng riêng
+# (ví dụ tên .ts.net của Tailscale) không phải dữ liệu nhà trường, mỗi máy một
+# khác, và không việc gì phải đi theo tệp dữ liệu.
+#
+# Đường dẫn CỐ ĐỊNH cạnh web.py, KHÔNG đi theo --cauhinh: nếu không thì
+# "--cauhinh khac.json" sẽ âm thầm đổi luôn cả danh sách máy được phép gọi vào.
+DUONG_DAN_MAY_CHU = os.path.join(THU_MUC, 'cauhinh_may_chu.json')
+
+# None = chưa nạp, hoặc tệp thiếu/hỏng/rỗng -> dùng MẶC ĐỊNH loopback.
+# Đây là trạng thái ĐÓNG, không phải mở: mặc định chỉ cho chính máy này.
+HOST_CHO_PHEP = None
+ORIGIN_CHO_PHEP = None
+
+# --------------------------------------------------------------------------
 # Trần kích thước thân yêu cầu (bất biến A9).
 #
 # MỘT hằng duy nhất, không lập bảng theo từng đường. Thân lớn nhất mà giao
@@ -171,6 +188,116 @@ def _bao_su_co(noi=''):
 def _loi_su_co(ma):
     return (f'[LỖI] Máy chủ gặp sự cố bất ngờ (mã sự cố {ma}).\n'
             f'      Chi tiết đã ghi ra cửa sổ dòng lệnh đang chạy web.py.')
+
+
+# ==========================================================================
+# 1a. DANH SÁCH TÊN MÁY / NGUỒN GỐC ĐƯỢC PHÉP
+# ==========================================================================
+
+def _chuan_ten_may(gt):
+    """Chuẩn hoá một giá trị Host/Origin TRƯỚC khi so khớp.
+
+       CHỈ hạ chữ thường, vì tên miền vốn không phân biệt hoa thường (DNS).
+
+       Cố ý KHÔNG cắt khoảng trắng. Đã đo: bộ phân tích tiêu đề của thư viện
+       chuẩn tự bỏ khoảng trắng ĐẦU nhưng GIỮ NGUYÊN khoảng trắng cuối —
+       'Host: 127.0.0.1:20266   ' cho ra '127.0.0.1:20266   '. Thêm .strip()
+       vào đây là tự nới phép so khớp "cho dễ khớp", đúng loại nới lỏng mà cả
+       bảng ca thử Host được viết ra để canh. Trình duyệt không bao giờ gửi
+       khoảng trắng thừa; ai gửi thì đáng bị từ chối.
+    """
+    return gt.lower()
+
+
+def _kiem_ky_tu_dieu_khien(ten, gt):
+    """Giá trị tiêu đề có ký tự điều khiển thì DỪNG, kèm câu nói rõ.
+
+       Không phải để "chặn thêm" — phép so khớp chính xác vốn đã loại chúng
+       rồi. Là để câu trả lời nói đúng chuyện gì đã xảy ra thay vì một câu
+       "tên máy lạ" khó hiểu. Dạng lọt vào được là obs-fold (dòng nối tiếp bắt
+       đầu bằng khoảng trắng): đã đo, 'Host: a\\r\\n evil.com' cho ra MỘT giá
+       trị 'a\\r\\n evil.com'.
+    """
+    for c in gt:
+        if ord(c) < 0x20 or ord(c) == 0x7F:
+            raise SystemExit(
+                f'[LỖI] Tiêu đề "{ten}" có ký tự điều khiển ({c!r}).\n'
+                f'      Máy chủ không nhận tiêu đề gấp dòng.')
+
+
+def _ds_ten_may(cfg, khoa, duong_dan):
+    """Lấy một danh sách chuỗi từ cấu hình máy chủ. Sai kiểu thì DỪNG."""
+    gt = cfg.get(khoa, [])
+    if not isinstance(gt, list):
+        raise SystemExit(
+            f'[LỖI] Trong {os.path.basename(duong_dan)}, mục "{khoa}" phải là '
+            f'một dãy [ ... ]')
+    ra = set()
+    for x in gt:
+        if not isinstance(x, str) or not x.strip():
+            raise SystemExit(
+                f'[LỖI] Trong {os.path.basename(duong_dan)}, mục "{khoa}" có '
+                f'giá trị không phải chuỗi: {x!r}')
+        _kiem_ky_tu_dieu_khien(khoa, x)
+        ra.add(_chuan_ten_may(x))
+    return ra
+
+
+def nap_cau_hinh_may_chu(duong_dan=None):
+    """Nạp danh sách Host/Origin được phép từ cauhinh_may_chu.json.
+
+       Trả về (host, origin, ghi_chu) — hai tập chuỗi (hoặc None), và một câu
+       để in ra màn hình.
+
+       BỐN đường vào, cả bốn đều FAIL-CLOSED (thiếu gì thì về mặc định chỉ cho
+       chính máy này, KHÔNG BAO GIỜ mở rộng ra):
+
+         không có tệp     -> mặc định loopback, im lặng (đây là cài đặt thường)
+         tệp hỏng         -> mặc định loopback, KÊU TO ra cửa sổ dòng lệnh
+         danh sách rỗng   -> mặc định loopback, kêu to
+         hợp lệ           -> dùng đúng danh sách đó, và IN RA cho người dùng thấy
+
+       Vì sao tệp hỏng phải kêu to thay vì im: thầy cô sửa tệp, gõ nhầm một dấu
+       phẩy, rồi không vào được bằng địa chỉ Tailscale nữa mà không hiểu vì sao.
+       Im lặng lùi về mặc định là đúng về an ninh nhưng độc về cách dùng — nên
+       lùi thì lùi, mà phải nói.
+    """
+    global HOST_CHO_PHEP, ORIGIN_CHO_PHEP
+    dd = duong_dan or DUONG_DAN_MAY_CHU
+    HOST_CHO_PHEP = ORIGIN_CHO_PHEP = None
+
+    if not os.path.exists(dd):
+        return None, None, None
+
+    try:
+        with open(dd, encoding='utf-8-sig') as f:
+            cfg = json.load(f)
+        if not isinstance(cfg, dict):
+            raise ValueError('nội dung phải là một khối { ... }')
+        host = _ds_ten_may(cfg, 'host_cho_phep', dd)
+        org = _ds_ten_may(cfg, 'origin_cho_phep', dd)
+    except SystemExit as e:
+        return None, None, (f'{e}\n'
+                            f'      -> Tạm thời CHỈ cho 127.0.0.1 như khi chưa '
+                            f'có tệp này.')
+    except (OSError, ValueError) as e:
+        return None, None, (
+            f'[LỖI] Không đọc được {os.path.basename(dd)}: {e}\n'
+            f'      -> Tạm thời CHỈ cho 127.0.0.1 như khi chưa có tệp này.')
+
+    if not host and not org:
+        return None, None, (
+            f'[LỖI] {os.path.basename(dd)} có nhưng cả hai danh sách đều rỗng.\n'
+            f'      -> Tạm thời CHỈ cho 127.0.0.1 như khi chưa có tệp này.')
+
+    HOST_CHO_PHEP = frozenset(host) if host else None
+    ORIGIN_CHO_PHEP = frozenset(org) if org else None
+    ghi = [f'  Cấu hình mạng:       {dd}']
+    ghi.append('    Tên máy cho phép : ' +
+               (', '.join(sorted(host)) if host else '(mặc định — chỉ 127.0.0.1)'))
+    ghi.append('    Nguồn gốc cho phép: ' +
+               (', '.join(sorted(org)) if org else '(mặc định — chỉ 127.0.0.1)'))
+    return HOST_CHO_PHEP, ORIGIN_CHO_PHEP, '\n'.join(ghi)
 
 
 # ==========================================================================
@@ -789,11 +916,29 @@ class May(BaseHTTPRequestHandler):
 
     # ---------------- chỉ nhận yêu cầu phát từ CHÍNH TRANG NÀY ----------------
     def _ten_may_cho_phep(self):
+        """Tên máy được phép. Có cauhinh_may_chu.json thì danh sách đó là
+           DUY NHẤT — nó THAY THẾ mặc định chứ không cộng thêm vào.
+
+           Vì sao thay thế: đặt máy chủ sau một proxy có TLS rồi mà vẫn để
+           '[::1]:20266' hay 'localhost' lọt qua là giữ lại đúng những cửa mình
+           tưởng đã đóng. Ai cần chúng thì viết vào tệp — một chỗ, nhìn là thấy.
+        """
+        if HOST_CHO_PHEP:
+            return HOST_CHO_PHEP
         cong = self.server.server_address[1]
         return {f'127.0.0.1:{cong}', f'localhost:{cong}', f'[::1]:{cong}',
                 '127.0.0.1', 'localhost'}
 
     def _nguon_cho_phep(self):
+        """Nguồn gốc được phép — bảng RIÊNG, không suy ra từ bảng tên máy.
+
+           Origin có giao thức đằng trước, Host thì không. Tự ghép
+           'https://' + host để đỡ phải khai hai lần nghe thì tiện, nhưng nó
+           tự tay chấp nhận cả https lẫn http cho cùng một tên, tức mở lại đúng
+           cái mà việc đặt sau TLS định đóng. Hai bảng, khai hai lần.
+        """
+        if ORIGIN_CHO_PHEP:
+            return ORIGIN_CHO_PHEP
         cong = self.server.server_address[1]
         return {f'http://127.0.0.1:{cong}', f'http://localhost:{cong}',
                 f'http://[::1]:{cong}'}
@@ -819,20 +964,27 @@ class May(BaseHTTPRequestHandler):
                            bằng "simple request", phải qua preflight, mà
                            preflight lại mang Origin nên bị lớp trên chặn.
         """
-        host = (self._mot_dong_duy_nhat('Host') or '').strip().lower()
+        tho_host = self._mot_dong_duy_nhat('Host') or ''
+        _kiem_ky_tu_dieu_khien('Host', tho_host)
+        host = _chuan_ten_may(tho_host)
         if host not in self._ten_may_cho_phep():
             raise SystemExit(
                 f'[LỖI] Yêu cầu gửi tới tên máy lạ: {host!r}\n'
-                f'      Máy chủ này chỉ phục vụ 127.0.0.1 và localhost.\n'
-                f'      Hãy mở bằng http://127.0.0.1:'
-                f'{self.server.server_address[1]}')
+                f'      Máy chủ này chỉ nhận các tên đã khai: '
+                f'{", ".join(sorted(self._ten_may_cho_phep()))}\n'
+                f'      Thêm tên mới thì sửa cauhinh_may_chu.json rồi chạy lại '
+                f'web.py.')
 
-        org = self._mot_dong_duy_nhat('Origin')
-        if org is not None and org.strip().lower() not in self._nguon_cho_phep():
-            raise SystemExit(
-                f'[LỖI] Yêu cầu phát đi từ một trang khác: {org!r}\n'
-                f'      Máy chủ chỉ nhận lệnh từ chính trang xếp thời khoá '
-                f'biểu, không nhận từ trang web nào khác.')
+        tho_org = self._mot_dong_duy_nhat('Origin')
+        if tho_org is not None:
+            _kiem_ky_tu_dieu_khien('Origin', tho_org)
+            if _chuan_ten_may(tho_org) not in self._nguon_cho_phep():
+                raise SystemExit(
+                    f'[LỖI] Yêu cầu phát đi từ một trang khác: {tho_org!r}\n'
+                    f'      Máy chủ chỉ nhận lệnh từ chính trang xếp thời khoá '
+                    f'biểu, không nhận từ trang web nào khác.\n'
+                    f'      Nguồn gốc đã khai: '
+                    f'{", ".join(sorted(self._nguon_cho_phep()))}')
 
         if co_than:
             kieu = (self.headers.get('Content-Type') or '')
@@ -1170,6 +1322,10 @@ def main():
     args = ap.parse_args()
     DUONG_DAN_CAUHINH = os.path.abspath(args.cauhinh)
 
+    # Nạp TRƯỚC khi bind cổng: hỏng thì phải kêu trước dòng "Mở trình duyệt
+    # vào...", không thì người dùng đọc lướt qua tưởng đã chạy ngon.
+    host, org, ghi_chu = nap_cau_hinh_may_chu()
+
     dia_chi = ('127.0.0.1', args.port)                # CHỈ máy này, không mở ra mạng
     may = ThreadingHTTPServer(dia_chi, May)
     may.daemon_threads = True
@@ -1178,7 +1334,15 @@ def main():
     print('=' * 70)
     print(f'  Mở trình duyệt vào:  http://127.0.0.1:{args.port}')
     print(f'  Cấu hình đang dùng:  {DUONG_DAN_CAUHINH}')
-    print('  Chỉ chạy trên máy này, máy khác trong mạng không vào được.')
+    if ghi_chu:
+        print(ghi_chu)
+    if host or org:
+        # Có khai tên ngoài loopback -> máy khác TRONG MẠNG RIÊNG vào được
+        # (qua proxy), nên đừng in câu "máy khác không vào được" nữa.
+        print('  Máy chủ vẫn chỉ nghe 127.0.0.1; đường vào từ ngoài là do')
+        print('  proxy chuyển tiếp. Sửa danh sách thì phải chạy lại web.py.')
+    else:
+        print('  Chỉ chạy trên máy này, máy khác trong mạng không vào được.')
     print('  Tắt: bấm Ctrl+C ở cửa sổ này.')
     print('=' * 70)
     try:

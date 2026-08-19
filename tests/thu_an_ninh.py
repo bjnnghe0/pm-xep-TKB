@@ -189,7 +189,12 @@ def ca_a1_nguon_goc(tm):
             (f'localhost:{P}',                 200, 'app.js mở được cả hai tên'),
             (f'[::1]:{P}',                     200, 'loopback IPv6'),
             (f'LOCALHOST:{P}',                 200, 'DNS không phân biệt hoa/thường'),
-            (f'  127.0.0.1:{P}  ',             200, 'HTTP cho phép khoảng trắng quanh giá trị'),
+            # ĐỔI Ý so với Đợt 1, có chủ ý: bỏ .strip() khỏi phép chuẩn hoá.
+            # Đã đo: bộ phân tích tiêu đề tự bỏ khoảng trắng ĐẦU nhưng GIỮ
+            # khoảng trắng CUỐI, nên chuỗi này tới nơi là '127.0.0.1:P  ' và
+            # nay KHÔNG khớp. Trình duyệt không bao giờ gửi khoảng trắng thừa;
+            # cắt hộ "cho dễ khớp" chính là kiểu nới lỏng mà cả bảng này canh.
+            (f'  127.0.0.1:{P}  ',             400, 'khoảng trắng cuối KHÔNG được cắt hộ'),
             ('127.0.0.1',                      200, 'tên loopback trơ, cố ý nhận'),
             ('localhost',                      200, 'như trên'),
             ('evil.com',                       400, 'DNS rebinding — cái A1 sinh ra để chặn'),
@@ -253,6 +258,282 @@ def ca_a1_nguon_goc(tm):
             kiem(ma == 400,
                  f'Content-Length {tho!r} bị từ chối — {ma}')
         kiem(so_tat(dd) == [6], 'Tệp vẫn không đổi sau loạt Content-Length lạ')
+
+
+# ==========================================================================
+def ca_a1b_danh_sach_ten_may(tm):
+    print('\nCA A1b — danh sách tên máy lái bằng cauhinh_may_chu.json')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a1b')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    import web as W
+
+    TEN = 'admin.tail7dc28e.ts.net'
+    mc = os.path.join(tmx, 'cauhinh_may_chu.json')
+
+    def viet(host, org):
+        with io.open(mc, 'w', encoding='utf-8') as f:
+            json.dump({'host_cho_phep': host, 'origin_cho_phep': org}, f,
+                      ensure_ascii=False)
+
+    viet([TEN], ['https://' + TEN])          # cổng thật chưa biết, sửa lại bên trong
+    with MayChuTam(dd, may_chu=mc) as (k, (dia, cong)):
+        # Máy chủ thử chạy cổng ngẫu nhiên nên phải viết lại tệp cho đúng cổng
+        # rồi nạp lại — đây là DỰNG DỮ LIỆU ĐẦU VÀO, y như cau_hinh_tam() ghi
+        # cauhinh.json, không phải gọi tắt qua tầng HTTP.
+        viet([f'127.0.0.1:{cong}', TEN],
+             [f'http://127.0.0.1:{cong}', 'https://' + TEN])
+        W.nap_cau_hinh_may_chu(mc)
+
+        BANG_HOST = [
+            (f'127.0.0.1:{cong}',           200, 'từ chính máy vẫn vào được'),
+            (TEN,                           200, 'qua proxy — trình duyệt BỎ :443'),
+            (TEN.upper(),                   200, 'tên miền không phân biệt hoa thường'),
+            (TEN.title(),                   200, 'hoa thường lẫn lộn'),
+            (TEN + ':443',                  400, 'KHÔNG tự nhận cổng mặc định'),
+            (TEN + '.tenlakhac.com',        400, 'hậu tố — bẫy của startswith'),
+            ('tenlakhac.com/' + TEN,        400, 'nhét vào đường dẫn — bẫy của in'),
+            ('tenlakhac.com.' + TEN,        400, 'tiền tố — bẫy của endswith'),
+            (TEN + ' evil.com',             400, 'hai tên cách nhau dấu cách'),
+            ('evil.com ' + TEN,             400, 'như trên, đảo thứ tự'),
+            (TEN + ' ',                     400, 'thừa đúng một dấu cách cuối'),
+            (' ' + TEN,                     200, 'khoảng trắng ĐẦU do bộ phân tích tự bỏ'),
+            (f'[::1]:{cong}',               400, 'KHÔNG còn trong danh sách'),
+            (f'localhost:{cong}',           400, 'KHÔNG còn trong danh sách'),
+            ('127.0.0.1',                   400, 'KHÔNG còn trong danh sách'),
+            ('',                            400, 'Host rỗng'),
+            ('evil.com',                    400, 'tên hoàn toàn khác'),
+        ]
+        sai = []
+        for h, mong, vi_sao in BANG_HOST:
+            ma, _ = k.get('/api/gia-tri', them={'Host': h})
+            if ma != mong:
+                sai.append(f'{h!r} cho {ma}, mong {mong} ({vi_sao})')
+        kiem(not sai,
+             f'Bảng {len(BANG_HOST)} chuỗi Host khớp hết — lệch: {sai}')
+
+        # bốn dòng dưới đây phải chứng minh danh sách THAY THẾ mặc định,
+        # không phải cộng thêm vào
+        kiem(all(k.get('/api/gia-tri', them={'Host': h})[0] == 400
+                 for h in (f'localhost:{cong}', f'[::1]:{cong}', '127.0.0.1',
+                           'localhost')),
+             'Có tệp thì danh sách THAY THẾ mặc định loopback, không cộng thêm')
+
+        # thiếu hẳn dòng Host
+        ma, _, _ = k.tho_dong('GET', '/api/gia-tri', [('Connection', 'close')])
+        kiem(ma == 400, f'Thiếu hẳn dòng Host -> 400 — {ma}')
+
+        # gấp dòng obs-fold: \r\n NẰM LẠI trong giá trị (đã đo)
+        goi = (f'GET /api/gia-tri HTTP/1.1\r\nHost: {TEN}\r\n evil.com\r\n'
+               f'Connection: close\r\n\r\n').encode()
+        ma, _, t = k.tho(goi)
+        kiem(ma == 400, f'Gấp dòng obs-fold trong Host -> 400 — {ma}')
+        kiem('điều khiển' in t.decode('utf-8', 'replace'),
+             '  và câu lỗi nói đúng lý do (ký tự điều khiển), không nói chung chung')
+
+        # -------------------------------------------------------------
+        # CHỖ ĐỀ BÀI VIẾT "CHẶN" MÀ THỰC TẾ KHÔNG CHẶN ĐƯỢC — ghi lại đúng
+        # sự thật thay vì khẳng định một điều sai.
+        #
+        # Gửi 'Host: <tên>\r\nX-Gia: 1' thì \r\n KHÔNG nằm lại trong giá trị
+        # Host. Nó tách yêu cầu thành HAI dòng tiêu đề, và Host còn lại là
+        # chuỗi HỢP LỆ (đã đo bằng email.parser). Máy chủ cho qua, ĐÚNG.
+        #
+        # Chặn ở đây cũng vô nghĩa: khách tự chèn thêm tiêu đề vào yêu cầu của
+        # CHÍNH NÓ thì chẳng được gì. Mối nguy thật là chiều ngược lại — ta
+        # phát \r\n ra PHẢN HỒI — và đó là bất biến A10, đã vá và có ca riêng.
+        # -------------------------------------------------------------
+        goi = (f'GET /api/gia-tri HTTP/1.1\r\nHost: {TEN}\r\nX-Gia: 1\r\n'
+               f'Connection: close\r\n\r\n').encode()
+        ma, _, _ = k.tho(goi)
+        kiem(ma == 200,
+             f'"Host hợp lệ + \\r\\nX-Gia: 1" cho 200 — ĐÚNG, vì nó thành HAI '
+             f'dòng tiêu đề chứ không phải một Host hỏng ({ma})')
+
+        # ---------------- bảng Origin, RIÊNG ----------------
+        BANG_ORG = [
+            ('https://' + TEN,                  200, 'đúng tên, đúng giao thức'),
+            ('HTTPS://' + TEN.upper(),          200, 'hoa thường'),
+            ('http://' + TEN,                   400, 'ĐÚNG tên nhưng SAI giao thức'),
+            (f'http://127.0.0.1:{cong}',        200, 'từ chính máy'),
+            (f'https://127.0.0.1:{cong}',       400, 'sai giao thức chiều ngược lại'),
+            ('https://' + TEN + ':443',         400, 'không tự nhận cổng mặc định'),
+            ('https://' + TEN + '.tenlakhac.com', 400, 'hậu tố'),
+            ('https://tenlakhac.com/' + TEN,    400, 'nhét vào đường dẫn'),
+            ('null',                            400, 'trang sandbox'),
+            ('https://' + TEN + ' evil.com',    400, 'có dấu cách'),
+        ]
+        sai = []
+        for o, mong, vi_sao in BANG_ORG:
+            ma, _ = k.post('/api/thu-quy-tac', {'tat': []},
+                           them={'Host': TEN, 'Origin': o})
+            if ma != mong:
+                sai.append(f'{o!r} cho {ma}, mong {mong} ({vi_sao})')
+        kiem(not sai,
+             f'Bảng {len(BANG_ORG)} chuỗi Origin khớp hết — lệch: {sai}')
+        kiem(k.post('/api/thu-quy-tac', {'tat': []},
+                    them={'Host': TEN, 'Origin': 'http://' + TEN})[0] == 400,
+             'Hai bảng RIÊNG: đúng tên máy mà sai giao thức vẫn bị chặn')
+
+    # ---------------- FAIL-CLOSED: năm đường vào, ĐO QUA HTTP THẬT ----------
+    #
+    # Đo qua HTTP chứ không chỉ xem giá trị trả về của nap_cau_hinh_may_chu().
+    # Đã thử: một bản hỏng cố ý (tệp hỏng thì cho qua mọi Host) vẫn trả
+    # (None, None) y hệt bản đúng, nên phép kiểm giá trị trả về XANH GIẢ hoàn
+    # toàn. Thứ cần khẳng định là MÁY CHỦ CÓ TỪ CHỐI THẬT KHÔNG.
+    for nhan, noi_dung, cho_ghi in [
+            ('JSON hỏng',    '{ hong',                                       True),
+            ('rỗng cả hai',  '{"host_cho_phep": [], "origin_cho_phep": []}',  True),
+            ('sai kiểu',     '{"host_cho_phep": "khong-phai-day"}',           True),
+            ('có ký tự lạ',  '{"host_cho_phep": ["a\\u0000b"]}',              True),
+            ('KHÔNG CÓ TỆP', None,                                           False)]:
+        if noi_dung is None:
+            if os.path.exists(mc):
+                os.remove(mc)
+        else:
+            with io.open(mc, 'w', encoding='utf-8') as f:
+                f.write(noi_dung)
+
+        with MayChuTam(dd, may_chu=mc) as (k2, (dia2, cong2)):
+            kiem(W.HOST_CHO_PHEP is None and W.ORIGIN_CHO_PHEP is None,
+                 f'Tệp {nhan} -> không nạp danh sách nào')
+            # điều thật sự quan trọng: máy chủ CÓ TỪ CHỐI không
+            ma_la, _ = k2.get('/api/gia-tri', them={'Host': TEN})
+            ma_ac, _ = k2.get('/api/gia-tri', them={'Host': 'evil.com'})
+            ma_nha, _ = k2.get('/api/gia-tri',
+                               them={'Host': f'127.0.0.1:{cong2}'})
+            kiem(ma_la == 400 and ma_ac == 400,
+                 f'  và TỪ CHỐI THẬT mọi tên ngoài loopback — '
+                 f'{TEN}:{ma_la}, evil.com:{ma_ac}')
+            kiem(ma_nha == 200,
+                 f'  nhưng chính máy này vẫn vào được — {ma_nha}')
+        ghi = W.nap_cau_hinh_may_chu(mc)[2]
+        kiem(bool(ghi) == cho_ghi,
+             f'  báo ra cửa sổ dòng lệnh: {"CÓ" if cho_ghi else "im lặng"} — '
+             f'{(ghi or "").splitlines()[:1]}')
+
+    # có tệp đúng thì loopback mặc định KHÔNG còn được ngầm cho qua
+    with io.open(mc, 'w', encoding='utf-8') as f:
+        json.dump({'host_cho_phep': [TEN], 'origin_cho_phep': ['https://' + TEN]},
+                  f, ensure_ascii=False)
+    h, o, g = W.nap_cau_hinh_may_chu(mc)
+    kiem(h == frozenset({TEN}) and o == frozenset({'https://' + TEN}),
+         f'Tệp hợp lệ -> nạp đúng hai tập RIÊNG — {sorted(h)} / {sorted(o)}')
+    kiem(g and TEN in g, 'Và in ra màn hình đúng danh sách đang có hiệu lực')
+    W.nap_cau_hinh_may_chu(os.path.join(tmx, 'khong-co.json'))   # dọn lại
+
+
+# ==========================================================================
+def ca_a1c_moi_duong_deu_bi_gac(tm):
+    print('\nCA A1c — cổng Host/Origin gác MỌI đường, kể cả đường ghi')
+    print('-' * 74)
+    tmx = os.path.join(tm, 'a1c')
+    os.makedirs(tmx, exist_ok=True)
+    dd = cau_hinh_tam(tmx)
+    import web as W
+    import re as _re
+
+    TEN = 'admin.tail7dc28e.ts.net'
+    mc = os.path.join(tmx, 'cauhinh_may_chu.json')
+
+    # Danh sách đường BÓC TỪ MÃ NGUỒN, không chép tay. Chép tay thì thêm đường
+    # mới là ca thử vẫn xanh — đúng kiểu mục kiểm mục nát theo thời gian.
+    ma_nguon = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
+    duong_api = sorted(set(_re.findall(r"duong == '(/api/[a-z-]+)'", ma_nguon)))
+    # Guard hai chiều. Phép bóc hỏng -> vòng lặp dưới chạy rỗng và XANH GIẢ,
+    # nên phải khẳng định nó ra ĐÚNG tập đang có. Thêm đường mới vào web.py thì
+    # mục này ĐỎ trước — buộc người thêm phải ngó lại xem đã gác chưa rồi mới
+    # cập nhật danh sách ở đây.
+    MONG = sorted(['/api/trang-thai', '/api/quy-tac', '/api/loai-quy-tac',
+                   '/api/gia-tri', '/api/tai-ve', '/api/tai-web',
+                   '/api/xep', '/api/luu-quy-tac', '/api/them-quy-tac',
+                   '/api/xoa-quy-tac', '/api/thu-quy-tac'])
+    kiem(duong_api == MONG,
+         f'Bóc từ web.py ra ĐÚNG {len(MONG)} đường /api/ đang có — '
+         f'thiếu {sorted(set(MONG) - set(duong_api))}, '
+         f'thừa {sorted(set(duong_api) - set(MONG))}')
+
+    # Đường ghi: khai riêng vì cần thân, và vì đây chính là nhóm đề bài lo.
+    THAN = {'/api/xep': {'tat': []},
+            '/api/luu-quy-tac': {'tat': []},
+            '/api/them-quy-tac': {'quy_tac': {'loai': 'khong_xep_thu',
+                                              'ghi_chu': 'x', 'thu': [2]}},
+            '/api/xoa-quy-tac': {'i': 0},
+            '/api/thu-quy-tac': {'tat': []}}
+    TINH_D = ['/', '/index.html', '/web/app.js', '/web/style.css']
+
+    with MayChuTam(dd, may_chu=mc) as (k, (dia, cong)):
+        with io.open(mc, 'w', encoding='utf-8') as f:
+            json.dump({'host_cho_phep': [TEN],
+                       'origin_cho_phep': ['https://' + TEN]}, f)
+        W.nap_cau_hinh_may_chu(mc)
+
+        # --- 1. Host LẠ: mọi đường, đọc lẫn ghi, đều phải 400 ---
+        lot = []
+        for d in TINH_D + duong_api:
+            if d in THAN:
+                ma, _ = k.post(d, THAN[d], them={'Host': 'evil.com'})
+            else:
+                ma, _ = k.get(d, them={'Host': 'evil.com'})
+            if ma != 400:
+                lot.append(f'{d}:{ma}')
+        kiem(not lot,
+             f'Host lạ bị chặn ở TẤT CẢ {len(TINH_D) + len(duong_api)} đường '
+             f'— lọt: {lot}')
+
+        # --- 2. Nhóm GHI nói riêng, vì mất dữ liệu là hậu quả nặng nhất ---
+        lot_ghi = [f'{d}:{k.post(d, THAN[d], them={"Host": "evil.com"})[0]}'
+                   for d in sorted(THAN)
+                   if k.post(d, THAN[d], them={'Host': 'evil.com'})[0] != 400]
+        kiem(not lot_ghi,
+             f'Riêng 5 đường GHI: Host lạ đều 400 — lọt: {lot_ghi}')
+        kiem(so_tat(dd) == [], 'Và cauhinh.json không hề bị đụng tới')
+
+        # --- 3. Host đúng nhưng Origin của TRANG LẠ: đường ghi phải 400 ---
+        lot_org = []
+        for d in sorted(THAN):
+            ma, _ = k.post(d, THAN[d],
+                           them={'Host': TEN,
+                                 'Origin': 'https://trang-quang-cao.example'})
+            if ma != 400:
+                lot_org.append(f'{d}:{ma}')
+        kiem(not lot_org,
+             f'Origin trang lạ bị chặn ở cả 5 đường ghi — lọt: {lot_org}')
+        kiem(so_tat(dd) == [], 'Và cauhinh.json vẫn không bị đụng')
+
+        # --- 4. Chiều ngược lại: đúng cả hai thì KHÔNG được chặn oan ---
+        oan = []
+        for d in TINH_D + duong_api:
+            if d in THAN:
+                ma, t = k.post(d, THAN[d],
+                               them={'Host': TEN, 'Origin': 'https://' + TEN})
+            else:
+                ma, t = k.get(d, them={'Host': TEN})
+            # 400 do NGHIỆP VỤ (vd xoá quy tắc không có) thì không tính là oan;
+            # chỉ 400 phát ra từ chính cái cổng mới là chặn oan.
+            if ma == 400 and ('tên máy lạ' in t or 'trang khác' in t):
+                oan.append(f'{d}:{ma}')
+        kiem(not oan,
+             f'Host+Origin đúng thì cổng KHÔNG chặn đường nào — oan: {oan}')
+
+        # --- 5. Ghi lại ĐÚNG hành vi khi KHÔNG có dòng Origin ---
+        #
+        # Cố ý không đòi Origin, và đây là lý do — không phải bỏ sót:
+        # kiểm Origin CHỈ chặn được trình duyệt bị trang lạ sai khiến, vì trình
+        # duyệt không cho trang web nói dối Origin. Một chương trình gọi thẳng
+        # (curl, script) tự đặt Origin nào cũng được, nên bắt buộc phải có
+        # Origin KHÔNG thêm được một chút an toàn nào trước nó — chỉ thêm rủi ro
+        # từ chối oan một khách hợp lệ. Hàng rào đối với khách gọi thẳng là
+        # ĐĂNG NHẬP (Đợt 2), không phải Origin.
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': [1]}, them={'Host': TEN})
+        kiem(ma == 200,
+             f'Không có dòng Origin (curl/script) thì vẫn phục vụ — {ma}. '
+             f'CỐ Ý: Origin chỉ chặn được trình duyệt, khách gọi thẳng tự đặt '
+             f'được nên đòi cũng vô ích')
+        kiem(so_tat(dd) == [1], '  và ghi thật xuống tệp')
+
+    W.nap_cau_hinh_may_chu(os.path.join(tmx, 'khong-co.json'))
 
 
 # ==========================================================================
@@ -1068,6 +1349,8 @@ def ca_a8_khong_thanh_cong_thuc(tm):
 def chay_het(tm):
     ca_a2_than_di_dang(tm)
     ca_a1_nguon_goc(tm)
+    ca_a1b_danh_sach_ten_may(tm)
+    ca_a1c_moi_duong_deu_bi_gac(tm)
     ca_a9_tran_than(tm)
     ca_a10_tieu_de(tm)
     ca_a11_ben_vung(tm)

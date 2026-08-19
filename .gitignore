@@ -18,6 +18,12 @@ tkb_web.html
 cauhinh.bak*.json
 cauhinh.tam.json
 
+# Cấu hình MẠNG của máy chủ quản trị: danh sách tên máy / nguồn gốc được phép
+# gọi vào. Mỗi máy một khác (tên .ts.net của Tailscale là riêng của từng người),
+# và nó KHÔNG phải dữ liệu nhà trường nên không nằm trong cauhinh.json.
+# Thiếu tệp này thì máy chủ vẫn chạy, chỉ cho 127.0.0.1 như cũ.
+cauhinh_may_chu.json
+
 # File Excel mở dở
 ~$*.xlsx
 
