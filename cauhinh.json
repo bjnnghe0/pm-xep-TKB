@@ -1,55 +1,130 @@
 {
   "_doc": "Sua bang Notepad/VSCode roi chay lai chuong trinh. Xem danh muc quy tac: python3 xep_tkb.py --quy-tac",
-
   "thong_tin": {
     "tieu_de": "THỜI KHÓA BIỂU KHỐI 12 HK1 (Năm học 2026-2027)",
     "tuan": "TUẦN 2 (31/8/2026-05/9/2026)",
     "file_mau": "mau_tkb.xlsx",
     "file_xuat": "TKB_Khoi12.xlsx",
     "ten_sheet": "Khối 12",
-    "vi_tri_bang": { "hang_bat_dau": 8, "cot_bat_dau": 4, "hang_tieu_de": 3, "hang_tuan": 4, "hang_gvcn": 7 }
+    "vi_tri_bang": {
+      "hang_bat_dau": 8,
+      "cot_bat_dau": 4,
+      "hang_tieu_de": 3,
+      "hang_tuan": 4,
+      "hang_gvcn": 7
+    }
   },
-
   "khung_gio": {
     "cac_thu": [2, 3, 4, 5, 6],
     "buoi": "Chiều",
     "cac_tiet": [6, 7, 8, 9, 10]
   },
-
   "lop": [
-    { "ten": "12B1", "gvcn": "Lê Thị Anh",            "gvcn_vt": "L.Anh" },
-    { "ten": "12B2", "gvcn": "Hồ Thị Hiền",           "gvcn_vt": "H.Hiền" },
-    { "ten": "12B3", "gvcn": "Nguyễn Ngọc Hoàng An",  "gvcn_vt": "H.An" },
-    { "ten": "12B4", "gvcn": "Nguyễn Lê Hồng Hoàng",  "gvcn_vt": "H.Hoàng" },
-    { "ten": "12B5", "gvcn": "Hà Thị Huyền Trang",    "gvcn_vt": "H.Trang" },
-    { "ten": "12B6", "gvcn": "Dương Thị Ngọc Uyên",   "gvcn_vt": "N.Uyên" }
+    {
+      "ten": "12B1",
+      "gvcn": "Lê Thị Anh",
+      "gvcn_vt": "L.Anh"
+    },
+    {
+      "ten": "12B2",
+      "gvcn": "Hồ Thị Hiền",
+      "gvcn_vt": "H.Hiền"
+    },
+    {
+      "ten": "12B3",
+      "gvcn": "Nguyễn Ngọc Hoàng An",
+      "gvcn_vt": "H.An"
+    },
+    {
+      "ten": "12B4",
+      "gvcn": "Nguyễn Lê Hồng Hoàng",
+      "gvcn_vt": "H.Hoàng"
+    },
+    {
+      "ten": "12B5",
+      "gvcn": "Hà Thị Huyền Trang",
+      "gvcn_vt": "H.Trang"
+    },
+    {
+      "ten": "12B6",
+      "gvcn": "Dương Thị Ngọc Uyên",
+      "gvcn_vt": "N.Uyên"
+    }
   ],
-
   "dinh_muc_mon": {
     "_doc": "nhom = ten ngan de loc trong quy tac. cum = cach chia tiet/tuan thanh cac cum lien tiep.",
-    "Toán học":            { "nhom": "Toán",   "cum": [2, 1] },
-    "Chuyên đề Toán":      { "nhom": "Toán",   "cum": [1], "la_chuyen_de": true },
-    "Ngữ văn":             { "nhom": "Văn",    "cum": [2, 1] },
-    "Chuyên đề Ngữ văn":   { "nhom": "Văn",    "cum": [1], "la_chuyen_de": true },
-    "Lịch sử":             { "nhom": "Sử",     "cum": [2] },
-    "Chuyên đề Lịch sử":   { "nhom": "Sử",     "cum": [1], "la_chuyen_de": true },
-    "Địa lí":              { "nhom": "Địa",    "cum": [2] },
-    "Chuyên đề Địa lí":    { "nhom": "Địa",    "cum": [1], "la_chuyen_de": true },
-    "Vật lý":              { "nhom": "Lý",     "cum": [2] },
-    "Sinh học":            { "nhom": "Sinh",   "cum": [2] },
-    "Hoá học":             { "nhom": "Hoá",    "cum": [2] },
-    "HĐTN&HN":             { "nhom": "HĐTN",   "cum": [3] },
-    "GDKT-PL":             { "nhom": "GDKTPL", "cum": [2] },
-    "SHCN":                { "nhom": "SHCN",   "cum": [1] }
+    "Toán học": {
+      "nhom": "Toán",
+      "cum": [2, 1]
+    },
+    "Chuyên đề Toán": {
+      "nhom": "Toán",
+      "cum": [1],
+      "la_chuyen_de": true
+    },
+    "Ngữ văn": {
+      "nhom": "Văn",
+      "cum": [2, 1]
+    },
+    "Chuyên đề Ngữ văn": {
+      "nhom": "Văn",
+      "cum": [1],
+      "la_chuyen_de": true
+    },
+    "Lịch sử": {
+      "nhom": "Sử",
+      "cum": [2]
+    },
+    "Chuyên đề Lịch sử": {
+      "nhom": "Sử",
+      "cum": [1],
+      "la_chuyen_de": true
+    },
+    "Địa lí": {
+      "nhom": "Địa",
+      "cum": [2]
+    },
+    "Chuyên đề Địa lí": {
+      "nhom": "Địa",
+      "cum": [1],
+      "la_chuyen_de": true
+    },
+    "Vật lý": {
+      "nhom": "Lý",
+      "cum": [2]
+    },
+    "Sinh học": {
+      "nhom": "Sinh",
+      "cum": [2]
+    },
+    "Hoá học": {
+      "nhom": "Hoá",
+      "cum": [2]
+    },
+    "HĐTN&HN": {
+      "nhom": "HĐTN",
+      "cum": [3]
+    },
+    "GDKT-PL": {
+      "nhom": "GDKTPL",
+      "cum": [2]
+    },
+    "SHCN": {
+      "nhom": "SHCN",
+      "cum": [1]
+    }
   },
-
   "phan_cong": {
     "_doc": "lop -> danh sach [ten mon, giao vien viet tat, so tiet/tuan]",
     "12B1": [
-      ["Toán học", "M.Hạnh", 3], ["Chuyên đề Toán", "M.Hạnh", 1],
-      ["Ngữ văn", "H.Trang", 3], ["Chuyên đề Ngữ văn", "H.Trang", 1],
-      ["Lịch sử", "N.Xuân", 2],  ["Chuyên đề Lịch sử", "N.Xuân", 1],
-      ["Địa lí", "N.Dung", 2],   ["Chuyên đề Địa lí", "N.Dung", 1],
+      ["Toán học", "M.Hạnh", 3],
+      ["Chuyên đề Toán", "M.Hạnh", 1],
+      ["Ngữ văn", "H.Trang", 3],
+      ["Chuyên đề Ngữ văn", "H.Trang", 1],
+      ["Lịch sử", "N.Xuân", 2],
+      ["Chuyên đề Lịch sử", "N.Xuân", 1],
+      ["Địa lí", "N.Dung", 2],
+      ["Chuyên đề Địa lí", "N.Dung", 1],
       ["Vật lý", "T.V.Quỳnh", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "L.Anh", 3],
@@ -57,10 +132,14 @@
       ["SHCN", "L.Anh", 1]
     ],
     "12B2": [
-      ["Toán học", "M.Tuấn", 3], ["Chuyên đề Toán", "M.Tuấn", 1],
-      ["Ngữ văn", "H.Phương", 3], ["Chuyên đề Ngữ văn", "H.Phương", 1],
-      ["Lịch sử", "N.Uyên", 2],  ["Chuyên đề Lịch sử", "N.Uyên", 1],
-      ["Địa lí", "H.Hiền", 2],   ["Chuyên đề Địa lí", "H.Hiền", 1],
+      ["Toán học", "M.Tuấn", 3],
+      ["Chuyên đề Toán", "M.Tuấn", 1],
+      ["Ngữ văn", "H.Phương", 3],
+      ["Chuyên đề Ngữ văn", "H.Phương", 1],
+      ["Lịch sử", "N.Uyên", 2],
+      ["Chuyên đề Lịch sử", "N.Uyên", 1],
+      ["Địa lí", "H.Hiền", 2],
+      ["Chuyên đề Địa lí", "H.Hiền", 1],
       ["Vật lý", "T.V.Quỳnh", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "Đ.Hải", 3],
@@ -68,10 +147,14 @@
       ["SHCN", "H.Hiền", 1]
     ],
     "12B3": [
-      ["Toán học", "H.An", 3],   ["Chuyên đề Toán", "H.An", 1],
-      ["Ngữ văn", "Đ.Duy", 3],   ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
-      ["Lịch sử", "N.Uyên", 2],  ["Chuyên đề Lịch sử", "N.Uyên", 1],
-      ["Địa lí", "N.Dung", 2],   ["Chuyên đề Địa lí", "N.Dung", 1],
+      ["Toán học", "H.An", 3],
+      ["Chuyên đề Toán", "H.An", 1],
+      ["Ngữ văn", "Đ.Duy", 3],
+      ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
+      ["Lịch sử", "N.Uyên", 2],
+      ["Chuyên đề Lịch sử", "N.Uyên", 1],
+      ["Địa lí", "N.Dung", 2],
+      ["Chuyên đề Địa lí", "N.Dung", 1],
       ["Sinh học", "T.Thu.Hằng", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "V.Q.Huấn", 3],
@@ -79,10 +162,14 @@
       ["SHCN", "H.An", 1]
     ],
     "12B4": [
-      ["Toán học", "M.Hùng", 3], ["Chuyên đề Toán", "M.Hùng", 1],
-      ["Ngữ văn", "H.Phương", 3], ["Chuyên đề Ngữ văn", "H.Phương", 1],
-      ["Lịch sử", "N.Xuân", 2],  ["Chuyên đề Lịch sử", "N.Xuân", 1],
-      ["Địa lí", "H.Hoàng", 2],  ["Chuyên đề Địa lí", "H.Hoàng", 1],
+      ["Toán học", "M.Hùng", 3],
+      ["Chuyên đề Toán", "M.Hùng", 1],
+      ["Ngữ văn", "H.Phương", 3],
+      ["Chuyên đề Ngữ văn", "H.Phương", 1],
+      ["Lịch sử", "N.Xuân", 2],
+      ["Chuyên đề Lịch sử", "N.Xuân", 1],
+      ["Địa lí", "H.Hoàng", 2],
+      ["Chuyên đề Địa lí", "H.Hoàng", 1],
       ["Sinh học", "T.Thu.Hằng", 2],
       ["Hoá học", "H.Yến", 2],
       ["HĐTN&HN", "V.Trọng", 3],
@@ -90,10 +177,14 @@
       ["SHCN", "H.Hoàng", 1]
     ],
     "12B5": [
-      ["Toán học", "T.Loan", 3], ["Chuyên đề Toán", "T.Loan", 1],
-      ["Ngữ văn", "H.Trang", 3], ["Chuyên đề Ngữ văn", "H.Trang", 1],
-      ["Lịch sử", "N.Xuân", 2],  ["Chuyên đề Lịch sử", "N.Xuân", 1],
-      ["Địa lí", "H.Hiền", 2],   ["Chuyên đề Địa lí", "H.Hiền", 1],
+      ["Toán học", "T.Loan", 3],
+      ["Chuyên đề Toán", "T.Loan", 1],
+      ["Ngữ văn", "H.Trang", 3],
+      ["Chuyên đề Ngữ văn", "H.Trang", 1],
+      ["Lịch sử", "N.Xuân", 2],
+      ["Chuyên đề Lịch sử", "N.Xuân", 1],
+      ["Địa lí", "H.Hiền", 2],
+      ["Chuyên đề Địa lí", "H.Hiền", 1],
       ["Sinh học", "T.T.Hiền", 2],
       ["Hoá học", "H.Quân", 2],
       ["HĐTN&HN", "H.Nam", 3],
@@ -101,10 +192,14 @@
       ["SHCN", "H.Trang", 1]
     ],
     "12B6": [
-      ["Toán học", "T.Loan", 3], ["Chuyên đề Toán", "T.Loan", 1],
-      ["Ngữ văn", "Đ.Duy", 3],   ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
-      ["Lịch sử", "N.Uyên", 2],  ["Chuyên đề Lịch sử", "N.Uyên", 1],
-      ["Địa lí", "H.Hoàng", 2],  ["Chuyên đề Địa lí", "H.Hoàng", 1],
+      ["Toán học", "T.Loan", 3],
+      ["Chuyên đề Toán", "T.Loan", 1],
+      ["Ngữ văn", "Đ.Duy", 3],
+      ["Chuyên đề Ngữ văn", "Đ.Duy", 1],
+      ["Lịch sử", "N.Uyên", 2],
+      ["Chuyên đề Lịch sử", "N.Uyên", 1],
+      ["Địa lí", "H.Hoàng", 2],
+      ["Chuyên đề Địa lí", "H.Hoàng", 1],
       ["Sinh học", "T.T.Hiền", 2],
       ["Hoá học", "H.Quân", 2],
       ["HĐTN&HN", "X.Thọ", 3],
@@ -112,114 +207,258 @@
       ["SHCN", "N.Uyên", 1]
     ]
   },
-
   "luat_chung": {
     "_doc": "Hai luat nen, luon ap cho toan bo TKB.",
     "khong_tiet_trong_giua_buoi": true,
     "mot_cum_moi_mon_moi_ngay": true
   },
-
   "quy_tac": [
-
-    { "loai": "chi_xep_tiet",
+    {
+      "loai": "chi_xep_tiet",
       "ghi_chu": "SHCN ở tiết cuối buổi (trừ lớp do cô N.Uyên chủ nhiệm)",
-      "loc": { "nhom_mon": "SHCN", "tru": { "gv": "N.Uyên" } },
-      "tiet_trong_buoi": [5] },
-
-    { "loai": "chi_xep_tiet",
+      "loc": {
+        "nhom_mon": "SHCN",
+        "tru": {
+          "gv": "N.Uyên"
+        }
+      },
+      "tiet_trong_buoi": [5]
+    },
+    {
+      "loai": "chi_xep_tiet",
       "ghi_chu": "SHCN lớp cô N.Uyên chủ nhiệm xếp tiết 6 hoặc tiết 7",
-      "loc": { "nhom_mon": "SHCN", "gv": "N.Uyên" },
-      "tiet_trong_buoi": [1, 2] },
-
-    { "loai": "chi_xep_thu",
+      "loc": {
+        "nhom_mon": "SHCN",
+        "gv": "N.Uyên"
+      },
+      "tiet_trong_buoi": [1, 2]
+    },
+    {
+      "loai": "chi_xep_thu",
       "ghi_chu": "Vật lý 12B1, 12B2 chỉ Thứ 2 hoặc Thứ 3",
-      "loc": { "mon": "Vật lý", "lop": ["12B1", "12B2"] },
-      "thu": [2, 3] },
-
-    { "loai": "chi_xep_thu",
+      "loc": {
+        "mon": "Vật lý",
+        "lop": ["12B1", "12B2"]
+      },
+      "thu": [2, 3],
+      "bat": false
+    },
+    {
+      "loai": "chi_xep_thu",
       "ghi_chu": "Sinh học 12B3, 12B4 chỉ Thứ 2 hoặc Thứ 3",
-      "loc": { "mon": "Sinh học", "lop": ["12B3", "12B4"] },
-      "thu": [2, 3] },
-
-    { "loai": "chi_xep_thu",
+      "loc": {
+        "mon": "Sinh học",
+        "lop": ["12B3", "12B4"]
+      },
+      "thu": [2, 3]
+    },
+    {
+      "loai": "chi_xep_thu",
       "ghi_chu": "Sinh học 12B5, 12B6 chỉ Thứ 2 hoặc Thứ 3",
-      "loc": { "mon": "Sinh học", "lop": ["12B5", "12B6"] },
-      "thu": [2, 3] },
-
-    { "loai": "khong_xep_thu",
+      "loc": {
+        "mon": "Sinh học",
+        "lop": ["12B5", "12B6"]
+      },
+      "thu": [2, 3]
+    },
+    {
+      "loai": "khong_xep_thu",
       "ghi_chu": "Hoá học 12B1-12B4 không xếp Thứ 3 và Thứ 5",
-      "loc": { "mon": "Hoá học", "lop": ["12B1", "12B2", "12B3", "12B4"] },
-      "thu": [3, 5] },
-
-    { "loai": "khong_xep_thu",
+      "loc": {
+        "mon": "Hoá học",
+        "lop": ["12B1", "12B2", "12B3", "12B4"]
+      },
+      "thu": [3, 5]
+    },
+    {
+      "loai": "khong_xep_thu",
       "ghi_chu": "Văn cô Duy không xếp Thứ 2",
-      "loc": { "gv": "Đ.Duy" },
-      "thu": [2] },
-
-    { "loai": "khong_xep_tiet",
+      "loc": {
+        "gv": "Đ.Duy"
+      },
+      "thu": [2]
+    },
+    {
+      "loai": "khong_xep_tiet",
       "ghi_chu": "Sử cô Ngọc Uyên không xếp 2 tiết cuối buổi (tiết 9 và tiết 10)",
-      "loc": { "gv": "N.Uyên", "nhom_mon": "Sử" },
+      "loc": {
+        "gv": "N.Uyên",
+        "nhom_mon": "Sử"
+      },
       "tiet_trong_buoi": [4, 5],
-      "_doc": "tiet_trong_buoi đếm theo THỨ TỰ TRONG BUỔI (1 = tiết đầu buổi); còn khoá tiet thì đếm theo SỐ HIỆU TIẾT in trên TKB. Khối 12 chỉ học buổi chiều nên tiet_trong_buoi 1..5 ứng với tiết 6..10, tức [4, 5] ở đây chính là tiết 9 và tiết 10. Viết \"tiet\": [9, 10] cho kết quả y hệt." },
-
-    { "loai": "khac_ngay",
+      "_doc": "tiet_trong_buoi đếm theo THỨ TỰ TRONG BUỔI (1 = tiết đầu buổi); còn khoá tiet thì đếm theo SỐ HIỆU TIẾT in trên TKB. Khối 12 chỉ học buổi chiều nên tiet_trong_buoi 1..5 ứng với tiết 6..10, tức [4, 5] ở đây chính là tiết 9 và tiết 10. Viết \"tiet\": [9, 10] cho kết quả y hệt."
+    },
+    {
+      "loai": "khac_ngay",
       "ghi_chu": "Toán thầy Tuấn 12B2 không cùng ngày với Toán thầy Hùng 12B4",
-      "a": { "gv": "M.Tuấn", "lop": "12B2" },
-      "b": { "gv": "M.Hùng", "lop": "12B4" } },
-
-    { "loai": "khac_ngay",
+      "a": {
+        "gv": "M.Tuấn",
+        "lop": "12B2"
+      },
+      "b": {
+        "gv": "M.Hùng",
+        "lop": "12B4"
+      }
+    },
+    {
+      "loai": "khac_ngay",
       "ghi_chu": "Sử cô Lê Xuân không cùng ngày với lịch thầy Hùng",
-      "a": { "gv": "N.Xuân" },
-      "b": { "gv": "M.Hùng" } },
-
-    { "loai": "uu_tien_ke_nhau",
+      "a": {
+        "gv": "N.Xuân"
+      },
+      "b": {
+        "gv": "M.Hùng"
+      }
+    },
+    {
+      "loai": "uu_tien_ke_nhau",
       "ghi_chu": "Nên xếp tiết chuyên đề nối tiếp tiết chính",
-      "a": { "la_chuyen_de": true },
-      "b": { "la_chuyen_de": false },
+      "a": {
+        "la_chuyen_de": true
+      },
+      "b": {
+        "la_chuyen_de": false
+      },
       "cung_nhom_mon": true,
-      "diem": 12 },
-
-    { "loai": "uu_tien_it_buoi",
+      "diem": 12
+    },
+    {
+      "loai": "uu_tien_it_buoi",
       "ghi_chu": "Dồn buổi để giáo viên ít phải lên lớp",
-      "loc": {}, "diem": 4 },
-
-    { "loai": "uu_tien_trai_deu",
+      "loc": {},
+      "diem": 4
+    },
+    {
+      "loai": "uu_tien_trai_deu",
       "ghi_chu": "Hai buổi cùng một môn nên cách nhau từ 2 ngày trở lên",
-      "loc": {}, "cach": 2, "diem": 3 }
-
+      "loc": {},
+      "cach": 2,
+      "diem": 3
+    },
+    {
+      "loai": "chi_xep_thu",
+      "ghi_chu": "Vật lý 12B1, 12B2 chỉ Thứ 2",
+      "loc": {
+        "mon": "Vật lý",
+        "gv": "T.V.Quỳnh",
+        "lop": ["12B1", "12B2"]
+      },
+      "thu": [2]
+    },
+    {
+      "loai": "khac_ngay",
+      "ghi_chu": "Toán 12B2 không xếp trùng ngày với toán 12B4",
+      "a": {
+        "gv": "M.Tuấn",
+        "lop": "12B2"
+      },
+      "b": {
+        "gv": "M.Hùng",
+        "lop": "12B4"
+      },
+      "bat": false
+    },
+    {
+      "loai": "khac_ngay",
+      "ghi_chu": "Lịch sử  12b1,12b4,12b5 không trùng ngày với toán 12b4",
+      "a": {
+        "mon": "Lịch sử",
+        "lop": ["12B1", "12B4", "12B5"]
+      },
+      "b": {
+        "mon": "Toán học",
+        "gv": "M.Hùng",
+        "lop": "12B4"
+      },
+      "bat": false
+    },
+    {
+      "loai": "khac_ngay",
+      "ghi_chu": "Lịch sử 12B1, 12B4, 12B5 không cùng ngày với Toán 12B4 (vế Toán 12B2 đã có ở quy tắc \"Toán thầy Tuấn 12B2...\")",
+      "a": {
+        "mon": "Lịch sử",
+        "lop": ["12B1", "12B4", "12B5"]
+      },
+      "b": {
+        "mon": "Toán học",
+        "gv": "M.Hùng",
+        "lop": "12B4"
+      }
+    }
   ],
-
   "_quy_tac_de_san_chua_bat": [
-    { "bat": false, "loai": "gom_tiet",
+    {
+      "bat": false,
+      "loai": "gom_tiet",
       "ghi_chu": "Tách Hoá thành 2 buổi riêng thay vì gom 2 tiết liền",
-      "loc": { "mon": "Hoá học" }, "cum": [1, 1] },
-
-    { "bat": false, "loai": "khong_xep_o",
+      "loc": {
+        "mon": "Hoá học"
+      },
+      "cum": [1, 1]
+    },
+    {
+      "bat": false,
+      "loai": "khong_xep_o",
       "ghi_chu": "Thầy Nam bận họp Thứ 4 tiết 6, 7",
-      "loc": { "gv": "H.Nam" }, "o": [[4, 6], [4, 7]] },
-
-    { "bat": false, "loai": "co_dinh",
+      "loc": {
+        "gv": "H.Nam"
+      },
+      "o": [
+        [4, 6],
+        [4, 7]
+      ]
+    },
+    {
+      "bat": false,
+      "loai": "co_dinh",
       "ghi_chu": "Ghim SHCN 12B1 vào Thứ 6 tiết 10",
-      "loc": { "mon": "SHCN", "lop": "12B1" }, "thu": 6, "tiet": 10 },
-
-    { "bat": false, "loai": "toi_da_ngay_moi_tuan",
+      "loc": {
+        "mon": "SHCN",
+        "lop": "12B1"
+      },
+      "thu": 6,
+      "tiet": 10
+    },
+    {
+      "bat": false,
+      "loai": "toi_da_ngay_moi_tuan",
       "ghi_chu": "Cô Ngọc Uyên chỉ lên lớp tối đa 3 buổi/tuần",
-      "loc": { "gv": "N.Uyên" }, "theo": "gv", "so": 3 },
-
-    { "bat": false, "loai": "toi_da_tiet_moi_ngay",
+      "loc": {
+        "gv": "N.Uyên"
+      },
+      "theo": "gv",
+      "so": 3
+    },
+    {
+      "bat": false,
+      "loai": "toi_da_tiet_moi_ngay",
       "ghi_chu": "Mỗi giáo viên dạy tối đa 4 tiết/buổi",
-      "loc": {}, "theo": "gv", "so": 4 },
-
-    { "bat": false, "loai": "khong_ke_nhau",
+      "loc": {},
+      "theo": "gv",
+      "so": 4
+    },
+    {
+      "bat": false,
+      "loai": "khong_ke_nhau",
       "ghi_chu": "Không xếp Toán sát ngay Vật lý",
-      "a": { "nhom_mon": "Toán" }, "b": { "nhom_mon": "Lý" } },
-
-    { "bat": false, "loai": "uu_tien_o",
+      "a": {
+        "nhom_mon": "Toán"
+      },
+      "b": {
+        "nhom_mon": "Lý"
+      }
+    },
+    {
+      "bat": false,
+      "loai": "uu_tien_o",
       "ghi_chu": "Ưu tiên Toán, Văn vào 2 tiết đầu buổi",
-      "loc": { "nhom_mon": ["Toán", "Văn"] },
-      "tiet_trong_buoi": [1, 2], "diem": 3 }
+      "loc": {
+        "nhom_mon": ["Toán", "Văn"]
+      },
+      "tiet_trong_buoi": [1, 2],
+      "diem": 3
+    }
   ],
-
   "tim_kiem": {
     "_doc": "Chuong trinh chay lai nhieu lan roi giu phuong an diem cao nhat.",
     "so_lan_thu": 400,
