@@ -26,12 +26,12 @@ import subprocess
 import sys
 import tempfile
 import threading
-import urllib.error
-import urllib.request
 from http.server import ThreadingHTTPServer
 
 GOC_TM = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, GOC_TM)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from tien_ich_web import Khach       # noqa: E402
 
 import xep_tkb as X          # noqa: E402
 import quy_tac as QT         # noqa: E402
@@ -60,24 +60,20 @@ def dung_may(tm):
     shutil.copy(os.path.join(GOC_TM, 'mau_tkb.xlsx'),
                 os.path.join(tm, 'mau_tkb.xlsx'))
     web.DUONG_DAN_CAUHINH = dd
-    web.PHIEN['them'].clear()
+    web.xoa_sach_phien()
     web.dat_lai_trang_thai()
     may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
     may.daemon_threads = True
     threading.Thread(target=may.serve_forever, daemon=True).start()
-    return may, f'http://127.0.0.1:{may.server_address[1]}', dd
+    # Trả về một Khach thay cho chuỗi URL. urllib KHÔNG giữ cookie, mà từ 2A-2a
+    # bản nháp quy tắc gắn theo PHIÊN — mỗi yêu cầu không cookie là một phiên
+    # mới, nên "thêm rồi đọc lại" sẽ không bao giờ thấy nhau.
+    return may, Khach(may.server_address[1]), dd
 
 
 def goi(B, duong, than=None):
-    yc = urllib.request.Request(B + duong, method='POST' if than else 'GET')
-    if than is not None:
-        yc.add_header('Content-Type', 'application/json')
-        than = json.dumps(than).encode()
-    try:
-        with urllib.request.urlopen(yc, than, timeout=60) as t:
-            return t.status, json.loads(t.read().decode('utf-8'))
-    except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read().decode('utf-8'))
+    """B là một Khach (giữ cookie), không phải chuỗi URL."""
+    return B.js(duong, than)
 
 
 HOP_LE = {'loai': 'khong_xep_thu', 'ghi_chu': 'Hoá học không xếp Thứ 6',
@@ -118,8 +114,13 @@ def ca_1_them_hop_le(B, dd):
          f'Giữ nguyên nội dung đã gửi — {r["noi_dung"]}')
     kiem(md5(dd) == truoc_md5, 'md5 cauhinh.json KHÔNG đổi')
 
-    kiem(len(web.cau_hinh_phien()[0]['quy_tac']) == n0 + 1,
-         'Cấu hình phiên thật sự có quy tắc mới')
+    # Trước đây mục này gọi thẳng web.cau_hinh_phien() — vừa là gọi tắt qua
+    # tầng HTTP, vừa không còn đúng khi nháp gắn theo phiên. Quan sát qua HTTP:
+    # hỏi lại danh sách và đếm.
+    _, dl = goi(B, '/api/quy-tac')
+    kiem(len(dl['quy_tac']) == n0 + 1 and dl['so_moi'] == 1,
+         f'Phiên này thật sự có quy tắc mới — {len(dl["quy_tac"])} quy tắc, '
+         f'{dl["so_moi"]} chưa lưu')
     ma, t = goi(B, '/api/thu-quy-tac', {'quy_tac': None, 'tat': []})
     kiem(ma == 200 and t['xep_duoc'],
          f'Xếp thử với quy tắc mới: vẫn xếp được, {t["so_hop_le"]}/{t["so_lan"]}')
@@ -154,7 +155,8 @@ def ca_3_xoa(B, dd):
     ma, d2 = goi(B, '/api/xoa-quy-tac', {'i': i_moi})
     kiem(ma == 200 and d2['so_moi'] == 0 and len(d2['quy_tac']) == so_file,
          f'Xoá quy tắc vừa thêm: về đúng {so_file} quy tắc ban đầu')
-    kiem(not web.PHIEN['them'], 'Kho quy tắc của phiên rỗng trở lại')
+    _, dq = goi(B, '/api/quy-tac')
+    kiem(dq['so_moi'] == 0, 'Kho quy tắc nháp của phiên rỗng trở lại')
     kiem(md5(dd) == md5(dd), 'cauhinh.json vẫn nguyên')
 
 
@@ -178,7 +180,8 @@ def ca_4_luu(B, tm, dd):
          and sau['quy_tac'][-1]['ghi_chu'] == HOP_LE['ghi_chu'],
          'Quy tắc mới đã nằm trong file')
     kiem(sau['quy_tac'][3].get('bat') is False, 'Công tắc tắt cũng được ghi')
-    kiem(not web.PHIEN['them'], 'Ghi xong thì kho phiên rỗng')
+    _, dq = goi(B, '/api/quy-tac')
+    kiem(dq['so_moi'] == 0, 'Ghi xong thì kho nháp của phiên rỗng')
     kiem(len(sau['_quy_tac_de_san_chua_bat']) == 7,
          'Mục _quy_tac_de_san_chua_bat không bị đụng')
 

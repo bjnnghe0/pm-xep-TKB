@@ -41,6 +41,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tien_ich_web import (GOC_TM, MayChuTam, Khach, cau_hinh_tam,   # noqa: E402
                           doi_trang_thai)
 import xep_tkb as X          # noqa: E402
+import web as _W             # noqa: E402
+W_TEN_COOKIE = _W.TEN_COOKIE
 
 KQ = []
 
@@ -695,8 +697,15 @@ def ca_a10_tieu_de(tm):
         ma, td, than = k.yeu_cau('GET', '/api/tai-ve')
         kiem('x-chen-vao' not in td,
              f'KHÔNG chèn được tiêu đề lạ — thấy {sorted(td)}')
-        kiem('set-cookie' not in td,
-             'KHÔNG chèn được Set-Cookie (đây là mồi cố định phiên khi có cookie)')
+        # Từ 2A-2a máy chủ CÓ phát Set-Cookie thật (phiên vô danh), nên phép
+        # kiểm "không có set-cookie nào" hết đúng. Ý ĐỊNH thì không đổi và phải
+        # siết chặt hơn: cái CHÈN VÀO không được lọt, và mọi dòng set-cookie
+        # thấy được đều phải là dòng do CHÍNH TA phát.
+        cook = td.get('set-cookie', [])
+        kiem(not any('bikiem' in c for c in cook),
+             f'KHÔNG chèn được Set-Cookie giả (mồi cố định phiên) — {cook}')
+        kiem(all(c.startswith(W_TEN_COOKIE) for c in cook),
+             f'Mọi Set-Cookie thấy được đều do chính máy chủ phát — {cook}')
         kiem(ma == 400, f'Tên tệp có xuống dòng -> 400 — {ma}')
         kiem('file_xuat' in than.decode('utf-8', 'replace'),
              'Câu lỗi chỉ ĐÍCH DANH thong_tin.file_xuat')

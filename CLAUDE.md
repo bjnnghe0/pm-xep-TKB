@@ -72,6 +72,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tests/thu_phien.py` | Hạ tầng phiên: nháp tách theo phiên · hai tên cookie · hết hạn · trần · **đồng hồ canh deadlock** | Chạy khi sửa `tao_phien`/`doc_phien`/cookie |
 | `tests/thu_tai_lap.py` | Chế độ tái lập: cùng seed cho cùng kết quả (cả giữa hai tiến trình), và cấu hình VÔ NGHIỆM vẫn DỪNG | Chạy khi sửa `gop_tim_kiem()` hoặc `tim_phuong_an()` |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
@@ -817,6 +818,9 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 >
 > **Ca thử KHÔNG khẳng định trên VĂN BẢN MÃ NGUỒN. Khẳng định trên HÀNH VI quan
 > sát qua HTTP. Nếu buộc phải đọc mã nguồn thì LỘT CHÚ THÍCH TRƯỚC.**
+>
+> **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
+> **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
 Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
@@ -826,6 +830,7 @@ Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 2 | `list.index()` ném `ValueError` | Ca thử **chết giữa chừng** thay vì báo đỏ; mọi ca sau nó không bao giờ chạy |
 | 3 | Chỉ xem giá trị trả về của hàm nạp | Bản fail-open trả `(None, None)` y hệt bản đúng → xanh giả, trong khi máy chủ mở toang |
 | 4 | Khớp chuỗi trong mã nguồn | Chuỗi đó cũng nằm trong **dòng chú thích** ngay trên — ca thử kiểm lời chú thích chứ không kiểm mã |
+| 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
 
 **Danh sách kiểm cho ca thử mới:**
 
@@ -835,7 +840,9 @@ Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 3. Có mục nào chỉ xem giá trị trả về mà không xem hành vi không?
 4. Nếu có đọc mã nguồn: đã lột chú thích chưa? Đã có guard cho trường hợp phép
    bóc trả về rỗng chưa?
-5. Có mục tự khẳng định **điều kiện tiên quyết** chưa — để khi dữ liệu đổi khiến
+5. Ca thử có dựng máy chủ / luồng / khoá không? Nếu có thì **đã đặt đồng hồ
+   canh chưa** (`dat_dong_ho_canh()` trong `thu_phien.py` là mẫu)?
+6. Có mục tự khẳng định **điều kiện tiên quyết** chưa — để khi dữ liệu đổi khiến
    ca thử mất khả năng phân biệt thì nó báo đỏ chứ không âm thầm xanh?
 
 ---
@@ -909,6 +916,64 @@ Bốn hướng đã rà: không đường GET nào đổi trạng thái · khôn
 Đổi lại: giáo viên gửi link cho nhau qua Zalo là cách làm việc thật, và `Strict`
 làm **mọi** lần bấm link đều văng về ô mật khẩu — ghi vào tài liệu không chữa
 được, chỉ giải thích cho một phiền toái hằng ngày.
+
+---
+
+## Phiên trình duyệt (2A-2a) — chưa có xác thực
+
+Phiên ở bước này trả lời đúng **một** câu: *bản nháp quy tắc này là của trình
+duyệt nào*. Chưa có mật khẩu, chưa có tên người. Đăng nhập (2A-1) lắp lên đúng
+hạ tầng này, không dựng lại.
+
+> **Lỗi đã bịt, đo được trước khi sửa.** Thầy A thêm một quy tắc nháp (chưa Lưu),
+> cô B bấm Lưu → tệp đi từ **13 lên 14** quy tắc: quy tắc **chưa ai duyệt** của A
+> vào thẳng `cauhinh.json`, còn A vẫn thấy nháp của mình là "chưa lưu". Im lặng
+> cả hai chiều. Không cần tới hai người — mở phần mềm trên máy bàn và trên điện
+> thoại đã là hai trình duyệt khác nhau.
+>
+> **Dấu bản của `cauhinh.json` KHÔNG bắt được lỗi này** — lúc B tải danh sách về
+> thì tệp trên đĩa chưa hề đổi, dấu bản khớp hoàn hảo. Lỗ ở **bộ nhớ**, không
+> phải ở **tệp**, nên phải chữa bằng cách tách theo phiên.
+
+| Thứ | Cách làm |
+|---|---|
+| Mã phiên | `secrets.token_urlsafe(32)`, sinh **ở máy chủ**, không bao giờ nhận nuôi mã khách gửi lên (chống cố định phiên, đúng ngay từ bước chưa có mật khẩu) |
+| Cất | `CAC_PHIEN` + `PHIEN_THEM`, khoá riêng `KHOA_PHIEN` |
+| Hết hạn | Nghỉ 8 giờ / tuyệt đối 12 giờ, theo **hai đồng hồ** — `monotonic` không đếm lúc máy ngủ, `time()` nhảy khi NTP chỉnh. Hết theo cái nào tới trước |
+| Trần | 32 phiên; đầy thì **đuổi cái ngồi không lâu nhất**, không bao giờ từ chối người mới |
+| Dọn | Lười, ngay trong lúc tra sổ. Không luồng nền |
+
+### Hai tên cookie — và vì sao chỉ được đọc MỘT
+
+```
+Host loopback  ->  phien_tkb          ; Path=/; HttpOnly; SameSite=Lax
+Host khác      ->  __Host-phien_tkb   ; Path=/; HttpOnly; SameSite=Lax; Secure
+```
+
+Cờ `Secure` **suy từ `Host`**, không phải một khoá cấu hình. Mọi giá trị mặc định
+của một khoá như vậy đều có trạng thái hỏng **trong im lặng**: đăng nhập trả 200,
+trình duyệt vứt cookie, yêu cầu kế 401, quay lại ô mật khẩu, không một chữ giải
+thích. Tin được vì `Host` đã qua danh sách trắng A1 **ngay trước đó**.
+
+> **Chỉ đọc ĐÚNG MỘT tên, tên ứng với chế độ hiện tại.** Viết "thử `__Host-`
+> trước, không có thì thử tên trơn" là tự mở lại đúng lỗ vừa bịt — kẻ kia chỉ cần
+> đặt tên trơn là được đọc. Có ca thử riêng cho điều này.
+
+> **`SameSite=Lax` phải khai TƯỜNG MINH.** Chrome có ngoại lệ "Lax+POST 2 phút"
+> cho phép POST cross-site cấp cao nhất mang cookie, và ngoại lệ đó **chỉ áp cho
+> cookie KHÔNG khai SameSite**. Bỏ trống không giống khai `Lax`.
+
+### `_don_phien_da_khoa()` — vì sao tách khỏi bản tự khoá
+
+`threading.Lock` **không tái nhập**. Một hàm đã giữ `KHOA_PHIEN` mà gọi sang hàm
+tự khoá là **treo cứng máy chủ** ngay phiên hết hạn đầu tiên. Đừng chữa bằng
+`RLock` — nó giấu mất chỗ nào đang giữ khoá bao lâu.
+
+> **Đã lùi đúng lỗi này để thử, và phát hiện một lỗ trong chính bộ thử:** nó
+> **TREO** chứ không đỏ (`MayChuTam.__exit__` gọi `may.shutdown()`, mà hàm đó chờ
+> mãi một luồng đang kẹt trong khoá). Treo còn tệ hơn vỡ vì nó chặn luôn mọi bộ
+> thử chạy sau. Đã thêm **đồng hồ canh 180 giây** vào `thu_phien.py` để mọi
+> deadlock tương lai thành một dòng đỏ — đo lại: 4/6 mục, thoát 1.
 
 ---
 

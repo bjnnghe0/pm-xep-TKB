@@ -67,7 +67,7 @@ class MayChuTam:
 
     def __enter__(self):
         web.DUONG_DAN_CAUHINH = os.path.abspath(self.dd)
-        web.PHIEN['them'].clear()
+        web.xoa_sach_phien()
         web.dat_lai_trang_thai()
         # LUÔN nạp lại, kể cả khi không truyền gì: nap_cau_hinh_may_chu() tự
         # đặt hai danh sách về None trước. Thiếu dòng này thì danh sách của ca

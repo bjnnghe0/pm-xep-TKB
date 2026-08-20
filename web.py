@@ -107,7 +107,33 @@ TT = {}
 
 # Quy tắc người dùng thêm ở màn hình Quy tắc — CHỈ nằm trong bộ nhớ của phiên
 # này. Ghi xuống cauhinh.json vẫn chỉ qua nút "Lưu vào cauhinh.json".
-PHIEN = {'them': []}
+# ==========================================================================
+#  PHIÊN TRÌNH DUYỆT (2A-2a) — CHƯA CÓ XÁC THỰC
+# ==========================================================================
+#  Ở bước này phiên chỉ trả lời đúng một câu: "bản nháp quy tắc này là của
+#  TRÌNH DUYỆT nào". Chưa có mật khẩu, chưa có tên người. Đăng nhập (2A-1) lắp
+#  lên đúng hạ tầng này, không phải dựng lại.
+#
+#  VÌ SAO PHẢI LÀM TRƯỚC, và vì sao nó không phải việc "để dành cho sau":
+#  bản nháp đang là MỘT danh sách toàn cục, nên đã đo được — thầy A thêm một
+#  quy tắc nháp, cô B bấm Lưu, và quy tắc CHƯA AI DUYỆT của A đi thẳng vào
+#  cauhinh.json (13 -> 14 quy tắc), còn A thì vẫn thấy nháp của mình là "chưa
+#  lưu". Im lặng cả hai chiều. Không cần tới hai người: mở phần mềm trên máy
+#  bàn và trên điện thoại đã là hai trình duyệt khác nhau.
+#
+#  Dấu bản của cauhinh.json KHÔNG bắt được lỗi này — lúc B tải danh sách về thì
+#  tệp trên đĩa chưa hề đổi, dấu bản khớp hoàn hảo. Đây là lỗ ở BỘ NHỚ, không
+#  phải ở TỆP, nên phải chữa bằng cách tách theo phiên.
+
+CAC_PHIEN = {}                       # ma -> {'tao_m','tao_w','cham_m','cham_w'}
+PHIEN_THEM = {}                      # ma -> [quy tắc nháp của riêng phiên đó]
+KHOA_PHIEN = threading.Lock()
+
+TEN_COOKIE = 'phien_tkb'             # đường http tại chỗ
+TEN_COOKIE_BM = '__Host-phien_tkb'   # đường có TLS (qua proxy)
+TRAN_PHIEN = 32
+GIAY_NGHI_PHIEN = 8 * 3600           # QĐ 1
+GIAY_TOI_DA_PHIEN = 12 * 3600        # QĐ 1 — không gia hạn được
 
 
 def _trang_thai_moi():
@@ -193,6 +219,99 @@ def _loi_su_co(ma):
 # ==========================================================================
 # 1a. DANH SÁCH TÊN MÁY / NGUỒN GỐC ĐƯỢC PHÉP
 # ==========================================================================
+
+def _het_han(p, bay_gio_m, bay_gio_w):
+    """Phiên đã hết hiệu lực chưa? Hết khi MỘT TRONG HAI đồng hồ vượt.
+
+       Vì sao phải hai đồng hồ, không phải một:
+         monotonic  KHÔNG đếm lúc máy ngủ. Gập laptop qua đêm rồi mở ra thì
+                    phiên "12 giờ" vẫn còn sống sang hôm sau.
+         time()     nhảy khi NTP chỉnh giờ hoặc người dùng đổi múi giờ.
+       Ghi cả hai mốc, hết hạn theo cái nào tới trước — fail-closed với cả hai
+       kiểu hỏng, giá phải trả là hai số thực mỗi phiên.
+    """
+    return (bay_gio_m - p['cham_m'] > GIAY_NGHI_PHIEN
+            or bay_gio_w - p['cham_w'] > GIAY_NGHI_PHIEN
+            or bay_gio_m - p['tao_m'] > GIAY_TOI_DA_PHIEN
+            or bay_gio_w - p['tao_w'] > GIAY_TOI_DA_PHIEN)
+
+
+def _don_phien_da_khoa(bay_gio_m, bay_gio_w):
+    """Dọn phiên hết hạn. NGƯỜI GỌI PHẢI ĐANG GIỮ KHOA_PHIEN.
+
+       Tách hàm này ra khỏi bản có tự khoá là chuyện sống còn: threading.Lock
+       KHÔNG tái nhập, nên một hàm đã giữ khoá mà gọi sang hàm tự khoá là TREO
+       CỨNG máy chủ ngay phiên hết hạn đầu tiên — giáo viên chỉ còn đường Ctrl+C
+       mà không hiểu vì sao. Đừng chữa bằng RLock: RLock giấu mất chỗ nào đang
+       giữ khoá bao lâu.
+    """
+    chet = [m for m, p in CAC_PHIEN.items() if _het_han(p, bay_gio_m, bay_gio_w)]
+    for m in chet:
+        CAC_PHIEN.pop(m, None)
+        PHIEN_THEM.pop(m, None)
+    return len(chet)
+
+
+def tao_phien():
+    """Cấp một phiên MỚI. Trả (ma, ban_ghi).
+
+       Mã do secrets.token_urlsafe(32) sinh ra ở ĐÂY — không bao giờ nhận nuôi
+       mã do khách gửi lên. Đó chính là cách chống cố định phiên, và nó phải
+       đúng ngay từ bước chưa có mật khẩu: 2A-1 sẽ cấp lại mã mới một lần nữa
+       sau khi mật khẩu đúng.
+    """
+    m, w = time.monotonic(), time.time()
+    with KHOA_PHIEN:
+        _don_phien_da_khoa(m, w)
+        if len(CAC_PHIEN) >= TRAN_PHIEN:
+            # Đầy thì đuổi cái ngồi không lâu nhất. KHÔNG từ chối người mới —
+            # từ chối là biến một cái trần kỹ thuật thành cánh cửa đóng sập vào
+            # mặt người dùng hợp lệ.
+            cu = min(CAC_PHIEN, key=lambda x: CAC_PHIEN[x]['cham_m'])
+            CAC_PHIEN.pop(cu, None)
+            PHIEN_THEM.pop(cu, None)
+        ma = secrets.token_urlsafe(32)
+        CAC_PHIEN[ma] = {'tao_m': m, 'tao_w': w, 'cham_m': m, 'cham_w': w}
+        PHIEN_THEM[ma] = []
+        return ma, CAC_PHIEN[ma]
+
+
+def doc_phien(ma):
+    """Tra phiên còn hiệu lực. Hết hạn thì XOÁ rồi trả None.
+
+       NƠI DUY NHẤT quyết định "phiên này còn dùng được không".
+    """
+    if not ma:
+        return None
+    m, w = time.monotonic(), time.time()
+    with KHOA_PHIEN:
+        _don_phien_da_khoa(m, w)
+        p = CAC_PHIEN.get(ma)
+        if p is None:
+            return None
+        p['cham_m'], p['cham_w'] = m, w      # mọi yêu cầu qua cổng đều làm tươi
+        return p
+
+
+def xoa_phien(ma):
+    with KHOA_PHIEN:
+        co = CAC_PHIEN.pop(ma, None) is not None
+        PHIEN_THEM.pop(ma, None)
+        return co
+
+
+def xoa_sach_phien():
+    """Đường công khai cho ca thử dựng lại trạng thái sạch."""
+    with KHOA_PHIEN:
+        CAC_PHIEN.clear()
+        PHIEN_THEM.clear()
+
+
+def nhap_cua(ma):
+    """Danh sách quy tắc nháp của riêng phiên này (không bao giờ trả None)."""
+    with KHOA_PHIEN:
+        return PHIEN_THEM.setdefault(ma, [])
+
 
 def _chuan_ten_may(gt):
     """Chuẩn hoá một giá trị Host/Origin TRƯỚC khi so khớp.
@@ -458,9 +577,9 @@ def _chep_ben(nguon, dich):
 #  độ; dòng lệnh truyền None nên im lặng y như trước.
 #  tests/thu_web.py vẫn so từng ô của file Excel giữa hai đường chạy.
 
-def _chay(tuan, seed, so_lan, tat):
+def _chay(ma_phien, tuan, seed, so_lan, tat):
     try:
-        cfg, _ = cau_hinh_phien()
+        cfg, _ = cau_hinh_phien(ma_phien)
         if tuan:
             cfg['thong_tin']['tuan'] = tuan
         for i in tat:                       # tắt quy tắc cho riêng lượt này
@@ -618,16 +737,21 @@ def lich_gv(bt):
 # 3. ĐỌC / GHI QUY TẮC
 # ==========================================================================
 
-def cau_hinh_phien():
-    """cauhinh.json + các quy tắc vừa thêm trong phiên. Không đụng file."""
+def cau_hinh_phien(ma_phien):
+    """cauhinh.json + các quy tắc nháp CỦA RIÊNG phiên này. Không đụng file.
+
+       Tham số ma_phien là BẮT BUỘC, không có giá trị mặc định — cố ý. Để mặc
+       định thì chỗ nào quên truyền sẽ lặng lẽ đọc nháp của người khác, đúng lỗi
+       vừa bịt; thiếu tham số thì vỡ ngay bằng TypeError lúc chạy.
+    """
     cfg = X.doc_cau_hinh(DUONG_DAN_CAUHINH)
     tu_file = [r for r in cfg.get('quy_tac', []) if isinstance(r, dict)]
-    cfg['quy_tac'] = tu_file + [copy.deepcopy(r) for r in PHIEN['them']]
+    cfg['quy_tac'] = tu_file + [copy.deepcopy(r) for r in nhap_cua(ma_phien)]
     return cfg, len(tu_file)
 
 
-def doc_quy_tac():
-    cfg, so_file = cau_hinh_phien()
+def doc_quy_tac(ma_phien):
+    cfg, so_file = cau_hinh_phien(ma_phien)
     ds = []
     for i, r in enumerate(cfg['quy_tac']):
         ds.append({'i': i, 'loai': r.get('loai', '?'),
@@ -637,7 +761,8 @@ def doc_quy_tac():
                    'moi': i >= so_file,          # chưa lưu xuống file
                    'noi_dung': {k: v for k, v in r.items()
                                 if k not in ('loai', 'ghi_chu', 'bat')}})
-    return {'quy_tac': ds, 'so_file': so_file, 'so_moi': len(PHIEN['them']),
+    return {'quy_tac': ds, 'so_file': so_file,
+            'so_moi': len(nhap_cua(ma_phien)),
             'tuan': cfg['thong_tin']['tuan'],
             'tim_kiem': cfg.get('tim_kiem', {})}
 
@@ -671,7 +796,7 @@ def gia_tri_chon():
     }
 
 
-def them_quy_tac(r):
+def them_quy_tac(ma_phien, r):
     """Dựng thử BaiToan trước khi nhận. Khai sai thì SystemExit bay lên trên
        và người gọi hiện nguyên văn ra trang."""
     if not isinstance(r, dict):
@@ -681,32 +806,33 @@ def them_quy_tac(r):
                          '      Câu này hiện nguyên văn trên bảng đối chiếu '
                          'và trên sheet "Kiểm tra quy tắc", nên không được '
                          'để trống.')
-    cfg, _ = cau_hinh_phien()
+    cfg, _ = cau_hinh_phien(ma_phien)
     cfg['quy_tac'].append(copy.deepcopy(r))
     X.BaiToan(cfg)                     # ném SystemExit nếu khai sai
-    PHIEN['them'].append(copy.deepcopy(r))
-    return doc_quy_tac()
+    nhap_cua(ma_phien).append(copy.deepcopy(r))
+    return doc_quy_tac(ma_phien)
 
 
-def xoa_quy_tac(i):
-    _, so_file = cau_hinh_phien()
+def xoa_quy_tac(ma_phien, i):
+    _, so_file = cau_hinh_phien(ma_phien)
     if i < so_file:
         raise SystemExit(
             '[LỖI] Chỉ xoá được quy tắc vừa thêm trong phiên này.\n'
             '      Quy tắc đã có trong cauhinh.json thì dùng công tắc để tắt, '
             'rồi bấm "Lưu vào cauhinh.json".')
     j = i - so_file
-    if not 0 <= j < len(PHIEN['them']):
+    nhap = nhap_cua(ma_phien)
+    if not 0 <= j < len(nhap):
         raise SystemExit('[LỖI] Không có quy tắc thứ %d để xoá.' % i)
-    PHIEN['them'].pop(j)
-    return doc_quy_tac()
+    nhap.pop(j)
+    return doc_quy_tac(ma_phien)
 
 
-def thu_quy_tac(r, tat):
+def thu_quy_tac(ma_phien, r, tat):
     """Xếp thử rút gọn để xem thêm quy tắc này còn xếp được không.
        Chạy thẳng trong luồng HTTP vì đã chặn cứng 30 lần thử / 8 giây —
        khác hẳn lượt xếp thật (~50 giây) nên không được làm như vậy ở /api/xep."""
-    cfg, _ = cau_hinh_phien()
+    cfg, _ = cau_hinh_phien(ma_phien)
     if r:
         cfg['quy_tac'].append(copy.deepcopy(r))
     for i in tat:
@@ -790,7 +916,7 @@ def _xoay_sao_luu(tm):
     return bak
 
 
-def luu_quy_tac(tat):
+def luu_quy_tac(ma_phien, tat):
     """Ghi cờ bật/tắt vào cauhinh.json. Sao lưu trước, giữ nguyên thứ tự khoá.
 
        Ghi NGUYÊN TỬ. Trước đây thứ tự là:
@@ -808,8 +934,10 @@ def luu_quy_tac(tat):
        còn cảnh hai luồng cùng mở tệp ở chế độ 'w'.
     """
     with KHOA_GHI:
-        cfg, so_file = cau_hinh_phien()             # dict giữ thứ tự khoá
-        n = len(PHIEN['them'])
+        cfg, so_file = cau_hinh_phien(ma_phien)     # dict giữ thứ tự khoá
+        nhap = nhap_cua(ma_phien)
+        so_nhap = len(nhap)          # CHỤP số lượng ngay lúc dựng cfg
+        n = so_nhap                  # n đếm SỐ THAY ĐỔI, không phải số nháp
         for i, r in enumerate(cfg['quy_tac']):
             muon_bat = i not in tat
             if i < so_file and bool(r.get('bat', True)) != muon_bat:
@@ -847,7 +975,10 @@ def luu_quy_tac(tat):
         # 5. ép CÁI TÊN vừa đổi xuống đĩa nốt
         _dong_bo_thu_muc(tm)
 
-        PHIEN['them'].clear()                         # đã nằm trong file rồi
+        # Xoá ĐÚNG số phần tử đã chụp ở đầu hàm, không .clear(): cùng một người
+        # mở hai tab thì tab kia có thể vừa thêm nháp trong lúc hàm này chạy, và
+        # .clear() sẽ nuốt mất bản nháp đó trong im lặng.
+        del nhap[:so_nhap]
         return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
 
 
@@ -869,6 +1000,94 @@ class May(BaseHTTPRequestHandler):
         return self.server_version
 
     # ---------------- PHỄU PHÁT PHẢN HỒI ----------------
+    # ---------------- PHIÊN ----------------
+    def _di_qua_tls(self):
+        """Yêu cầu này tới bằng đường có TLS không? SUY TỪ Host, không từ cấu hình.
+
+           Vì sao không làm một khoá `cookie_secure` trong tệp cấu hình như thói
+           quen: mọi giá trị mặc định của cái cờ đó đều có một trạng thái hỏng,
+           và hỏng TRONG IM LẶNG — đăng nhập trả 200, trình duyệt vứt cookie
+           `Secure` đi vì trang đang chạy http, yêu cầu kế 401, quay lại ô mật
+           khẩu, không một chữ giải thích. Bật nhầm thì hỏng đường chạy tại chỗ;
+           quên bật thì hỏng đường qua proxy. Suy từ Host thì không có trạng
+           thái nào sai được.
+
+           Tin được vì Host đã đi qua danh sách trắng A1 NGAY TRƯỚC ĐÓ.
+           Tập loopback ở đây là CỐ ĐỊNH, không phải danh sách cho phép — câu
+           hỏi là "đường này có TLS không", khác câu "tên này có được phép không".
+        """
+        host = _chuan_ten_may(self._mot_dong_duy_nhat('Host') or '')
+        cong = self.server.server_address[1]
+        return host not in {f'127.0.0.1:{cong}', f'localhost:{cong}',
+                            f'[::1]:{cong}', '127.0.0.1', 'localhost'}
+
+    def _ten_cookie(self):
+        """ĐÚNG MỘT tên cookie cho chế độ hiện tại — không bao giờ thử cả hai.
+
+           Tiền tố __Host- đòi phải có cờ Secure, mà Secure trên http:// thì
+           trình duyệt vứt đi; nên đường tại chỗ buộc phải dùng tên trơn.
+
+           Vì sao __Host- đáng có ở đường TLS: ts.net nằm trong Public Suffix
+           List, nên tail7dc28e.ts.net là một tên ĐĂNG KÝ ĐƯỢC — một máy khác
+           trong cùng tailnet đặt được cookie Domain=tail7dc28e.ts.net và trình
+           duyệt sẽ GỬI NÓ SANG máy quản trị này. Tiền tố __Host- cấm thuộc tính
+           Domain nên bịt đúng đường đó.
+
+           Và vì sao chỉ đọc MỘT tên: viết "thử __Host- trước, không có thì thử
+           tên trơn" là tự mở lại đúng cái lỗ vừa bịt — kẻ kia chỉ cần đặt tên
+           trơn là được đọc.
+        """
+        return TEN_COOKIE_BM if self._di_qua_tls() else TEN_COOKIE
+
+    def _ma_phien(self):
+        """Mã phiên khách gửi lên, hoặc None. HÀM TOÀN PHẦN — không bao giờ ném.
+
+           Không dùng http.cookies.SimpleCookie: gặp một mẩu dị dạng là nó nuốt
+           luôn phần còn lại hoặc ném CookieError, mà ở đây dị dạng phải cho ra
+           "không có phiên" chứ không phải 500.
+        """
+        dong = self._mot_dong_duy_nhat('Cookie')
+        if not dong:
+            return None
+        can = self._ten_cookie()
+        for mau in dong.split(';'):
+            if '=' not in mau:
+                continue
+            ten, _, gt = mau.partition('=')
+            if ten.strip() == can:
+                gt = gt.strip()
+                # token_urlsafe chỉ sinh [A-Za-z0-9_-]; lọc ở đây để chuỗi rác
+                # không bao giờ thành khoá tra bảng.
+                return gt if gt and re.fullmatch(r'[A-Za-z0-9_-]{1,128}', gt) else None
+        return None
+
+    def _phien(self):
+        """Phiên của trình duyệt này; chưa có thì CẤP MỚI (vô danh).
+
+           Cấp ở đây chứ không ở một đường riêng, để mọi đường đều có phiên ngay
+           từ yêu cầu đầu tiên — kể cả người vào thẳng /api/quy-tac.
+        """
+        if self._ph is None:
+            ma = self._ma_phien()
+            p = doc_phien(ma)
+            if p is None:
+                ma, p = tao_phien()
+                self._cookie_moi = ma      # _tra_byte sẽ đính Set-Cookie
+            self._ph = (ma, p)
+        return self._ph[0]
+
+    def _dong_cookie(self, ma):
+        """Dòng Set-Cookie. SameSite=Lax khai TƯỜNG MINH — xem ghi chú."""
+        phan = [f'{self._ten_cookie()}={ma}', 'Path=/', 'HttpOnly',
+                # Khai Lax TƯỜNG MINH, đừng bỏ trống cho "giống mặc định":
+                # Chrome có ngoại lệ "Lax+POST 2 phút" cho phép POST cross-site
+                # cấp cao nhất mang theo cookie, và ngoại lệ đó CHỈ áp cho cookie
+                # KHÔNG khai SameSite. Bỏ trống không giống khai Lax.
+                'SameSite=Lax']
+        if self._di_qua_tls():
+            phan.append('Secure')          # __Host- đòi Secure, và đã có TLS thật
+        return '; '.join(phan)
+
     def _tra_byte(self, ma, tieu_de, than):
         """Nơi DUY NHẤT được gọi send_response() và send_header().
 
@@ -882,7 +1101,12 @@ class May(BaseHTTPRequestHandler):
         """
         if isinstance(than, str):
             than = than.encode('utf-8')
-        dong = list(tieu_de) + [('Content-Length', str(len(than)))]
+        dong = list(tieu_de)
+        if self._cookie_moi:
+            # Đính ở ĐÂY để cookie cũng đi qua đúng phễu kiểm tiêu đề (A10),
+            # thay vì gọi thẳng send_header ở chỗ khác.
+            dong.append(('Set-Cookie', self._dong_cookie(self._cookie_moi)))
+        dong += [('Content-Length', str(len(than)))]
         for ten, gt in dong:                 # 1. KIỂM HẾT — có thể ném
             _kiem_tieu_de(ten, gt)
         self.send_response(ma)               # 2. giờ mới phát dòng trạng thái
@@ -972,6 +1196,11 @@ class May(BaseHTTPRequestHandler):
                 f'{", ".join(sorted(self._ten_may_cho_phep()))}\n'
                 f'      Thêm tên mới thì sửa cauhinh_may_chu.json rồi chạy lại '
                 f'web.py.')
+
+        # Cookie cũng chỉ được đúng một dòng: hai dòng thì headers.get() lấy
+        # dòng đầu, mà một công cụ trung gian có thể chọn dòng khác ta — đúng
+        # kiểu lệch-cách-hiểu mà A1 sinh ra để chặn.
+        self._mot_dong_duy_nhat('Cookie')
 
         tho_org = self._mot_dong_duy_nhat('Origin')
         if tho_org is not None:
@@ -1124,10 +1353,17 @@ class May(BaseHTTPRequestHandler):
         return d
 
     # ---------------- GET ----------------
+    def _bat_dau(self):
+        """Đặt lại trạng thái cho MỘT yêu cầu. Gọi ở đầu do_GET/do_POST."""
+        self._ph = None
+        self._cookie_moi = None
+
     def do_GET(self):
         duong = self.path.split('?')[0]
+        self._bat_dau()
         try:
             self._kiem_nguon_goc(co_than=False)
+            self._phien()                 # cấp phiên vô danh nếu chưa có
             if duong in ('/', '/index.html'):
                 return self._tinh('index.html')
             if duong.startswith('/web/'):
@@ -1135,7 +1371,7 @@ class May(BaseHTTPRequestHandler):
             if duong == '/api/trang-thai':
                 return self._trang_thai()
             if duong == '/api/quy-tac':
-                return self._json(doc_quy_tac())
+                return self._json(doc_quy_tac(self._phien()))
             if duong == '/api/loai-quy-tac':
                 return self._json(danh_muc_loai())
             if duong == '/api/gia-tri':
@@ -1219,17 +1455,20 @@ class May(BaseHTTPRequestHandler):
     # ---------------- POST ----------------
     def do_POST(self):
         duong = self.path.split('?')[0]
+        self._bat_dau()
         try:
             self._kiem_nguon_goc(co_than=True)
+            self._phien()                 # cấp phiên vô danh nếu chưa có
             if duong == '/api/xep':
                 return self._xep()
             if duong == '/api/luu-quy-tac':
                 return self._luu()
             if duong == '/api/them-quy-tac':
                 return self._json(them_quy_tac(
+                    self._phien(),
                     self._than_json(bat_buoc=True).get('quy_tac')))
             if duong == '/api/xoa-quy-tac':
-                return self._json(xoa_quy_tac(self._chi_so()))
+                return self._json(xoa_quy_tac(self._phien(), self._chi_so()))
             if duong == '/api/thu-quy-tac':
                 return self._thu()
             self._tra(404, 'text/plain', 'Không có trang này')
@@ -1259,7 +1498,8 @@ class May(BaseHTTPRequestHandler):
         if not gianh_luot():
             return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
         try:
-            threading.Thread(target=_chay, args=(tuan, seed, so_lan, tat),
+            threading.Thread(target=_chay,
+                             args=(self._phien(), tuan, seed, so_lan, tat),
                              daemon=True).start()
         except BaseException:
             dat(dang_chay=False, xong=True)     # nhả chỗ, đừng kẹt mãi
@@ -1285,7 +1525,7 @@ class May(BaseHTTPRequestHandler):
             return self._json({'loi': 'Đang thử một quy tắc khác, đợi vài giây '
                                       'rồi bấm lại.'}, 409)
         try:
-            return self._json(thu_quy_tac(d.get('quy_tac'), tat))
+            return self._json(thu_quy_tac(self._phien(), d.get('quy_tac'), tat))
         finally:
             KHOA_THU.release()
 
@@ -1296,7 +1536,7 @@ class May(BaseHTTPRequestHandler):
                 '[LỖI] Yêu cầu lưu thiếu danh sách "tat".\n'
                 '      Không có danh sách này thì không biết quy tắc nào bị '
                 'tắt — ghi bừa xuống tệp là bật lại hết.')
-        return self._json(luu_quy_tac(_tap_chi_so(d['tat'])))
+        return self._json(luu_quy_tac(self._phien(), _tap_chi_so(d['tat'])))
 
     def _chi_so(self):
         d = self._than_json(bat_buoc=True)
