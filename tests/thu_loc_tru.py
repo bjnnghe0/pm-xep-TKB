@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ: KHOÁ "tru" TRONG BỘ LỌC
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_loc_tru.py
+ Chạy:  python3 tests/thu_loc_tru.py
 
  "tru" diễn tả "áp cho tất cả TRỪ trường hợp này":
      "loc": { "nhom_mon": "SHCN", "tru": { "gv": "N.Uyên" } }

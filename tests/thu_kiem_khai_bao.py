@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ: CHƯƠNG TRÌNH PHẢI TỰ BẮT LỖI KHAI SAI THỨ / TIẾT
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_kiem_khai_bao.py
+ Chạy:  python3 tests/thu_kiem_khai_bao.py
 
  Có hai cách ghi tiết, lệch nhau đúng một khoảng:
      "tiet_trong_buoi"  thứ tự trong buổi, 1..5

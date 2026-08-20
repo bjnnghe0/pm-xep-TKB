@@ -88,7 +88,7 @@ def kiem_khoa_quy_tac(r, cls, ghi_chu):
                 + ' / '.join(sorted(hop_le)),
                 goi_y=('      => Khoá lạ bị bỏ qua, nên quy tắc hoá ra KHÔNG cấm '
                        'gì cả mà vẫn báo ĐẠT.',
-                       '         Xem danh mục đầy đủ: python xep_tkb.py --quy-tac'))
+                       '         Xem danh mục đầy đủ: python3 xep_tkb.py --quy-tac'))
     nhom = {}
     for t in cls.TRUONG:
         if t.get('nhom'):
@@ -122,7 +122,7 @@ def bao_loi(ghi_chu, khoa, sai, mo_ta_mien,
                     f'Giá trị {ds} hợp lệ với khoá đó.')
         dong.append(f'         Miền của "{khoa_kia}": {mo_ta_kia}')
     dong.extend(goi_y)
-    dong.append('      Sửa lại rồi chạy: python xep_tkb.py')
+    dong.append('      Sửa lại rồi chạy: python3 xep_tkb.py')
     raise SystemExit('\n'.join(dong))
 
 

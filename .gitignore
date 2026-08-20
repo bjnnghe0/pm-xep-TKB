@@ -25,7 +25,7 @@ cauhinh.tam.json
 cauhinh_may_chu.json
 
 # Tài khoản đăng nhập của máy chủ quản trị — chứa BẢN BĂM mật khẩu.
-# TUYỆT ĐỐI không commit. Mỗi máy tự đặt một lần: python tao_mat_khau.py them
+# TUYỆT ĐỐI không commit. Mỗi máy tự đặt một lần: python3 tao_mat_khau.py them
 #
 # ĐỪNG viết "tai_khoan*" — mẫu đó nuốt luôn tai_khoan.json.mau, mà tệp .mau
 # thì PHẢI được commit để cài lại máy còn biết cấu trúc.

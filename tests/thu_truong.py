@@ -4,10 +4,10 @@
 ==========================================================================
  CA THỬ: KHAI BÁO TRUONG CỦA TỪNG LOẠI QUY TẮC
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_truong.py
+ Chạy:  python3 tests/thu_truong.py
 
  TRUONG liệt kê các khoá cấp cao nhất mà mỗi loại quy tắc chấp nhận.
- Nó phục vụ hai chỗ cùng lúc — bảng "python xep_tkb.py --quy-tac" và
+ Nó phục vụ hai chỗ cùng lúc — bảng "python3 xep_tkb.py --quy-tac" và
  form nhập trên giao diện web — nên chép lại sang JS là chắc chắn lệch.
 
  Trước khi có TRUONG, đo được: cả 17/17 loại đều cho khoá bịa lọt qua.

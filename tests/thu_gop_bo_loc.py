@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ: MỘT BỘ LỌC DUY NHẤT CHO CẢ HAI CHỖ
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_gop_bo_loc.py
+ Chạy:  python3 tests/thu_gop_bo_loc.py
 
  Trước đây có HAI bản cài bộ lọc:
    quy_tac.QuyTac.khop()        dùng cho mọi loại quy tắc  — hiểu la_chuyen_de

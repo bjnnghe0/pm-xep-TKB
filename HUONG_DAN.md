@@ -27,22 +27,38 @@ sửa code. Tra cứu đầy đủ 17 loại quy tắc: **`QUY_TAC.md`**.
 
 ## 2. Cài đặt (làm một lần)
 
+*(Phần này viết cho máy **Windows** của nhà trường.)*
+
 1. Cài **Python** tại python.org — nhớ tick **"Add Python to PATH"** ở màn hình đầu.
 2. Mở Command Prompt, gõ: `pip install openpyxl`
+
+Trên **Linux / macOS** thì Python có sẵn, chỉ cần `pip3 install openpyxl`.
 
 ## 3. Chạy
 
 Bấm đúp `chay.bat`, hoặc mở Command Prompt tại thư mục này:
 
+> **Gõ `python3` hay gõ `python`? — tuỳ máy, và chỉ khác đúng chữ số 3.**
+>
+> | Máy | Mở lệnh bằng |
+> |---|---|
+> | **Windows** (máy ở trường) | `python` — hoặc khỏi gõ gì cả, bấm đúp `chay.bat` |
+> | **Linux / macOS** | `python3` |
+>
+> Bản cài từ python.org cho Windows chỉ tạo lệnh tên `python`; gõ `python3` ở
+> đó sẽ mở nhầm Microsoft Store. Ngược lại, nhiều bản Linux **không có** lệnh
+> `python` mà chỉ có `python3`. Các dòng lệnh viết dưới đây theo dạng
+> `python3`; ở Windows thì bỏ chữ số 3 đi là đúng.
+
 ```
-python xep_tkb.py                      xếp và xuất Excel
-python xep_tkb.py --quy-tac            xem danh mục quy tắc + mẫu chép sẵn
-python xep_tkb.py --in-man-hinh        xem luôn TKB trên màn hình
-python xep_tkb.py --seed 99            ra một phương án khác hẳn
-python xep_tkb.py --xuat TKB_T3.xlsx   đổi tên file kết quả
-python xep_tkb.py --tuan "TUẦN 3 ..."  đổi dòng chữ tuần, không phải mở file
-python xep_tkb.py --xuat-html          xuất thêm trang web tkb_web.html để chia sẻ
-python tu_kiem_tra.py                  chạy thử toàn bộ các loại quy tắc
+python3 xep_tkb.py                      xếp và xuất Excel
+python3 xep_tkb.py --quy-tac            xem danh mục quy tắc + mẫu chép sẵn
+python3 xep_tkb.py --in-man-hinh        xem luôn TKB trên màn hình
+python3 xep_tkb.py --seed 99            ra một phương án khác hẳn
+python3 xep_tkb.py --xuat TKB_T3.xlsx   đổi tên file kết quả
+python3 xep_tkb.py --tuan "TUẦN 3 ..."  đổi dòng chữ tuần, không phải mở file
+python3 xep_tkb.py --xuat-html          xuất thêm trang web tkb_web.html để chia sẻ
+python3 tu_kiem_tra.py                  chạy thử toàn bộ các loại quy tắc
 ```
 
 > **Mẹo:** mỗi `--seed` cho một phương án khác nhau nhưng đều hợp lệ.
@@ -55,7 +71,7 @@ Không phải nhớ lệnh nào cả.
 **Khởi động:** mở Command Prompt tại thư mục này, gõ:
 
 ```
-python web.py
+python3 web.py
 ```
 
 rồi mở trình duyệt (Chrome, Edge, Firefox — cái nào cũng được) vào địa chỉ:
@@ -64,7 +80,7 @@ rồi mở trình duyệt (Chrome, Edge, Firefox — cái nào cũng được) v
 http://127.0.0.1:20266
 ```
 
-Muốn dùng cổng khác: `python web.py --port 8080`.
+Muốn dùng cổng khác: `python3 web.py --port 8080`.
 
 **Tắt:** quay lại cửa sổ Command Prompt, bấm **Ctrl + C**, hoặc đóng luôn cửa sổ đó.
 Đóng trình duyệt thôi thì chưa tắt máy chủ.
@@ -88,7 +104,7 @@ trong khung đỏ và máy chủ vẫn chạy — cứ sửa file rồi bấm x�
 
 ## 3b. Chia sẻ thời khoá biểu cho giáo viên và học sinh
 
-`python xep_tkb.py --xuat-html` (hoặc nút **Xuất trang web** trên giao diện) sinh
+`python3 xep_tkb.py --xuat-html` (hoặc nút **Xuất trang web** trên giao diện) sinh
 ra **`tkb_web.html`** — một file duy nhất, mở bằng điện thoại cũng đọc tốt, xem
 được theo lớp / theo giáo viên / cả khối.
 
@@ -127,7 +143,7 @@ Mở `cauhinh.json` bằng Notepad, tìm mục `"quy_tac"`, chép thêm một kh
 ```
 
 Ba việc cần làm:
-1. Chọn `loai` phù hợp — xem `QUY_TAC.md` hoặc chạy `python xep_tkb.py --quy-tac`.
+1. Chọn `loai` phù hợp — xem `QUY_TAC.md` hoặc chạy `python3 xep_tkb.py --quy-tac`.
 2. Viết `ghi_chu` bằng tiếng Việt — câu này hiện nguyên văn ở sheet "Kiểm tra quy tắc".
 3. Chạy lại chương trình, xem dòng tương ứng có báo ĐẠT không.
 
@@ -148,7 +164,7 @@ Hằng tuần chỉ đổi mỗi dòng chữ này thì **không cần mở file 
 ngoài dòng lệnh là xong:
 
 ```
-python xep_tkb.py --tuan "TUẦN 3 (07/9/2026-12/9/2026)"
+python3 xep_tkb.py --tuan "TUẦN 3 (07/9/2026-12/9/2026)"
 ```
 
 `--tuan` chỉ đổi chữ in lên TKB của lần chạy đó, `cauhinh.json` giữ nguyên.

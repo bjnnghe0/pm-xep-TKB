@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ: TRANG WEB TĨNH tkb_web.html
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_xuat_html.py
+ Chạy:  python3 tests/thu_xuat_html.py
 
  Trang này đưa lên Internet cho giáo viên và học sinh xem, mà cũng phải
  mở được bằng cách bấm đúp file từ USB khi trường mất mạng. Nên hai điều

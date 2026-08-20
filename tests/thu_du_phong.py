@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ NHÁNH DỰ PHÒNG CỦA xep_tkb.main()
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_du_phong.py
+ Chạy:  python3 tests/thu_du_phong.py
 
  Nhánh dự phòng là nhánh chạy khi MỌI lời giải đều trượt hậu kiểm. Bộ quy
  tắc thật không bao giờ chạm tới nhánh này, nên ở đây phải tự ép nó xảy ra

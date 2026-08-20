@@ -115,7 +115,8 @@ Bấm đúp **`dua_len.bat`**. Nó sẽ tự: xếp TKB → xuất trang web →
 `docs/` → đẩy lên GitHub. Lần đầu mất khoảng 1 phút rưỡi.
 
 > Máy không cài được git? Vẫn làm được bằng tay: chạy
-> `python xep_tkb.py --xuat-html`, đổi tên `tkb_web.html` thành `index.html`,
+> `python3 xep_tkb.py --xuat-html` (trên Windows gõ `python`, không có chữ số 3
+> — xem mục 3 của `HUONG_DAN.md`), đổi tên `tkb_web.html` thành `index.html`,
 > rồi trên GitHub bấm **Add file** → **Upload files**, kéo tệp vào, bấm
 > **Commit changes**. Tuần nào cũng làm lại bốn thao tác đó.
 
@@ -158,7 +159,7 @@ cũng dùng đúng nó.
 # PHẦN B — LÀM HẰNG TUẦN (2 phút)
 
 1. Mở `cauhinh.json`, sửa dòng `"tuan"` thành tuần mới.
-   *(Hoặc bỏ qua bước này rồi dùng `python xep_tkb.py --tuan "TUẦN 3 (...)"`.)*
+   *(Hoặc bỏ qua bước này rồi dùng `python3 xep_tkb.py --tuan "TUẦN 3 (...)"`.)*
 2. Bấm đúp **`dua_len.bat`**
 3. Đợi nó chạy xong (~1 phút rưỡi), đọc dòng cuối
 4. Đợi thêm 1–2 phút, mở link kiểm tra dòng **"Xuất lúc ..."**

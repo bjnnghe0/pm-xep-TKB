@@ -6,13 +6,13 @@
  Trường Cao đẳng Đà Lạt
 --------------------------------------------------------------------------
  Cách dùng:
-     python xep_tkb.py                     chạy với cauhinh.json
-     python xep_tkb.py --quy-tac           xem danh mục quy tắc có thể dùng
-     python xep_tkb.py --in-man-hinh       xem luôn TKB trên màn hình
-     python xep_tkb.py --seed 99           ra một phương án khác
-     python xep_tkb.py --xuat TKB_T3.xlsx  đổi tên file kết quả
-     python xep_tkb.py --tuan "TUẦN 3"    đổi dòng chữ tuần in trên TKB
-     python xep_tkb.py --xuat-html         xuất thêm trang web tĩnh tkb_web.html
+     python3 xep_tkb.py                     chạy với cauhinh.json
+     python3 xep_tkb.py --quy-tac           xem danh mục quy tắc có thể dùng
+     python3 xep_tkb.py --in-man-hinh       xem luôn TKB trên màn hình
+     python3 xep_tkb.py --seed 99           ra một phương án khác
+     python3 xep_tkb.py --xuat TKB_T3.xlsx  đổi tên file kết quả
+     python3 xep_tkb.py --tuan "TUẦN 3"    đổi dòng chữ tuần in trên TKB
+     python3 xep_tkb.py --xuat-html         xuất thêm trang web tĩnh tkb_web.html
 
  Dữ liệu và quy tắc nằm hết trong cauhinh.json.
  Định nghĩa các loại quy tắc nằm trong quy_tac.py.
@@ -241,7 +241,7 @@ class BaiToan:
             if loai not in QT.DANH_MUC:
                 raise SystemExit(
                     f'[LỖI] Không có loại quy tắc "{loai}".\n'
-                    f'       Chạy: python xep_tkb.py --quy-tac  để xem danh mục.')
+                    f'       Chạy: python3 xep_tkb.py --quy-tac  để xem danh mục.')
             self.quy_tac.append(QT.DANH_MUC[loai](r, self))
 
         for q in self.quy_tac:
@@ -649,7 +649,13 @@ def xuat_excel(bt, pa, file_mau, file_xuat):
         import openpyxl
         from openpyxl.styles import Font, Alignment, Border, Side
     except ImportError:
-        raise SystemExit('[LỖI] Thiếu thư viện openpyxl. Chạy: pip install openpyxl')
+        raise SystemExit(
+            '[LỖI] Thiếu thư viện openpyxl.\n'
+            '      Windows: pip install openpyxl\n'
+            '      Linux/macOS: python3 -m pip install openpyxl\n'
+            '      (Linux chặn cài vào hệ thống thì dựng một venv riêng:\n'
+            '       python3 -m venv ~/.venvs/xeptkb'
+            ' && ~/.venvs/xeptkb/bin/pip install openpyxl)')
 
     if not os.path.exists(file_mau):
         raise SystemExit(f'[LỖI] Không tìm thấy file mẫu: {file_mau}')

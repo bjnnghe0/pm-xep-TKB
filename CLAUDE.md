@@ -12,28 +12,29 @@ Người dùng cuối là giáo viên, **không biết lập trình**: họ ch�
 ## Lệnh hay dùng
 
 ```bash
-python xep_tkb.py                      # xếp và xuất TKB_Khoi12.xlsx
-python xep_tkb.py --quy-tac            # in danh mục 17 loại quy tắc + mẫu JSON
-python xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
-python xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
-python xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
-python xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
-python xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
-python xep_tkb.py --xuat-html          # xuất thêm trang web tĩnh tkb_web.html
-python xep_tkb.py --tai-lap            # chế độ TÁI LẬP: cùng seed -> cùng kết quả
-python tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
-python tests/thu_du_phong.py           # thử nhánh dự phòng của main()
-python tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
-python tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
-python tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
-python tests/thu_web.py                # thử giao diện web
-python tests/thu_xuat_html.py          # thử trang web tĩnh
-python tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
-python tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
-python tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
+python3 xep_tkb.py                      # xếp và xuất TKB_Khoi12.xlsx
+python3 xep_tkb.py --quy-tac            # in danh mục 17 loại quy tắc + mẫu JSON
+python3 xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
+python3 xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
+python3 xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
+python3 xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
+python3 xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
+python3 xep_tkb.py --xuat-html          # xuất thêm trang web tĩnh tkb_web.html
+python3 xep_tkb.py --tai-lap            # chế độ TÁI LẬP: cùng seed -> cùng kết quả
+python3 tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
+python3 tests/thu_du_phong.py           # thử nhánh dự phòng của main()
+python3 tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
+python3 tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
+python3 tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
+python3 tests/thu_web.py                # thử giao diện web
+python3 tests/thu_xuat_html.py          # thử trang web tĩnh
+python3 tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
+python3 tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
+python3 tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
+python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh là python3
 
-python web.py                          # giao diện web -> http://127.0.0.1:20266
-python web.py --port 8080              # đổi cổng; Ctrl+C để tắt
+python3 web.py                          # giao diện web -> http://127.0.0.1:20266
+python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
 ```
 
 ### Môi trường Python trên máy này (Linux)
@@ -41,9 +42,15 @@ Máy này **không có `pip`** và không có `python` (chỉ có `python3`), l�
 chặn cài gói vào hệ thống. Đã dựng sẵn một venv dùng chung:
 
 ```bash
-~/.venvs/xeptkb/bin/python xep_tkb.py       # thay cho "python xep_tkb.py"
+~/.venvs/xeptkb/bin/python xep_tkb.py       # thay cho "python3 xep_tkb.py"
 ~/.venvs/xeptkb/bin/python tu_kiem_tra.py
 ```
+
+> **Quy ước của cả tài liệu này:** mọi dòng lệnh đều viết `python3` — đó là dạng
+> đúng cho một máy Linux có openpyxl, và là dạng ca thử `tests/thu_lenh_chay.py`
+> ghim. **Trên máy này** thì thay `python3` bằng `~/.venvs/xeptkb/bin/python`,
+> vì `python3` hệ thống thiếu openpyxl (đã đo: `python3 -c "import openpyxl"`
+> báo `ModuleNotFoundError`). **Trên Windows** thì thay bằng `python`.
 
 Dựng lại khi cần: `python3 -m venv ~/.venvs/xeptkb && ~/.venvs/xeptkb/bin/pip install openpyxl`
 (hiện dùng Python 3.12.3 + openpyxl 3.1.5).
@@ -72,6 +79,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
 | `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
 | `tai_khoan.json` | Bản băm mật khẩu. **Đã gitignore** | Thiếu thì máy chủ TỪ CHỐI khởi động |
@@ -332,7 +340,7 @@ A4, `fitToPage=True`, `fitToWidth=1`, **`fitToHeight=1`**, lề
 lặp lại được:
 
 ```bash
-python -c "import openpyxl; wb=openpyxl.load_workbook('TKB_Khoi12.xlsx'); \
+~/.venvs/xeptkb/bin/python -c "import openpyxl; wb=openpyxl.load_workbook('TKB_Khoi12.xlsx'); \
   [wb.__delitem__(t) for t in ('TKB giáo viên','Kiểm tra quy tắc')]; wb.save('/tmp/in.xlsx')"
 soffice --headless --convert-to pdf --outdir /tmp /tmp/in.xlsx
 pdfinfo /tmp/in.pdf | grep -E 'Pages|Page size'     # phải là: Pages 1, A4
@@ -400,7 +408,7 @@ và bỏ `"bat": false` là dùng được.
 
 ## Giao diện web (`web.py` + `web/`)
 
-`python web.py` → `http://127.0.0.1:20266`. Ctrl+C để tắt.
+`python3 web.py` → `http://127.0.0.1:20266`. Ctrl+C để tắt.
 **Chỉ thư viện chuẩn** (`http.server`, `json`, `threading`), **chỉ bind 127.0.0.1**,
 không tải gì từ mạng. `web.py` **chỉ gọi vào** `xep_tkb.py` / `quy_tac.py`, không
 sửa gì trong đó.
@@ -760,7 +768,7 @@ Ca thử xanh chưa chứng minh được gì cả — phải chứng minh nó *
 ```bash
 cp -r <dự án> /tmp/bancu            # chép sang thư mục tạm, đừng đụng bản thật
 # sửa /tmp/bancu/xep_tkb.py, lùi ĐÚNG dòng vừa đổi về bản cũ
-cd /tmp/bancu && python tests/thu_du_phong.py    # phải thoát mã 1
+cd /tmp/bancu && python3 tests/thu_du_phong.py    # phải thoát mã 1
 ```
 
 Kiểm cả **mục nào** đỏ, không chỉ nhìn mã thoát: đúng những mục nói về hành vi
@@ -772,28 +780,28 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 
 ## Trạng thái đã kiểm chứng (19/8/2026)
 
-- `python xep_tkb.py`: 396 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
+- `python3 xep_tkb.py`: 396 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
   **−26**, **22/22 quy tắc ĐẠT**, xuất `TKB_Khoi12.xlsx`
   đủ 3 sheet, 144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
   New Roman + viền `thin` nguyên vẹn.
-- `python tu_kiem_tra.py`: 17 loại quy tắc đã đăng ký, ca CƠ SỞ + 11 ca thử đều
+- `python3 tu_kiem_tra.py`: 17 loại quy tắc đã đăng ký, ca CƠ SỞ + 11 ca thử đều
   **OK** (~105s), điểm từng ca −36 / −39 / −33 / −43 / −25 / −48 / −55 / −22 / 6 /
   −49 / −50 / 33. 11 loại được thử trực tiếp; 6 loại còn lại (`chi_xep_tiet`,
   `khong_xep_thu`, `khac_ngay`, và 3 loại `uu_tien_*`) được phủ qua ca CƠ SỞ vì
   đã có sẵn trong `cauhinh.json`.
-- `python tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
+- `python3 tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
   dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.
-- `python tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
+- `python3 tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
   khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
-- `python tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
+- `python3 tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
   chỗ lọc thì tụt còn 5/25.
-- `python tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
+- `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
-- `python tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python3 tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
-- `python tests/thu_an_ninh.py`: **202/202 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
+- `python3 tests/thu_an_ninh.py`: **202/202 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
   vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
   A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
   tiêu đề trùng → 166 (6× CA A1). Danh sách tên máy đo trên bộ 202 mục:
@@ -802,11 +810,14 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   Cổng gác mọi đường đo trên bộ 211 mục: thêm đường ghi mới mà quên gác → 210 ·
   bỏ cổng ở `do_POST` → 192 · bỏ cổng ở `do_GET` → 194 ·
   **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.
-- `python tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
+- `python3 tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
-- `python tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
+- `python3 tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
-- `python tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
+- `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (~10s). Lùi `quy_tac.py:125` về
+  `python` trần thì tụt còn 16/19; lùi thêm `web.py:1191` + `tai_khoan.py:123` thì 14/19.
+  Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.
+- `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
   `node` — ca thử không đòi hỏi phải cài `node`.
 - 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.

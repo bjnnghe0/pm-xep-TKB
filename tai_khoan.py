@@ -120,7 +120,7 @@ def _loi(cau):
         f'[LỖI] {cau}\n'
         f'      Máy chủ KHÔNG khởi động khi chưa có tài khoản hợp lệ.\n'
         f'      Đặt tài khoản một lần bằng:\n'
-        f'          python tao_mat_khau.py them\n'
+        f'          python3 tao_mat_khau.py them\n'
         f'          (trên Windows: bấm đúp tao_tai_khoan.bat)')
 
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Chạy thử từng loại quy tắc để chắc chắn tất cả đều hoạt động.
    Dùng khi vừa thêm một loại quy tắc mới vào quy_tac.py:
-       python tu_kiem_tra.py
+       python3 tu_kiem_tra.py
 """
 import copy
 import json

@@ -5,9 +5,9 @@
  GIAO DIỆN WEB CHO PHẦN MỀM XẾP THỜI KHÓA BIỂU
 --------------------------------------------------------------------------
  Chạy:
-     python web.py                 rồi mở http://127.0.0.1:20266
-     python web.py --port 8080     đổi cổng
-     python web.py --cauhinh khac.json
+     python3 web.py                 rồi mở http://127.0.0.1:20266
+     python3 web.py --port 8080     đổi cổng
+     python3 web.py --cauhinh khac.json
 
  Tắt: bấm Ctrl+C ở cửa sổ dòng lệnh, hoặc đóng cửa sổ đó.
 
@@ -1188,7 +1188,7 @@ class May(BaseHTTPRequestHandler):
             # khẩu thay vì đi tạo tài khoản.
             self._bao_loi(duong,
                           '[LỖI] Máy chủ chưa có tài khoản nào.\n'
-                          '      Chạy: python tao_mat_khau.py them', 503)
+                          '      Chạy: python3 tao_mat_khau.py them', 503)
             return True
         if self._ten_dang_nhap() is None:
             self._bao_loi(duong, 'Bạn cần đăng nhập để dùng chức năng này.', 401)

@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ CỔNG ĐĂNG NHẬP  (Đợt 2A-1)
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_dang_nhap.py
+ Chạy:  python3 tests/thu_dang_nhap.py
 
  Tách khỏi thu_an_ninh.py vì HAI TỆP CÓ TIỀN ĐỀ NGƯỢC NHAU: mọi ca trong
  thu_an_ninh giả định khách ĐÃ có quyền (MayChuTam tự đăng nhập sẵn), mọi ca ở

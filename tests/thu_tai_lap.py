@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ CHẾ ĐỘ TÁI LẬP
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_tai_lap.py
+ Chạy:  python3 tests/thu_tai_lap.py
 
  VÌ SAO CÓ TỆP NÀY. Bộ giải bị chặn bằng ĐỒNG HỒ TREO TƯỜNG (60 giây tổng,
  3 giây mỗi lượt), nên hai lần chạy cùng seed vẫn cho số phương án khác nhau

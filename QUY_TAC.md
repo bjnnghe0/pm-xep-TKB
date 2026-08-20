@@ -1,6 +1,6 @@
 # DANH MỤC QUY TẮC XẾP THỜI KHÓA BIỂU
 
-Xem nhanh trong máy: `python xep_tkb.py --quy-tac`
+Xem nhanh trong máy: `python3 xep_tkb.py --quy-tac`
 
 Mọi quy tắc đều nằm trong mục `"quy_tac"` của `cauhinh.json`, dạng một danh sách.
 Thêm quy tắc = chép thêm một khối `{ ... }` vào danh sách đó. Không giới hạn số lượng.
@@ -103,7 +103,7 @@ Viết theo số hiệu tiết in trên TKB thì **cho kết quả y hệt**, ch
 >       Miền hợp lệ: 1..5 (thứ tự trong buổi, 1 = tiết đầu buổi Chiều)
 >       => Có phải bạn định dùng khoá "tiet" không? Giá trị 9, 10 hợp lệ với khoá đó.
 >          Miền của "tiet": số hiệu tiết in trên TKB: 6, 7, 8, 9, 10
->       Sửa lại rồi chạy: python xep_tkb.py
+>       Sửa lại rồi chạy: python3 xep_tkb.py
 > ```
 >
 > Khoá `o` của `khong_xep_o` cũng được kiểm y như vậy, cả phần thứ lẫn phần tiết.
@@ -325,7 +325,7 @@ class KhongCuoiTuan(QuyTac):
         return [self.ten_o(c) for c in self.cac_cum() if c.ngay == cuoi]
 ```
 
-Lưu file, chạy `python tu_kiem_tra.py` để chắc chắn không làm hỏng gì, rồi dùng ngay
+Lưu file, chạy `python3 tu_kiem_tra.py` để chắc chắn không làm hỏng gì, rồi dùng ngay
 trong `cauhinh.json`. Không phải đụng vào `xep_tkb.py`.
 
 **Thông tin có sẵn trong mỗi cụm `c`:** `c.lop` `c.mon` `c.nhom` `c.gv` `c.size`

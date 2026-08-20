@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ: THÊM / XOÁ / LƯU QUY TẮC TỪ GIAO DIỆN WEB
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_them_quy_tac.py
+ Chạy:  python3 tests/thu_them_quy_tac.py
 
  Thêm quy tắc từ giao diện là đường đi nguy hiểm nhất của cả phần mềm:
  nó ghi vào cùng chỗ với dữ liệu khai bằng tay của nhà trường. Nên phải

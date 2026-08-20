@@ -6,12 +6,15 @@
 --------------------------------------------------------------------------
  Chạy tay, cần bàn phím. Trên Windows: bấm đúp tao_tai_khoan.bat
 
-     python tao_mat_khau.py them              thêm người mới
-     python tao_mat_khau.py doi   <tên>       đổi mật khẩu
-     python tao_mat_khau.py tat   <tên>       tạm khoá một người
-     python tao_mat_khau.py bat   <tên>       mở lại
-     python tao_mat_khau.py xoa   <tên>       xoá hẳn
-     python tao_mat_khau.py liet-ke           xem có những ai
+ Các lệnh dưới đây viết theo dạng Linux/macOS. Trên Windows thì gõ "python"
+ (không có chữ số 3) — bản cài từ python.org không tạo lệnh "python3".
+
+     python3 tao_mat_khau.py them              thêm người mới
+     python3 tao_mat_khau.py doi   <tên>       đổi mật khẩu
+     python3 tao_mat_khau.py tat   <tên>       tạm khoá một người
+     python3 tao_mat_khau.py bat   <tên>       mở lại
+     python3 tao_mat_khau.py xoa   <tên>       xoá hẳn
+     python3 tao_mat_khau.py liet-ke           xem có những ai
 
  KHÔNG có tuỳ chọn --mat-khau, và đó là cố ý: mọi thứ gõ trên dòng lệnh đều
  vào lịch sử shell và hiện ra trong "ps aux" cho mọi người dùng khác trên máy.
@@ -80,7 +83,7 @@ def _ghi(dd, ds, cau):
     print('  Tệp này chứa mật khẩu đã băm — ĐỪNG gửi cho ai, ĐỪNG đưa lên '
           'GitHub.')
     print('  (nó đã được .gitignore chặn sẵn)')
-    print('\n  Bây giờ chạy:  python web.py')
+    print('\n  Bây giờ chạy:  python3 web.py')
 
 
 def _tim(ds, ten):
@@ -95,7 +98,7 @@ def lam(viec, ten, dd):
 
     if viec == 'liet-ke':
         if not ds:
-            print('Chưa có tài khoản nào. Chạy: python tao_mat_khau.py them')
+            print('Chưa có tài khoản nào. Chạy: python3 tao_mat_khau.py them')
             return
         print(f'{len(ds)} tài khoản trong {dd}:\n')
         print(f'  {"TÊN ĐĂNG NHẬP":<24}{"TRẠNG THÁI":<12}NGÀY TẠO')
@@ -118,7 +121,7 @@ def lam(viec, ten, dd):
         if i >= 0:
             _dung(f'Đã có tài khoản "{ten}".\n'
                   f'      Muốn đổi mật khẩu thì dùng: '
-                  f'python tao_mat_khau.py doi {ten}')
+                  f'python3 tao_mat_khau.py doi {ten}')
         print(f'\n  Đặt mật khẩu cho "{ten}".')
         print('  Mật khẩu sẽ KHÔNG hiện ra khi gõ — cứ gõ rồi bấm Enter.')
         ds.append(TK.ban_ghi_moi(ten, _hoi_mat_khau()))
@@ -129,7 +132,7 @@ def lam(viec, ten, dd):
 
     if i < 0:
         _dung(f'Không có tài khoản nào tên "{ten}".\n'
-              f'      Xem danh sách: python tao_mat_khau.py liet-ke')
+              f'      Xem danh sách: python3 tao_mat_khau.py liet-ke')
 
     if viec == 'doi':
         print(f'\n  Đổi mật khẩu cho "{ten}".')

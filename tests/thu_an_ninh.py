@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ AN NINH GIAO DIỆN WEB
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_an_ninh.py
+ Chạy:  python3 tests/thu_an_ninh.py
 
  Bảy lỗi tìm được khi rà soát web.py trước lúc thêm đăng nhập. Tất cả đều
  HỎNG NGAY hôm nay khi chạy cục bộ, không đợi tới lúc mở ra Internet.
@@ -1222,7 +1222,7 @@ def ca_a3_khong_lo_traceback(tm):
     def sach(than, nhan):
         """Phản hồi không được chứa dấu vết nội bộ nào."""
         # Dò dấu vết NỘI BỘ, không dò tên tệp trần: thông báo khai báo sai
-        # cố ý kết thúc bằng "Sửa lại rồi chạy: python xep_tkb.py" — đó là
+        # cố ý kết thúc bằng "Sửa lại rồi chạy: python3 xep_tkb.py" — đó là
         # hướng dẫn cho người dùng, không phải rò rỉ.
         xau = [('Traceback', 'dấu vết lỗi'),
                ('File "', 'khung dấu vết lỗi'),

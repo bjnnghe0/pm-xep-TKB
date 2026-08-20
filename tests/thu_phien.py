@@ -4,7 +4,7 @@
 ==========================================================================
  CA THỬ HẠ TẦNG PHIÊN  (Đợt 2A-2a — CHƯA CÓ ĐĂNG NHẬP)
 --------------------------------------------------------------------------
- Chạy:  python tests/thu_phien.py
+ Chạy:  python3 tests/thu_phien.py
 
  Ở bước này phiên trả lời đúng MỘT câu: "bản nháp quy tắc này là của TRÌNH
  DUYỆT nào". Chưa có mật khẩu, chưa có tên người. Đăng nhập (2A-1) lắp lên
