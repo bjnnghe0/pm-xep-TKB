@@ -99,13 +99,16 @@ def ca_1_moi_trinh_duyet_mot_phien(tm):
     dd = cau_hinh_tam(tmx)
 
     with MayChuTam(dd) as (kA, (dia, cong)):
-        kB = Khach(cong)
-        ma, td, _ = kA.yeu_cau('GET', '/api/quy-tac')
+        # Khách MỚI TINH, chưa đăng nhập: đây mới là "yêu cầu đầu tiên".
+        # kA đã được MayChuTam đăng nhập sẵn nên không dùng để thử việc này.
+        k0 = Khach(cong)
+        ma, td, _ = k0.yeu_cau('GET', '/')
         kiem(ma == 200 and td.get('set-cookie'),
              f'Yêu cầu đầu tiên được cấp cookie phiên — {td.get("set-cookie")}')
-        maA = kA.cookie.get(W.TEN_COOKIE)
-        kB.get('/api/quy-tac')
-        maB = kB.cookie.get(W.TEN_COOKIE)
+        kB = Khach(cong)
+        kB.dang_nhap()
+        maA = kA.ma_phien()
+        maB = kB.ma_phien()
         kiem(maA and maB and maA != maB,
              f'Hai trình duyệt, hai mã khác nhau — {maA[:12]}… / {maB[:12]}…')
         kiem(len(maA) >= 32, f'Mã đủ dài (token_urlsafe(32)) — {len(maA)} ký tự')
@@ -114,7 +117,7 @@ def ca_1_moi_trinh_duyet_mot_phien(tm):
         ma, td, _ = kA.yeu_cau('GET', '/api/quy-tac')
         kiem(not td.get('set-cookie'),
              'Yêu cầu sau, đã có cookie hợp lệ -> KHÔNG cấp lại phiên mới')
-        kiem(kA.cookie.get(W.TEN_COOKIE) == maA, 'Và mã giữ nguyên')
+        kiem(kA.ma_phien() == maA, 'Và mã giữ nguyên')
 
 
 # ==========================================================================
@@ -127,6 +130,7 @@ def ca_2_nhap_tach_theo_phien(tm):
 
     with MayChuTam(dd) as (kA, (dia, cong)):
         kB = Khach(cong)
+        kB.dang_nhap()
         n0 = so_qt(dd)
         kiem(n0 and n0 > 0, f'Tệp ban đầu có {n0} quy tắc')
 
@@ -184,7 +188,7 @@ def ca_3_cookie_dung_che_do(tm):
 
         # --- đường TẠI CHỖ (http) ---
         k1 = Khach(cong)
-        _, td, _ = k1.yeu_cau('GET', '/api/quy-tac',
+        _, td, _ = k1.yeu_cau('GET', '/',
                               them={'Host': f'127.0.0.1:{cong}'})
         c1 = (td.get('set-cookie') or [''])[0]
         kiem(c1.startswith(W.TEN_COOKIE + '='),
@@ -196,7 +200,7 @@ def ca_3_cookie_dung_che_do(tm):
 
         # --- đường QUA PROXY (https) ---
         k2 = Khach(cong)
-        _, td, _ = k2.yeu_cau('GET', '/api/quy-tac', them={'Host': TEN})
+        _, td, _ = k2.yeu_cau('GET', '/', them={'Host': TEN})
         c2 = (td.get('set-cookie') or [''])[0]
         kiem(c2.startswith(W.TEN_COOKIE_BM + '='),
              f'Qua proxy: dùng tên {W.TEN_COOKIE_BM} — {c2[:60]}')
@@ -208,6 +212,7 @@ def ca_3_cookie_dung_che_do(tm):
         # --- CẢ HAI đường phải độc lập chạy được, không đường nào kẹt ---
         for nhan, host, kh in (('tại chỗ', f'127.0.0.1:{cong}', k1),
                                ('qua proxy', TEN, k2)):
+            kh.dang_nhap(them={'Host': host})
             ma, _ = kh.post('/api/them-quy-tac', {'quy_tac': NHAP_A},
                             them={'Host': host})
             _, d = kh.js('/api/quy-tac', them={'Host': host})
@@ -217,7 +222,7 @@ def ca_3_cookie_dung_che_do(tm):
 
         # --- CHỈ đọc một tên: gửi tên của chế độ KIA thì không được nhận ---
         k3 = Khach(cong)
-        k3.get('/api/quy-tac', them={'Host': f'127.0.0.1:{cong}'})
+        k3.dang_nhap(them={'Host': f'127.0.0.1:{cong}'})
         ma_tron = k3.cookie[W.TEN_COOKIE]
         k3.post('/api/them-quy-tac', {'quy_tac': NHAP_A},
                 them={'Host': f'127.0.0.1:{cong}'})
@@ -225,10 +230,9 @@ def ca_3_cookie_dung_che_do(tm):
         ma, td, t = k3.yeu_cau('GET', '/api/quy-tac', cookie=False,
                                them={'Host': TEN,
                                      'Cookie': f'{W.TEN_COOKIE}={ma_tron}'})
-        d = json.loads(t.decode('utf-8', 'replace'))
-        kiem(d['so_moi'] == 0,
-             f'Gửi cookie tên TRƠN vào đường proxy -> KHÔNG được nhận, cấp phiên '
-             f'mới — so_moi={d["so_moi"]}')
+        kiem(ma == 401,
+             f'Gửi cookie tên TRƠN vào đường proxy -> KHÔNG được nhận, thành '
+             f'chưa đăng nhập — {ma}')
         kiem(td.get('set-cookie') and
              td['set-cookie'][0].startswith(W.TEN_COOKIE_BM),
              'Và phiên mới cấp dưới đúng tên __Host-')
@@ -251,14 +255,14 @@ def ca_4_cookie_di_dang(tm):
                    f'{W.TEN_COOKIE}=khong-ton-tai-trong-so']
         hong = []
         for c in DI_DANG:
-            ma, td, t = Khach(cong).yeu_cau('GET', '/api/quy-tac', cookie=False,
+            ma, td, t = Khach(cong).yeu_cau('GET', '/', cookie=False,
                                             them={'Cookie': c})
             if ma != 200:
                 hong.append((c[:28], ma))
         kiem(not hong, f'Mọi cookie dị dạng vẫn cho 200 và cấp phiên mới — {hong}')
 
         # hai dòng Cookie -> 400, cùng lý lẽ với Host/Origin
-        ma, _, _ = k.tho_dong('GET', '/api/quy-tac',
+        ma, _, _ = k.tho_dong('GET', '/',
                               [('Host', f'127.0.0.1:{cong}'),
                                ('Cookie', f'{W.TEN_COOKIE}=a'),
                                ('Cookie', f'{W.TEN_COOKIE}=b'),
@@ -268,7 +272,7 @@ def ca_4_cookie_di_dang(tm):
         # không bao giờ nhận nuôi mã do khách bịa (chống cố định phiên)
         BIA = 'B' * 43
         kh = Khach(cong)
-        ma, td, _ = kh.yeu_cau('GET', '/api/quy-tac', cookie=False,
+        ma, td, _ = kh.yeu_cau('GET', '/', cookie=False,
                                them={'Cookie': f'{W.TEN_COOKIE}={BIA}'})
         cap = (td.get('set-cookie') or [''])[0]
         kiem(BIA not in cap,
@@ -293,9 +297,9 @@ def ca_5_het_han_va_tran(tm):
             # --- hết hạn NGHỈ ---
             W.GIAY_NGHI_PHIEN = 0.4
             time.sleep(0.8)
-            _, d = k.js('/api/quy-tac')
-            kiem(d['so_moi'] == 0,
-                 f'Quá hạn NGHỈ -> phiên chết, nháp mất theo — {d["so_moi"]}')
+            ma, _ = k.get('/api/quy-tac')
+            kiem(ma == 401,
+                 f'Quá hạn NGHỈ -> phiên chết, phải đăng nhập lại — {ma}')
             W.GIAY_NGHI_PHIEN = nghi
 
             # Chỗ này chính là phép thử khoá-không-tái-nhập: tao_phien() gọi
@@ -303,22 +307,22 @@ def ca_5_het_han_va_tran(tm):
             # sang gọi bản tự khoá thì máy chủ TREO CỨNG ngay tại đây, và mục
             # dưới sẽ hết giờ chứ không đỏ — nên đo bằng đồng hồ.
             t0 = time.time()
-            ma, _ = k.get('/api/quy-tac')
+            ma, _ = k.get('/')
             kiem(ma == 200 and time.time() - t0 < 5,
                  f'Dọn phiên hết hạn KHÔNG treo (khoá không tái nhập) — '
                  f'{time.time() - t0:.2f}s')
 
             # --- hết hạn TUYỆT ĐỐI, không gia hạn được ---
             k2 = Khach(cong)
+            k2.dang_nhap()
             k2.post('/api/them-quy-tac', {'quy_tac': NHAP_A})
             W.GIAY_TOI_DA_PHIEN = 0.4
             for _ in range(4):                # cứ hỏi liên tục để làm tươi cham_*
                 time.sleep(0.15)
                 k2.get('/api/quy-tac')
-            _, d = k2.js('/api/quy-tac')
-            kiem(d['so_moi'] == 0,
-                 f'Hạn TUYỆT ĐỐI không gia hạn được dù hỏi liên tục — '
-                 f'{d["so_moi"]}')
+            ma, _ = k2.get('/api/quy-tac')
+            kiem(ma == 401,
+                 f'Hạn TUYỆT ĐỐI không gia hạn được dù hỏi liên tục — {ma}')
             W.GIAY_TOI_DA_PHIEN = toi_da
 
             # --- trần phiên: ĐUỔI cái cũ nhất, KHÔNG từ chối người mới ---
@@ -327,7 +331,7 @@ def ca_5_het_han_va_tran(tm):
             ma_cuoi = []
             for i in range(8):
                 kh = Khach(cong)
-                ma, _ = kh.get('/api/quy-tac')
+                ma, _ = kh.get('/')
                 ma_cuoi.append(ma)
             kiem(all(m == 200 for m in ma_cuoi),
                  f'Vượt trần vẫn phục vụ người mới, không từ chối ai — {ma_cuoi}')

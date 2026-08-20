@@ -33,6 +33,7 @@ if GOC_TM not in sys.path:
     sys.path.insert(0, GOC_TM)
 
 import xep_tkb as X          # noqa: E402
+import tai_khoan as TK       # noqa: E402
 import web                   # noqa: E402
 
 
@@ -61,9 +62,17 @@ class MayChuTam:
                ma, than = k.get('/api/quy-tac')
     """
 
-    def __init__(self, duong_dan_cauhinh, may_chu=None):
+    MAT_KHAU = 'matkhau-thu-that-dai'
+    TEN = 'khcbcddl'
+
+    def __init__(self, duong_dan_cauhinh, may_chu=None, tai_khoan=True,
+                 dang_nhap=True):
         self.dd = duong_dan_cauhinh
         self.may_chu = may_chu          # đường dẫn cauhinh_may_chu.json, hoặc None
+        # tai_khoan: True = dựng một tài khoản tạm; False = KHÔNG có tài khoản
+        # nào (để thử nhánh máy-chủ-chưa-cài-xong); hoặc một đường dẫn sẵn.
+        self.tai_khoan = tai_khoan
+        self.dang_nhap = dang_nhap
 
     def __enter__(self):
         web.DUONG_DAN_CAUHINH = os.path.abspath(self.dd)
@@ -75,12 +84,34 @@ class MayChuTam:
         # hoặc tệ hơn là xanh giả.
         self.ghi_chu = web.nap_cau_hinh_may_chu(self.may_chu or os.path.join(
             os.path.dirname(os.path.abspath(self.dd)), 'khong-co-tep-nay.json'))[2]
+        thu_muc = os.path.dirname(os.path.abspath(self.dd))
+        if self.tai_khoan is True:
+            dd_tk = os.path.join(thu_muc, 'tai_khoan.json')
+            if not os.path.exists(dd_tk):
+                TK.ghi(dd_tk, [TK.ban_ghi_moi(self.TEN, self.MAT_KHAU)])
+        elif self.tai_khoan is False:
+            dd_tk = os.path.join(thu_muc, 'khong-co-tai-khoan.json')
+        else:
+            dd_tk = self.tai_khoan
+        web.nap_tai_khoan_may_chu(dd_tk)
+
         self.may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
         self.may.daemon_threads = True
         self.luong = threading.Thread(target=self.may.serve_forever, daemon=True)
         self.luong.start()
         self.dia, self.cong = self.may.server_address
-        return Khach(self.cong), (self.dia, self.cong)
+        k = Khach(self.cong)
+        if self.dang_nhap and self.tai_khoan is not False:
+            # Đăng nhập QUA HTTP THẬT, rồi KHẲNG ĐỊNH là nó thành công. Trả ra
+            # một Khach chưa đăng nhập mà im lặng thì mọi ca thử cũ vẫn xanh
+            # trong khi cổng đăng nhập hỏng hoàn toàn — đúng bẫy xanh giả.
+            ma, _ = k.post('/api/dang-nhap',
+                           {'ten': self.TEN, 'mat_khau': self.MAT_KHAU})
+            if ma != 200 or not k.cookie:
+                raise RuntimeError(
+                    f'MayChuTam: đăng nhập tự động THẤT BẠI (mã {ma}, '
+                    f'cookie {k.cookie})')
+        return k, (self.dia, self.cong)
 
     def __exit__(self, *a):
         self.may.shutdown()
@@ -196,6 +227,12 @@ class Khach:
         except ValueError:
             return ma, None
 
+    def dong_cookie(self):
+        """Dòng 'Cookie: …' của jar hiện tại, hoặc None."""
+        if not self.cookie:
+            return None
+        return ('Cookie', '; '.join(f'{k}={v}' for k, v in self.cookie.items()))
+
     def tho_dong(self, cach, duong, dong, than=None, doc_het=True):
         """Gửi yêu cầu với DANH SÁCH dòng tiêu đề, cho phép TRÙNG TÊN.
 
@@ -209,9 +246,37 @@ class Khach:
         elif isinstance(than, str):
             than = than.encode()
         d = [f'{cach} {duong} HTTP/1.1']
+        # Tự thêm Cookie nếu người gọi chưa tự đặt: từ 2A-1 mọi đường nghiệp vụ
+        # đều đòi đăng nhập, mà các ca thử dị dạng vẫn cần đi tới ĐÚNG chỗ kiểm
+        # của mình (400/413) chứ không dừng sớm ở 401.
+        dong = list(dong)
+        if not any(k.lower() == 'cookie' for k, _ in dong):
+            c = self.dong_cookie()
+            if c:
+                dong.append(c)
         d += [f'{k}: {v}' for k, v in dong]
         goi = ('\r\n'.join(d) + '\r\n\r\n').encode() + (than or b'')
         return self.tho(goi, doc_het=doc_het)
+
+    def dang_nhap(self, ten=None, mat_khau=None, **kw):
+        """Đăng nhập QUA HTTP THẬT rồi khẳng định là thành công.
+
+           Trả về mã phiên mới. Im lặng nuốt lỗi ở đây là để mọi ca thử sau đó
+           xanh giả trong khi cổng đăng nhập hỏng.
+        """
+        ma, t = self.post('/api/dang-nhap',
+                          {'ten': ten or MayChuTam.TEN,
+                           'mat_khau': mat_khau or MayChuTam.MAT_KHAU}, **kw)
+        if ma != 200:
+            raise RuntimeError(f'Khach.dang_nhap THẤT BẠI: mã {ma} — {t[:90]}')
+        return self.ma_phien()
+
+    def ma_phien(self):
+        """Mã phiên đang giữ, dù cookie mang tên nào."""
+        for ten in (web.TEN_COOKIE, web.TEN_COOKIE_BM):
+            if self.cookie.get(ten):
+                return self.cookie[ten]
+        return None
 
     # ---------------- yêu cầu DỊ DẠNG (dành cho ca thử an ninh) ----------------
     def chunked(self, duong, than, kieu='application/json'):
@@ -220,18 +285,22 @@ class Khach:
             than = json.dumps(than, ensure_ascii=False).encode()
         elif isinstance(than, str):
             than = than.encode()
+        c = self.dong_cookie()
+        them_c = f'{c[0]}: {c[1]}\r\n' if c else ''
         goi = (f'POST {duong} HTTP/1.1\r\nHost: {self.host}:{self.cong}\r\n'
                f'Content-Type: {kieu}\r\nTransfer-Encoding: chunked\r\n'
-               f'Connection: close\r\n\r\n').encode()
+               f'{them_c}Connection: close\r\n\r\n').encode()
         goi += hex(len(than))[2:].encode() + b'\r\n' + than + b'\r\n0\r\n\r\n'
         ma, _, t = self.tho(goi)
         return ma, t.decode('utf-8', 'replace')
 
     def khong_do_dai(self, duong, than=b''):
         """POST không có Content-Length và cũng không chunked."""
+        c = self.dong_cookie()
+        them_c = f'{c[0]}: {c[1]}\r\n' if c else ''
         goi = (f'POST {duong} HTTP/1.1\r\nHost: {self.host}:{self.cong}\r\n'
                f'Content-Type: application/json\r\n'
-               f'Connection: close\r\n\r\n').encode() + than
+               f'{them_c}Connection: close\r\n\r\n').encode() + than
         ma, _, t = self.tho(goi)
         return ma, t.decode('utf-8', 'replace')
 

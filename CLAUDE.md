@@ -72,6 +72,11 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS | Chạy khi sửa form quy tắc |
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
+| `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
+| `tai_khoan.json` | Bản băm mật khẩu. **Đã gitignore** | Thiếu thì máy chủ TỪ CHỐI khởi động |
+| `*.json.mau` | Bản mẫu của hai tệp bị gitignore, **có commit** | Để cài lại máy còn biết cấu trúc |
+| `tests/thu_dang_nhap.py` | Cổng đăng nhập: xoay mã phiên · câu chung · hai tài khoản · một lần scrypt mọi nhánh · bốn nhánh từ chối khởi động | Chạy khi sửa cổng đăng nhập |
 | `tests/thu_phien.py` | Hạ tầng phiên: nháp tách theo phiên · hai tên cookie · hết hạn · trần · **đồng hồ canh deadlock** | Chạy khi sửa `tao_phien`/`doc_phien`/cookie |
 | `tests/thu_tai_lap.py` | Chế độ tái lập: cùng seed cho cùng kết quả (cả giữa hai tiến trình), và cấu hình VÔ NGHIỆM vẫn DỪNG | Chạy khi sửa `gop_tim_kiem()` hoặc `tim_phuong_an()` |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
@@ -974,6 +979,55 @@ tự khoá là **treo cứng máy chủ** ngay phiên hết hạn đầu tiên. 
 > mãi một luồng đang kẹt trong khoá). Treo còn tệ hơn vỡ vì nó chặn luôn mọi bộ
 > thử chạy sau. Đã thêm **đồng hồ canh 180 giây** vào `thu_phien.py` để mọi
 > deadlock tương lai thành một dòng đỏ — đo lại: 4/6 mục, thoát 1.
+
+---
+
+## Cổng đăng nhập (2A-1)
+
+**Từ đây, vào được tailnet KHÔNG còn đủ để ghi `cauhinh.json`.**
+
+| Thứ | Cách làm |
+|---|---|
+| Tài khoản | `tai_khoan.json` — **một DÃY**, mỗi người một bản ghi. Thêm người là chạy lại script, không sửa mã |
+| Băm | `scrypt` **đúng một bộ tham số** `{n=16384, r=8, p=1, dklen=32}`, `maxmem` tường minh. Muối 16 byte **riêng từng người**. So bằng `hmac.compare_digest` |
+| Thiếu/hỏng/rỗng/sai kiểu | Máy chủ **TỪ CHỐI KHỞI ĐỘNG**, và chưa hề in dòng "Mở trình duyệt vào" |
+| Sổ rỗng lúc chạy | **503** ("chưa cài xong"), không phải 401 ("chưa đăng nhập") |
+| Tắt một tài khoản | Có hiệu lực **ngay**, phiên đang mở của người đó chết theo (QĐ 3) |
+
+### Xoay mã phiên — chống cố định phiên
+
+Phiên vô danh **KHÔNG BAO GIỜ** được nâng cấp tại chỗ thành phiên đã đăng nhập.
+Đăng nhập thành công thì **huỷ hẳn mã cũ** và **sinh mã mới**.
+
+> Vì sao không dựa vào tiền tố `__Host-` để miễn việc này, dù nó đã chặn được
+> đường gieo cookie: như vậy là đặt an ninh của mình vào một tính năng của trình
+> duyệt thay vì vào mã của mình. Xoay mã tốn ba dòng.
+
+**Nháp thì CHUYỂN sang mã mới, không bỏ.** Thứ kẻ tấn công cần là mã *sau* khi
+đăng nhập; mã đã xoay thì hắn không có, và nháp chuyển hay không không đụng tới
+tính chất đó. Phiên vô danh vốn **không thể** có nháp (mọi đường tạo nháp đều
+đòi xác thực), nên lần đăng nhập đầu chuyển một danh sách rỗng.
+
+> **Nháp sống và chết cùng phiên**, trừ đúng lúc xoay mã. Hết hạn hoặc đăng xuất
+> là nháp mất. Giữ nháp sống lâu hơn phiên nghĩa là giữ một bản ghi tồn tại
+> ngoài phiên — đúng loại trạng thái làm việc suy luận về cố định phiên trở nên
+> khó. (Bản thiết kế ban đầu ghi "hết hạn thì nháp giữ nguyên"; mã làm ngược
+> lại, và đây là quyết định giữ theo mã.)
+
+### Một lần scrypt ở MỌI nhánh
+
+Tên có thật · tên không tồn tại · tên sai cú pháp · tên rỗng — **tất cả** đều
+chạy đúng một lần `scrypt`, dùng bản ghi giả khi cần. Thoát sớm ở bất kỳ nhánh
+nào là mở một kênh đo thời gian để dò xem tài khoản nào có thật.
+
+> **Ca thử đếm SỐ LỜI GỌI, không đo đồng hồ.** Đếm là bằng chứng xác định; đo
+> thời gian phụ thuộc tải máy và sẽ chớp đỏ ngẫu nhiên trên máy của trường. Kèm
+> một mục canh riêng: `bam()` phải thật sự đắt (≥ 8 ms) — mục đó bắt lỗi "thay
+> scrypt bằng hàm băm rẻ tiền", thứ mà phép so bằng-nhau không bao giờ thấy.
+
+`KHOA_BAM = Semaphore(2)`: `scrypt` cấp phát 16 MB và **nhả GIL**, nên nhiều lời
+gọi chạy song song thật — đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB.
+`/api/dang-nhap` là đường **chưa xác thực** duy nhất tốn kém như vậy.
 
 ---
 

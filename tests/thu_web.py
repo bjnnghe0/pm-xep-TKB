@@ -202,7 +202,11 @@ def ca_4_trang_tinh():
         kiem(chu in html, f'Có nhãn tiếng Việt có dấu: "{chu}"')
     # Đừng ghim cứng danh sách: thêm một đường API là ca thử vỡ dù không sai gì.
     # Điều cần khẳng định là JS và web.py khớp nhau — cả hai chiều.
-    duong = set(re.findall(r"fetch\('(/api/[^'?]+)", js)) \
+    # [DI TRÚ 2A-1] app.js nay gọi API qua PHỄU goi()/goiCu() chứ không fetch()
+    # rải rác — cả tệp chỉ còn ĐÚNG MỘT chữ fetch(, nằm trong phễu. Bắt theo tên
+    # phễu, và giữ luôn mẫu fetch( cũ phòng khi có ai gọi thẳng.
+    duong = set(re.findall(r"goi\w*\('(/api/[^'?]+)", js)) \
+        | set(re.findall(r"fetch\('(/api/[^'?]+)", js)) \
         | set(re.findall(r"location = '(/api/[^']+)'", js))
     may = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
     co = set(re.findall(r"duong == '(/api/[^']+)'", may))

@@ -8,10 +8,32 @@
 </head>
 <body>
 
+<!-- ============ LỚP PHỦ ĐĂNG NHẬP ============ -->
+<div id="man-dang-nhap" class="phu an">
+  <form id="form-dang-nhap" class="hop-dn" autocomplete="on">
+    <h2>Đăng nhập</h2>
+    <p class="ghi-chu">Xếp thời khoá biểu — Khoa Khoa học Cơ bản</p>
+    <label>Tên đăng nhập
+      <input id="o-ten" type="text" autocomplete="username" autocapitalize="off"
+             autocorrect="off" spellcheck="false" required>
+    </label>
+    <label>Mật khẩu
+      <input id="o-mat-khau" type="password" autocomplete="current-password"
+             required>
+    </label>
+    <button id="nut-dang-nhap" class="chinh" type="submit">Đăng nhập</button>
+    <p id="loi-dang-nhap" class="bao-loi an"></p>
+    <p class="ghi-chu">Quên mật khẩu? Mở cửa sổ dòng lệnh trên máy chạy phần mềm
+       và chạy <code>python tao_mat_khau.py doi &lt;tên&gt;</code>.</p>
+  </form>
+</div>
+
 <header>
   <h1>Xếp thời khoá biểu — Khối 12</h1>
   <p class="phu">Khoa Khoa học Cơ bản · Trường Cao đẳng Đà Lạt
      <span class="cuc-bo">chỉ chạy trên máy này</span></p>
+  <p class="phu-nguoi"><span id="chu-nguoi"></span>
+     <button id="nut-dang-xuat" class="nho an">Đăng xuất</button></p>
 </header>
 
 <nav id="tabs">

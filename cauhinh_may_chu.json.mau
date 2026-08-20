@@ -1,0 +1,6 @@
+{
+  "_doc": "MẪU của cauhinh_may_chu.json — danh sách tên máy và nguồn gốc được phép gọi vào máy chủ quản trị. Tệp thật bị .gitignore chặn vì tên máy mỗi nơi một khác. Máy chủ VẪN chỉ nghe 127.0.0.1; các tên khác là do proxy (ví dụ Tailscale Serve) chuyển tiếp vào. So khớp CHÍNH XÁC cả chuỗi, chỉ bỏ qua hoa/thường — không tự thêm cổng, không tự suy Origin ra từ Host. Thiếu tệp này, hoặc tệp hỏng/rỗng, thì mặc định CHỈ cho 127.0.0.1. Sửa xong phải chạy lại web.py.",
+  "_luu_y_cong": "Trình duyệt BỎ ':443' khi gửi Host cho https, nên khai tên KHÔNG kèm cổng. Cần dạng có cổng thì thêm hẳn chuỗi đó vào danh sách.",
+  "host_cho_phep":   ["127.0.0.1:20266", "may-cua-ban.tenmang.ts.net"],
+  "origin_cho_phep": ["http://127.0.0.1:20266", "https://may-cua-ban.tenmang.ts.net"]
+}

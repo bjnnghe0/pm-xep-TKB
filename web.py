@@ -32,6 +32,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import quy_tac as QT
+import tai_khoan as TK
 import xep_tkb as X
 
 THU_MUC = os.path.dirname(os.path.abspath(__file__))
@@ -128,6 +129,29 @@ TT = {}
 CAC_PHIEN = {}                       # ma -> {'tao_m','tao_w','cham_m','cham_w'}
 PHIEN_THEM = {}                      # ma -> [quy tắc nháp của riêng phiên đó]
 KHOA_PHIEN = threading.Lock()
+
+# Danh sách MỞ. Mặc định là CẤM: chỉ những đường ghi ở đây mới đi lọt khi chưa
+# đăng nhập, mọi thứ còn lại — kể cả đường không tồn tại — đều 401.
+#
+# So BẰNG NHAU, không dùng startswith('/web/'): tiền tố mở ra một lớp đường
+# không đếm được, còn phép so bằng thì kiểm được chính xác cả hai chiều.
+#
+# Bốn tệp tĩnh mở là quyết định CÓ ĐO: web/index.html, app.js, style.css đã nằm
+# trong kho GitHub Public bjnnghe0/pm-xep-TKB. Gác chúng không giấu thêm byte nào,
+# mà lại không còn chỗ nào hiện ô mật khẩu.
+DUONG_MO = frozenset({'/', '/index.html',
+                      '/api/dang-nhap', '/api/dang-xuat', '/api/toi-la-ai'}
+                     | {'/web/' + t for t in TINH})
+
+DUONG_DAN_TAI_KHOAN = os.path.join(THU_MUC, 'tai_khoan.json')
+TAI_KHOAN = {}                       # ten -> bản ghi. RỖNG = máy chủ chưa cài xong
+BAM_GIA = None                       # bản ghi giả cho nhánh "tên không tồn tại"
+
+# scrypt cấp phát 16 MB và NHẢ GIL, nên nhiều lời gọi chạy song song THẬT —
+# đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB. /api/dang-nhap là đường
+# CHƯA XÁC THỰC duy nhất tốn kém như vậy, nên phải chặn số lần chạy cùng lúc,
+# nếu không chính cổng đăng nhập thành chỗ hạ máy chủ.
+KHOA_BAM = threading.Semaphore(2)
 
 TEN_COOKIE = 'phien_tkb'             # đường http tại chỗ
 TEN_COOKIE_BM = '__Host-phien_tkb'   # đường có TLS (qua proxy)
@@ -252,8 +276,8 @@ def _don_phien_da_khoa(bay_gio_m, bay_gio_w):
     return len(chet)
 
 
-def tao_phien():
-    """Cấp một phiên MỚI. Trả (ma, ban_ghi).
+def tao_phien(ten=None):
+    """Cấp một phiên MỚI. Trả (ma, ban_ghi). ten=None nghĩa là CHƯA đăng nhập.
 
        Mã do secrets.token_urlsafe(32) sinh ra ở ĐÂY — không bao giờ nhận nuôi
        mã do khách gửi lên. Đó chính là cách chống cố định phiên, và nó phải
@@ -271,7 +295,8 @@ def tao_phien():
             CAC_PHIEN.pop(cu, None)
             PHIEN_THEM.pop(cu, None)
         ma = secrets.token_urlsafe(32)
-        CAC_PHIEN[ma] = {'tao_m': m, 'tao_w': w, 'cham_m': m, 'cham_w': w}
+        CAC_PHIEN[ma] = {'tao_m': m, 'tao_w': w, 'cham_m': m, 'cham_w': w,
+                         'ten': ten}
         PHIEN_THEM[ma] = []
         return ma, CAC_PHIEN[ma]
 
@@ -288,6 +313,13 @@ def doc_phien(ma):
         _don_phien_da_khoa(m, w)
         p = CAC_PHIEN.get(ma)
         if p is None:
+            return None
+        # QĐ 3: tắt một tài khoản có hiệu lực NGAY, không phải khởi động lại.
+        # Kiểm ở đây vì đây là nơi duy nhất quyết định "phiên còn dùng được
+        # không" — đặt chỗ khác là đẻ ra bản cài thứ hai của cùng một luật.
+        if p.get('ten') is not None and p['ten'] not in TAI_KHOAN:
+            CAC_PHIEN.pop(ma, None)
+            PHIEN_THEM.pop(ma, None)
             return None
         p['cham_m'], p['cham_w'] = m, w      # mọi yêu cầu qua cổng đều làm tươi
         return p
@@ -311,6 +343,67 @@ def nhap_cua(ma):
     """Danh sách quy tắc nháp của riêng phiên này (không bao giờ trả None)."""
     with KHOA_PHIEN:
         return PHIEN_THEM.setdefault(ma, [])
+
+
+def nap_tai_khoan_may_chu(duong_dan=None):
+    """Nạp tai_khoan.json vào TAI_KHOAN. Trả (ok, ghi_chu).
+
+       TK.nap() NÉM SystemExit ở cả bốn nhánh hỏng; hàm này BẮT lấy, đặt sổ về
+       RỖNG, và trả câu để người gọi in ra. Chỉ main() được sys.exit(1) —
+       ca thử dựng máy chủ thẳng thì không được phép giết cả tiến trình.
+
+       Sổ rỗng KHÔNG có nghĩa là "cho qua": _chan_neu_chua_dang_nhap() trả 503
+       cho mọi đường. Trạng thái "chưa cài xong" phải là ĐÓNG.
+    """
+    global TAI_KHOAN, BAM_GIA
+    dd = duong_dan or DUONG_DAN_TAI_KHOAN
+    if BAM_GIA is None:
+        BAM_GIA = TK.ban_ghi_gia()
+    try:
+        TAI_KHOAN = TK.nap(dd)
+        return True, None
+    except SystemExit as e:
+        TAI_KHOAN = {}
+        return False, str(e)
+
+
+def dang_nhap(ma_cu, ten_tho, mat_khau):
+    """Đối chiếu mật khẩu. Trả (ma_moi, ten) nếu đúng, (None, None) nếu sai.
+
+       XOAY MÃ PHIÊN — chống cố định phiên. Mã cũ bị HUỶ HẲN, mã mới do
+       tao_phien() sinh ra. Không bao giờ nâng cấp tại chỗ một phiên vô danh:
+       nếu kẻ tấn công gieo được mã vào trình duyệt nạn nhân rồi đợi họ đăng
+       nhập, nâng cấp tại chỗ là trao luôn phiên đã xác thực cho hắn. Ở đây kẻ
+       tấn công là người trong tailnet — đúng mô hình đe doạ đang chống.
+
+       Nháp thì CHUYỂN sang mã mới, không bỏ: thứ kẻ tấn công cần là mã sau khi
+       đăng nhập, mà mã đã xoay thì hắn không có. Nháp chuyển hay không KHÔNG
+       đụng tới tính chất đó. Và phiên vô danh vốn không thể có nháp (mọi đường
+       tạo nháp đều đòi xác thực), nên lần đăng nhập đầu chuyển một danh sách
+       rỗng. Trường hợp có nháp là người đã đăng nhập lại POST đăng nhập lần
+       nữa — bỏ nháp lúc đó là làm mất việc của họ mà chẳng đổi lấy gì.
+
+       MỘT lần scrypt ở MỌI nhánh, kể cả tên không tồn tại và tên sai cú pháp.
+       Thoát sớm ở bất kỳ nhánh nào là mở một kênh đo thời gian để dò xem tài
+       khoản nào có thật.
+    """
+    ten = TK.chuan_ten(ten_tho)
+    bg = TAI_KHOAN.get(ten) if ten else None
+    that = bg is not None
+    if bg is None:
+        bg = BAM_GIA
+    with KHOA_BAM:
+        d = TK.bam(mat_khau if isinstance(mat_khau, str) else '', bg['muoi'])
+    if not (TK.so_khop(d, bg['bam']) and that):
+        return None, None
+
+    nhap_cu = list(nhap_cua(ma_cu)) if ma_cu else []
+    if ma_cu:
+        xoa_phien(ma_cu)                 # HUỶ HẲN mã cũ
+    ma_moi, _ = tao_phien(ten)           # mã HOÀN TOÀN MỚI
+    if nhap_cu:
+        nhap_cua(ma_moi).extend(nhap_cu)
+    return ma_moi, ten
 
 
 def _chuan_ten_may(gt):
@@ -1076,6 +1169,32 @@ class May(BaseHTTPRequestHandler):
             self._ph = (ma, p)
         return self._ph[0]
 
+    def _ten_dang_nhap(self):
+        """Tên tài khoản của phiên hiện tại, hoặc None nếu chưa đăng nhập."""
+        self._phien()
+        return (self._ph[1] or {}).get('ten')
+
+    def _chan_neu_chua_dang_nhap(self, duong):
+        """True = ĐÃ trả lời xong (401/503), người gọi phải return ngay.
+
+           Tên hàm nói đúng việc nó làm: nó CHẶN và TRẢ LỜI, không phải chỉ
+           kiểm rồi để người gọi tự xử.
+        """
+        if duong in DUONG_MO:
+            return False
+        if not TAI_KHOAN:
+            # 503 chứ không 401: đây không phải "bạn chưa đăng nhập" mà là
+            # "máy chủ chưa cài xong". Nói sai thì người vận hành đi tìm mật
+            # khẩu thay vì đi tạo tài khoản.
+            self._bao_loi(duong,
+                          '[LỖI] Máy chủ chưa có tài khoản nào.\n'
+                          '      Chạy: python tao_mat_khau.py them', 503)
+            return True
+        if self._ten_dang_nhap() is None:
+            self._bao_loi(duong, 'Bạn cần đăng nhập để dùng chức năng này.', 401)
+            return True
+        return False
+
     def _dong_cookie(self, ma):
         """Dòng Set-Cookie. SameSite=Lax khai TƯỜNG MINH — xem ghi chú."""
         phan = [f'{self._ten_cookie()}={ma}', 'Path=/', 'HttpOnly',
@@ -1364,6 +1483,13 @@ class May(BaseHTTPRequestHandler):
         try:
             self._kiem_nguon_goc(co_than=False)
             self._phien()                 # cấp phiên vô danh nếu chưa có
+            # Cổng nằm SAU A1 (Host lạ phải vẫn là 400, không phải 401) và
+            # TRƯỚC khi đọc thân (khách lạ không được ép ta cấp phát 256 KB).
+            if self._chan_neu_chua_dang_nhap(duong):
+                return
+            if duong == '/api/toi-la-ai':
+                return self._json({'dang_nhap': self._ten_dang_nhap() is not None,
+                                   'ten': self._ten_dang_nhap()})
             if duong in ('/', '/index.html'):
                 return self._tinh('index.html')
             if duong.startswith('/web/'):
@@ -1459,6 +1585,12 @@ class May(BaseHTTPRequestHandler):
         try:
             self._kiem_nguon_goc(co_than=True)
             self._phien()                 # cấp phiên vô danh nếu chưa có
+            if self._chan_neu_chua_dang_nhap(duong):
+                return
+            if duong == '/api/dang-nhap':
+                return self._dang_nhap()
+            if duong == '/api/dang-xuat':
+                return self._dang_xuat()
             if duong == '/api/xep':
                 return self._xep()
             if duong == '/api/luu-quy-tac':
@@ -1483,6 +1615,39 @@ class May(BaseHTTPRequestHandler):
         except Exception:
             self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
                        500)
+
+    def _dang_nhap(self):
+        d = self._than_json(bat_buoc=True)
+        ma_cu = self._phien()
+        ma_moi, ten = dang_nhap(ma_cu, d.get('ten'), d.get('mat_khau'))
+        if ma_moi is None:
+            # MỘT câu duy nhất cho mọi nhánh sai, giống nhau từng byte: sai mật
+            # khẩu · tên không tồn tại · tên sai cú pháp · tài khoản đã tắt.
+            # Mã HTTP cũng phải giống nhau, khác mã cũng là một kênh rò rỉ.
+            print(f'[ĐĂNG NHẬP SAI] {ascii(str(d.get("ten"))[:64])}',
+                  file=sys.stderr)
+            return self._json(
+                {'loi': 'Tên đăng nhập hoặc mật khẩu không đúng.'}, 401)
+        self._cookie_moi = ma_moi        # _tra_byte đính Set-Cookie mã MỚI
+        self._ph = (ma_moi, CAC_PHIEN.get(ma_moi))
+        print(f'[ĐĂNG NHẬP] {ascii(ten)}', file=sys.stderr)
+        return self._json({'ok': True, 'ten': ten})
+
+    def _dang_xuat(self):
+        # Xoá bản ghi phía máy chủ TRƯỚC, rồi mới trả cookie rỗng. Bản ghi máy
+        # chủ mới là quyền lực; cookie chỉ là cái vé. Xoá cookie mà giữ bản ghi
+        # là vô nghĩa.
+        ma = self._phien()
+        xoa_phien(ma)
+        self._ph = (None, None)
+        self._cookie_moi = None
+        than = json.dumps({'ok': True}, ensure_ascii=False)
+        return self._tra_byte(200, [
+            ('Content-Type', 'application/json; charset=utf-8'),
+            ('Cache-Control', 'no-store'),
+            ('Set-Cookie', f'{self._ten_cookie()}=; Path=/; HttpOnly; '
+                           f'SameSite=Lax; Max-Age=0'
+                           + ('; Secure' if self._di_qua_tls() else ''))], than)
 
     def _xep(self):
         # Đọc và kiểm thân TRƯỚC khi giành chỗ: yêu cầu hỏng thì phải trả lỗi
@@ -1557,12 +1722,23 @@ def main():
     ap = argparse.ArgumentParser(description='Giao diện web cho phần mềm xếp TKB')
     ap.add_argument('--port', type=int, default=20266)
     ap.add_argument('--cauhinh', default=DUONG_DAN_CAUHINH)
+    ap.add_argument('--tai-khoan', dest='tai_khoan',
+                    default=DUONG_DAN_TAI_KHOAN,
+                    help='đường dẫn tai_khoan.json (dành cho ca thử)')
     args = ap.parse_args()
     DUONG_DAN_CAUHINH = os.path.abspath(args.cauhinh)
 
     # Nạp TRƯỚC khi bind cổng: hỏng thì phải kêu trước dòng "Mở trình duyệt
     # vào...", không thì người dùng đọc lướt qua tưởng đã chạy ngon.
     host, org, ghi_chu = nap_cau_hinh_may_chu()
+
+    # Nạp tài khoản TRƯỚC khi bind cổng, và trước cả dòng "Mở trình duyệt vào".
+    # Chết sau khi bind thì để lại một cổng nửa vời; in lỗi SAU dòng đó thì
+    # người dùng đọc lướt qua tưởng đã chạy được.
+    ok_tk, loi_tk = nap_tai_khoan_may_chu(os.path.abspath(args.tai_khoan))
+    if not ok_tk:
+        print(loi_tk, file=sys.stderr)
+        raise SystemExit(1)
 
     dia_chi = ('127.0.0.1', args.port)                # CHỈ máy này, không mở ra mạng
     may = ThreadingHTTPServer(dia_chi, May)
@@ -1572,6 +1748,8 @@ def main():
     print('=' * 70)
     print(f'  Mở trình duyệt vào:  http://127.0.0.1:{args.port}')
     print(f'  Cấu hình đang dùng:  {DUONG_DAN_CAUHINH}')
+    print(f'  Tài khoản            :  {len(TAI_KHOAN)} người '
+          f'({", ".join(sorted(TAI_KHOAN))})')
     if ghi_chu:
         print(ghi_chu)
     if host or org:

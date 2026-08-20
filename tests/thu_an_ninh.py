@@ -214,9 +214,14 @@ def ca_a1_nguon_goc(tm):
             (f'127.0.0.1:0{P}',                400, 'cổng có số 0 đứng đầu'),
             ('',                               400, 'Host rỗng'),
         ]
+        # Hỏi đường MỞ ('/'), không hỏi đường cần đăng nhập: ở đây đang thử
+        # DANH SÁCH TÊN MÁY, mà cookie thì gắn theo chế độ (tên trơn cho
+        # loopback, __Host- cho proxy) nên một khách không thể vừa đăng nhập
+        # qua 127.0.0.1 vừa được nhận ở đường .ts.net. Trộn hai thứ vào một
+        # phép đo là đo nhầm.
         sai = []
         for h, mong, vi_sao in BANG_HOST:
-            ma, _ = k.get('/api/gia-tri', them={'Host': h})
+            ma, _ = k.get('/', them={'Host': h})
             if ma != mong:
                 sai.append(f'{h!r} cho {ma}, mong {mong} ({vi_sao})')
         kiem(not sai,
@@ -280,13 +285,16 @@ def ca_a1b_danh_sach_ten_may(tm):
                       ensure_ascii=False)
 
     viet([TEN], ['https://' + TEN])          # cổng thật chưa biết, sửa lại bên trong
-    with MayChuTam(dd, may_chu=mc) as (k, (dia, cong)):
+    # dang_nhap=False: lúc __enter__ danh sách chưa có 127.0.0.1 nên tự đăng
+    # nhập sẽ ăn 400 của A1. Đăng nhập sau khi đã ghi đúng cổng thật.
+    with MayChuTam(dd, may_chu=mc, dang_nhap=False) as (k, (dia, cong)):
         # Máy chủ thử chạy cổng ngẫu nhiên nên phải viết lại tệp cho đúng cổng
         # rồi nạp lại — đây là DỰNG DỮ LIỆU ĐẦU VÀO, y như cau_hinh_tam() ghi
         # cauhinh.json, không phải gọi tắt qua tầng HTTP.
         viet([f'127.0.0.1:{cong}', TEN],
              [f'http://127.0.0.1:{cong}', 'https://' + TEN])
         W.nap_cau_hinh_may_chu(mc)
+        k.dang_nhap()
 
         BANG_HOST = [
             (f'127.0.0.1:{cong}',           200, 'từ chính máy vẫn vào được'),
@@ -307,9 +315,14 @@ def ca_a1b_danh_sach_ten_may(tm):
             ('',                            400, 'Host rỗng'),
             ('evil.com',                    400, 'tên hoàn toàn khác'),
         ]
+        # Hỏi đường MỞ ('/'), không hỏi đường cần đăng nhập: ở đây đang thử
+        # DANH SÁCH TÊN MÁY, mà cookie thì gắn theo chế độ (tên trơn cho
+        # loopback, __Host- cho proxy) nên một khách không thể vừa đăng nhập
+        # qua 127.0.0.1 vừa được nhận ở đường .ts.net. Trộn hai thứ vào một
+        # phép đo là đo nhầm.
         sai = []
         for h, mong, vi_sao in BANG_HOST:
-            ma, _ = k.get('/api/gia-tri', them={'Host': h})
+            ma, _ = k.get('/', them={'Host': h})
             if ma != mong:
                 sai.append(f'{h!r} cho {ma}, mong {mong} ({vi_sao})')
         kiem(not sai,
@@ -317,17 +330,17 @@ def ca_a1b_danh_sach_ten_may(tm):
 
         # bốn dòng dưới đây phải chứng minh danh sách THAY THẾ mặc định,
         # không phải cộng thêm vào
-        kiem(all(k.get('/api/gia-tri', them={'Host': h})[0] == 400
+        kiem(all(k.get('/', them={'Host': h})[0] == 400
                  for h in (f'localhost:{cong}', f'[::1]:{cong}', '127.0.0.1',
                            'localhost')),
              'Có tệp thì danh sách THAY THẾ mặc định loopback, không cộng thêm')
 
         # thiếu hẳn dòng Host
-        ma, _, _ = k.tho_dong('GET', '/api/gia-tri', [('Connection', 'close')])
+        ma, _, _ = k.tho_dong('GET', '/', [('Connection', 'close')])
         kiem(ma == 400, f'Thiếu hẳn dòng Host -> 400 — {ma}')
 
         # gấp dòng obs-fold: \r\n NẰM LẠI trong giá trị (đã đo)
-        goi = (f'GET /api/gia-tri HTTP/1.1\r\nHost: {TEN}\r\n evil.com\r\n'
+        goi = (f'GET / HTTP/1.1\r\nHost: {TEN}\r\n evil.com\r\n'
                f'Connection: close\r\n\r\n').encode()
         ma, _, t = k.tho(goi)
         kiem(ma == 400, f'Gấp dòng obs-fold trong Host -> 400 — {ma}')
@@ -346,7 +359,7 @@ def ca_a1b_danh_sach_ten_may(tm):
         # CHÍNH NÓ thì chẳng được gì. Mối nguy thật là chiều ngược lại — ta
         # phát \r\n ra PHẢN HỒI — và đó là bất biến A10, đã vá và có ca riêng.
         # -------------------------------------------------------------
-        goi = (f'GET /api/gia-tri HTTP/1.1\r\nHost: {TEN}\r\nX-Gia: 1\r\n'
+        goi = (f'GET / HTTP/1.1\r\nHost: {TEN}\r\nX-Gia: 1\r\n'
                f'Connection: close\r\n\r\n').encode()
         ma, _, _ = k.tho(goi)
         kiem(ma == 200,
@@ -368,13 +381,12 @@ def ca_a1b_danh_sach_ten_may(tm):
         ]
         sai = []
         for o, mong, vi_sao in BANG_ORG:
-            ma, _ = k.post('/api/thu-quy-tac', {'tat': []},
-                           them={'Host': TEN, 'Origin': o})
+            ma, _ = k.post('/api/dang-xuat', {}, them={'Host': TEN, 'Origin': o})
             if ma != mong:
                 sai.append(f'{o!r} cho {ma}, mong {mong} ({vi_sao})')
         kiem(not sai,
              f'Bảng {len(BANG_ORG)} chuỗi Origin khớp hết — lệch: {sai}')
-        kiem(k.post('/api/thu-quy-tac', {'tat': []},
+        kiem(k.post('/api/dang-xuat', {},
                     them={'Host': TEN, 'Origin': 'http://' + TEN})[0] == 400,
              'Hai bảng RIÊNG: đúng tên máy mà sai giao thức vẫn bị chặn')
 
@@ -450,7 +462,9 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
     MONG = sorted(['/api/trang-thai', '/api/quy-tac', '/api/loai-quy-tac',
                    '/api/gia-tri', '/api/tai-ve', '/api/tai-web',
                    '/api/xep', '/api/luu-quy-tac', '/api/them-quy-tac',
-                   '/api/xoa-quy-tac', '/api/thu-quy-tac'])
+                   '/api/xoa-quy-tac', '/api/thu-quy-tac',
+                   # ba đường của cổng đăng nhập (2A-1)
+                   '/api/dang-nhap', '/api/dang-xuat', '/api/toi-la-ai'])
     kiem(duong_api == MONG,
          f'Bóc từ web.py ra ĐÚNG {len(MONG)} đường /api/ đang có — '
          f'thiếu {sorted(set(MONG) - set(duong_api))}, '
@@ -462,14 +476,19 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
             '/api/them-quy-tac': {'quy_tac': {'loai': 'khong_xep_thu',
                                               'ghi_chu': 'x', 'thu': [2]}},
             '/api/xoa-quy-tac': {'i': 0},
-            '/api/thu-quy-tac': {'tat': []}}
-    TINH_D = ['/', '/index.html', '/web/app.js', '/web/style.css']
+            '/api/thu-quy-tac': {'tat': []},
+            '/api/dang-nhap': {'ten': 'x', 'mat_khau': 'y'},
+            '/api/dang-xuat': {}}
+    TINH_D = ['/', '/index.html', '/web/index.html', '/web/app.js',
+              '/web/style.css']
 
-    with MayChuTam(dd, may_chu=mc) as (k, (dia, cong)):
+    with MayChuTam(dd, may_chu=mc, dang_nhap=False) as (k, (dia, cong)):
         with io.open(mc, 'w', encoding='utf-8') as f:
-            json.dump({'host_cho_phep': [TEN],
-                       'origin_cho_phep': ['https://' + TEN]}, f)
+            json.dump({'host_cho_phep': [TEN, f'127.0.0.1:{cong}'],
+                       'origin_cho_phep': ['https://' + TEN,
+                                           f'http://127.0.0.1:{cong}']}, f)
         W.nap_cau_hinh_may_chu(mc)
+        k.dang_nhap()
 
         # --- 1. Host LẠ: mọi đường, đọc lẫn ghi, đều phải 400 ---
         lot = []
@@ -506,18 +525,22 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
 
         # --- 4. Chiều ngược lại: đúng cả hai thì KHÔNG được chặn oan ---
         oan = []
+        H = f'127.0.0.1:{cong}'          # khách đã đăng nhập qua đường này
         for d in TINH_D + duong_api:
             if d in THAN:
                 ma, t = k.post(d, THAN[d],
-                               them={'Host': TEN, 'Origin': 'https://' + TEN})
+                               them={'Host': H, 'Origin': f'http://{H}'})
             else:
-                ma, t = k.get(d, them={'Host': TEN})
+                ma, t = k.get(d, them={'Host': H})
             # 400 do NGHIỆP VỤ (vd xoá quy tắc không có) thì không tính là oan;
             # chỉ 400 phát ra từ chính cái cổng mới là chặn oan.
             if ma == 400 and ('tên máy lạ' in t or 'trang khác' in t):
                 oan.append(f'{d}:{ma}')
         kiem(not oan,
              f'Host+Origin đúng thì cổng KHÔNG chặn đường nào — oan: {oan}')
+
+        # Vòng lặp trên quét CẢ /api/dang-xuat nên nó vừa tự đăng xuất. Vào lại.
+        k.dang_nhap()
 
         # --- 5. Ghi lại ĐÚNG hành vi khi KHÔNG có dòng Origin ---
         #
@@ -528,7 +551,9 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
         # Origin KHÔNG thêm được một chút an toàn nào trước nó — chỉ thêm rủi ro
         # từ chối oan một khách hợp lệ. Hàng rào đối với khách gọi thẳng là
         # ĐĂNG NHẬP (Đợt 2), không phải Origin.
-        ma, _ = k.post('/api/luu-quy-tac', {'tat': [1]}, them={'Host': TEN})
+        # Dùng Host loopback vì k đã đăng nhập qua đường đó (cookie tên trơn).
+        ma, _ = k.post('/api/luu-quy-tac', {'tat': [1]},
+                       them={'Host': f'127.0.0.1:{cong}'})
         kiem(ma == 200,
              f'Không có dòng Origin (curl/script) thì vẫn phục vụ — {ma}. '
              f'CỐ Ý: Origin chỉ chặn được trình duyệt, khách gọi thẳng tự đặt '
@@ -988,6 +1013,7 @@ def ca_a7_sao_luu_xoay_vong(tm):
         def ban(i):
             try:
                 k2 = Khach(k.cong)
+                k2.cookie = dict(k.cookie)     # [DI TRÚ 2A-1] mượn phiên đã đăng nhập
                 k2.js('/api/luu-quy-tac', {'tat': [i]})
             except Exception as e:          # pragma: no cover
                 loi.append(repr(e))
@@ -1071,6 +1097,8 @@ def ca_a4_mot_luot(tm):
 
                 def ban(i):
                     k2 = Khach(k.cong)
+                    # [DI TRÚ 2A-1] mượn phiên đã đăng nhập của k
+                    k2.cookie = dict(k.cookie)
                     rao.wait()
                     m, _t = k2.js('/api/xep', {'tuan': f'NGUOI-{i}'})
                     with khoa_ds:
@@ -1158,7 +1186,9 @@ def ca_a4b_thu_quy_tac(tm):
             kh2 = threading.Lock()
 
             def ban():
-                ma = Khach(cong).post('/api/thu-quy-tac', {'tat': []})[0]
+                kx = Khach(cong)
+                kx.cookie = dict(k.cookie)     # [DI TRÚ 2A-1] mượn phiên đã đăng nhập
+                ma = kx.post('/api/thu-quy-tac', {'tat': []})[0]
                 with kh2:
                     kq.append(ma)
 

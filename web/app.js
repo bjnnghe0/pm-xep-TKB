@@ -2,6 +2,64 @@
 // Giao diện chỉ nói chuyện với máy chủ cục bộ qua mấy đường /api/... bên dưới.
 // Không tải gì từ mạng, chạy được cả khi máy không có Internet.
 
+// ---------------------------------------------------------------- phễu gọi API
+// MỌI lời gọi API đi qua ĐÚNG hàm này. Trước đây có 9 chỗ fetch rải rác, trong
+// đó 4 chỗ (hoi, napQuyTac, napDanhMuc x2) KHÔNG kiểm tl.ok — mà thân của 401
+// lại LÀ JSON hợp lệ, nên .json() chạy lọt rồi mới ném TypeError ở dòng sau:
+// màn hình trắng trơn, không một chữ giải thích. Ở hoi() thì cú ném đó còn rơi
+// vào catch(e){return} và bị nuốt sạch — thanh tiến độ đứng im vĩnh viễn.
+//
+// Bất biến kiểm được rẻ tiền: cả tệp này chỉ được có ĐÚNG MỘT chữ "fetch(".
+let viecCho = null;         // việc vừa trượt vì hết phiên, chạy lại sau khi vào
+
+async function goi(duong, than, tuyChon) {
+  const opt = than === undefined
+    ? {}
+    : { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(than) };
+  const tl = await fetch(duong, opt);
+  if (tuyChon && tuyChon.laDangNhap) {
+    // Ba đường xác thực KHÔNG đi qua nhánh bắt 401 — 401 ở đó nghĩa là "sai
+    // mật khẩu", không phải "hết phiên"; xử như hết phiên là đệ quy vô tận.
+    let dd = null;
+    try { dd = await tl.json(); } catch (e) { dd = null; }
+    return { ma: tl.status, ok: tl.ok, d: dd };
+  }
+  if (tl.status === 401 || tl.status === 503) {
+    if (tuyChon && tuyChon.lai) viecCho = tuyChon.lai;
+    hienDangNhap(tl.status === 503
+      ? 'Máy chủ chưa có tài khoản nào. Xem cửa sổ dòng lệnh.'
+      : null);
+    throw { hetPhien: true };
+  }
+  let d = null;
+  try { d = await tl.json(); } catch (e) { d = null; }
+  return { ma: tl.status, ok: tl.ok, d: d };
+}
+
+// Vỏ mỏng cho những chỗ đang dùng kiểu "tl.ok / await tl.json()" của fetch.
+async function goiCu(duong, than) {
+  let r;
+  try { r = await goi(duong, than === undefined ? {} : than); }
+  catch (e) { return { ok: false, json: async () => ({ loi: '' }) }; }
+  return { ok: r.ok, json: async () => r.d || {} };
+}
+
+function hienDangNhap(loi) {
+  const m = $('man-dang-nhap');
+  if (m.classList.contains('an')) m.classList.remove('an');
+  if (loi) { $('loi-dang-nhap').textContent = loi;
+             $('loi-dang-nhap').classList.remove('an'); }
+  const o = $('o-mat-khau'); if (o) { o.value = ''; o.focus(); }
+}
+
+function anDangNhap(ten) {
+  $('man-dang-nhap').classList.add('an');
+  $('loi-dang-nhap').classList.add('an');
+  $('chu-nguoi').textContent = ten ? `Đang đăng nhập: ${ten}` : '';
+  $('nut-dang-xuat').classList.toggle('an', !ten);
+}
+
 const $ = (id) => document.getElementById(id);
 let daLog = 0;        // đã hiện bao nhiêu dòng nhật ký
 let dongHo = null;    // bộ đếm hỏi trạng thái
@@ -32,12 +90,10 @@ $('nut-xep').onclick = async () => {
     so_lan: $('o-lan').value,
     tat: quyTac.filter((r) => !r.bat).map((r) => r.i),
   };
-  const tl = await fetch('/api/xep', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(than),
-  });
-  const kq = await tl.json();
-  if (!tl.ok) { alert(kq.loi || 'Không gọi được máy chủ.'); return; }
+  let r;
+  try { r = await goi('/api/xep', than, { lai: () => $('nut-xep').onclick() }); }
+  catch (e) { return; }
+  if (!r.ok) { alert((r.d && r.d.loi) || 'Không gọi được máy chủ.'); return; }
   daLog = 0;
   $('log').textContent = '';
   $('hop-loi').classList.add('an');
@@ -56,8 +112,14 @@ function batDauHoi() {
 
 async function hoi() {
   let t;
-  try { t = await (await fetch('/api/trang-thai?tu=' + daLog)).json(); }
-  catch (e) { return; }
+  try { t = (await goi('/api/trang-thai?tu=' + daLog)).d; }
+  catch (e) {
+    // Hết phiên giữa lượt xếp: DỪNG hỏi, nếu không nó nện 401 mỗi 0,7 giây.
+    // Máy chủ vẫn xếp tiếp, kết quả không mất — đăng nhập lại là thấy.
+    if (e && e.hetPhien) { clearInterval(dongHo); dongHo = null; daLog = 0; }
+    return;
+  }
+  if (!t) return;
 
   if (t.log_moi && t.log_moi.length) {
     $('log').textContent += t.log_moi.join('\n') + '\n';
@@ -146,7 +208,10 @@ $('nut-tai-web').onclick = () => { window.location = '/api/tai-web'; };
 
 // ---------------------------------------------------------------- 3. quy tắc
 async function napQuyTac() {
-  const d = await (await fetch('/api/quy-tac')).json();
+  let d;
+  try { d = (await goi('/api/quy-tac', undefined, { lai: napQuyTac })).d; }
+  catch (e) { return; }
+  if (!d) return;
   // giữ lại các công tắc người dùng vừa gạt, đừng nạp đè lên
   const daGat = new Map(quyTac.map((r) => [r.i, r.bat]));
   quyTac = d.quy_tac.map((r) => ({ ...r, bat: daGat.has(r.i) ? daGat.get(r.i) : r.bat }));
@@ -172,10 +237,7 @@ function veQuyTac() {
   });
   $('bang-quy-tac').querySelectorAll('[data-xoa]').forEach((o) => {
     o.onclick = async () => {
-      const tl = await fetch('/api/xoa-quy-tac', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ i: +o.dataset.xoa }),
-      });
+      const tl = await goiCu('/api/xoa-quy-tac', { i: +o.dataset.xoa });
       const kq = await tl.json();
       if (!tl.ok) { baoLoi(kq.loi || 'Không xoá được.'); return; }
       quyTac = kq.quy_tac.map((r) => ({ ...r }));
@@ -190,8 +252,15 @@ let GT = null;      // giá trị chọn được, lấy từ /api/gia-tri
 
 async function napDanhMuc() {
   if (DM) return;
-  DM = await (await fetch('/api/loai-quy-tac')).json();
-  GT = await (await fetch('/api/gia-tri')).json();
+  // Gán CẢ HAI cùng lúc: nếu phiên hết hạn giữa hai lời gọi thì DM có mà GT
+  // không, và màn hình Quy tắc kẹt vĩnh viễn ở trạng thái nửa vời.
+  let dm, gt;
+  try {
+    dm = (await goi('/api/loai-quy-tac', undefined, { lai: napDanhMuc })).d;
+    gt = (await goi('/api/gia-tri', undefined, { lai: napDanhMuc })).d;
+  } catch (e) { return; }
+  if (!dm || !gt) return;
+  DM = dm; GT = gt;
   $('o-loai').innerHTML = DM.nhom.map((n) =>
     `<optgroup label="${ma(n.nhom)}">`
     + n.loai.map((l) => `<option value="${ma(l.ten)}">${ma(l.ten)}</option>`).join('')
@@ -443,10 +512,7 @@ $('nut-them').onclick = async () => {
          + 'nên không được để trống.');
     return;
   }
-  const tl = await fetch('/api/them-quy-tac', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quy_tac: docForm() }),
-  });
+  const tl = await goiCu('/api/them-quy-tac', { quy_tac: docForm() });
   const kq = await tl.json();
   if (!tl.ok) { baoLoi(kq.loi || 'Không thêm được.'); return; }
   quyTac = kq.quy_tac.map((r) => ({ ...r }));
@@ -460,11 +526,9 @@ $('nut-thu').onclick = async () => {
   const n = $('nut-thu');
   n.disabled = true; n.textContent = 'Đang thử...';
   try {
-    const tl = await fetch('/api/thu-quy-tac', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quy_tac: docForm(),
-                             tat: quyTac.filter((r) => !r.bat).map((r) => r.i) }),
-    });
+    const tl = await goiCu('/api/thu-quy-tac',
+      { quy_tac: docForm(),
+        tat: quyTac.filter((r) => !r.bat).map((r) => r.i) });
     const kq = await tl.json();
     if (!tl.ok) { baoLoi(kq.loi || 'Không thử được.'); return; }
     const h = $('ket-qua-thu');
@@ -496,10 +560,7 @@ $('nut-luu').onclick = async () => {
   const tat = quyTac.filter((r) => !r.bat).map((r) => r.i);
   if (!confirm('Ghi cờ bật/tắt vào cauhinh.json?\n'
              + 'Bản cũ sẽ được sao lưu thành cauhinh.bak.json.')) return;
-  const tl = await fetch('/api/luu-quy-tac', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tat }),
-  });
+  const tl = await goiCu('/api/luu-quy-tac', { tat });
   const kq = await tl.json();
   $('chu-luu').textContent = tl.ok
     ? `Đã ghi. ${kq.doi} quy tắc đổi trạng thái. Bản cũ: ${kq.sao_luu}`
@@ -542,3 +603,49 @@ function ma(s) {
 if (location.hash.length > 1) moMan(location.hash.slice(1));
 napQuyTac();
 hoi();
+
+// ---------------------------------------------------------------- đăng nhập
+$('form-dang-nhap').onsubmit = async (e) => {
+  e.preventDefault();
+  const nut = $('nut-dang-nhap');
+  nut.disabled = true; nut.textContent = 'Đang kiểm...';
+  let tl;
+  try {
+    tl = await goi('/api/dang-nhap',
+                   { ten: $('o-ten').value, mat_khau: $('o-mat-khau').value },
+                   { laDangNhap: true });
+  } catch (err) { tl = null; }
+  nut.disabled = false; nut.textContent = 'Đăng nhập';
+  const d = (tl && tl.d) || {};
+  if (!tl || !tl.ok) {
+    $('loi-dang-nhap').textContent =
+      d.loi || 'Không gọi được máy chủ. Máy chủ còn đang chạy không?';
+    $('loi-dang-nhap').classList.remove('an');
+    $('o-mat-khau').value = '';
+    $('o-mat-khau').focus();
+    return;
+  }
+  anDangNhap(d.ten);
+  const lai = viecCho; viecCho = null;
+  if (lai) lai();                       // chạy lại đúng MỘT việc vừa trượt
+  else moMan(location.hash.slice(1) || 'man-xep');
+};
+
+$('nut-dang-xuat').onclick = async () => {
+  try {
+    await goi('/api/dang-xuat', {}, { laDangNhap: true });
+  } catch (e) { /* mất mạng thì thôi, cứ hiện lại ô đăng nhập */ }
+  if (dongHo) { clearInterval(dongHo); dongHo = null; }
+  anDangNhap(null);
+  hienDangNhap(null);
+};
+
+// Hỏi ngay lúc tải trang, để hiện ô mật khẩu TRƯỚC khi thầy cô bấm nút —
+// nếu không thì cú bấm đầu tiên bị mất và không được chạy lại.
+(async () => {
+  try {
+    const d = (await goi('/api/toi-la-ai', undefined,
+                         { laDangNhap: true })).d;
+    if (d && d.dang_nhap) anDangNhap(d.ten); else hienDangNhap(null);
+  } catch (e) { hienDangNhap(null); }
+})();

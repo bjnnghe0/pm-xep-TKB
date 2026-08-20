@@ -31,7 +31,8 @@ from http.server import ThreadingHTTPServer
 GOC_TM = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, GOC_TM)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from tien_ich_web import Khach       # noqa: E402
+from tien_ich_web import Khach, MayChuTam   # noqa: E402
+import tai_khoan as TK                      # noqa: E402
 
 import xep_tkb as X          # noqa: E402
 import quy_tac as QT         # noqa: E402
@@ -62,13 +63,20 @@ def dung_may(tm):
     web.DUONG_DAN_CAUHINH = dd
     web.xoa_sach_phien()
     web.dat_lai_trang_thai()
+    # [DI TRÚ 2A-1] Máy chủ nay đòi tài khoản. Dựng một cái tạm rồi đăng nhập
+    # qua HTTP thật — mã cũ không sai, nó chỉ đúng với thế giới chưa có cổng.
+    dd_tk = os.path.join(tm, 'tai_khoan.json')
+    TK.ghi(dd_tk, [TK.ban_ghi_moi(MayChuTam.TEN, MayChuTam.MAT_KHAU)])
+    web.nap_tai_khoan_may_chu(dd_tk)
     may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
     may.daemon_threads = True
     threading.Thread(target=may.serve_forever, daemon=True).start()
     # Trả về một Khach thay cho chuỗi URL. urllib KHÔNG giữ cookie, mà từ 2A-2a
     # bản nháp quy tắc gắn theo PHIÊN — mỗi yêu cầu không cookie là một phiên
     # mới, nên "thêm rồi đọc lại" sẽ không bao giờ thấy nhau.
-    return may, Khach(may.server_address[1]), dd
+    k = Khach(may.server_address[1])
+    k.dang_nhap()
+    return may, k, dd
 
 
 def goi(B, duong, than=None):

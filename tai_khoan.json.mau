@@ -1,0 +1,12 @@
+{
+  "_doc": "MẪU của tai_khoan.json. Tệp thật bị .gitignore chặn — mỗi máy tự tạo bằng: python tao_mat_khau.py them (Windows: bấm đúp tao_tai_khoan.bat). ĐỪNG sửa tay tệp thật: muoi và bam phải khớp nhau, sửa lệch là không ai đăng nhập được. Chép tệp này thành tai_khoan.json sẽ cho danh sách RỖNG, và máy chủ sẽ TỪ CHỐI khởi động kèm hướng dẫn — đúng như mong đợi.",
+  "_vi_du_mot_ban_ghi": {
+    "ten_dang_nhap": "khcbcddl",
+    "muoi": "32 chữ hex, ngẫu nhiên, RIÊNG cho từng người",
+    "bam": "64 chữ hex, scrypt n=16384 r=8 p=1 dklen=32",
+    "ngay_tao": "2026-08-20T09:15:00",
+    "bat": true
+  },
+  "phien_ban": 1,
+  "tai_khoan": []
+}
