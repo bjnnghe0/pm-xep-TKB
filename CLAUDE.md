@@ -885,6 +885,13 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 7. Có chỗ nào so bằng với **hằng số lấy từ `cauhinh.json`** không (số quy tắc,
    tên lớp, tên môn, tên GVCN)? Dựng kỳ vọng TỪ tệp, đừng chép giá trị ra.
    `tests/thu_ghim_du_lieu.py` canh việc này, nhưng đừng đợi nó nhắc.
+   **Và nếu số kỳ vọng được TÍNH TỪ dữ liệu thì phải khẳng định nó KHÁC 0
+   trước khi dùng.** Bộ lọc rỗng làm phép so trở nên vô nghĩa mà **vẫn xanh** —
+   đây là dạng lỗi số 3 (xanh giả) ở hình thức mới, và nó nguy hiểm hơn hẳn
+   việc đỏ oan. Đã đo một lần:
+   `n_uyen = len([c for c in NEN.cac_cum if c.gv == 'N.Uyên'])` — cô ấy rời
+   `phan_cong` là số này thành 0, phép trừ `tat_ca - n_uyen` hoá ra "giữ
+   nguyên tất cả", và ca thử xanh trong khi không kiểm gì cả.
 8. Nếu ca thử phải **tự dựng trạng thái** (thêm quy tắc nháp, tắt bớt quy tắc)
    thì dữ liệu dựng ra có **mâu thuẫn được** với `cauhinh.json` thật không?
    Bộ lọc nên chọn thứ KHÔNG KHỚP GÌ CẢ, để nó không bao giờ có ý kiến về dữ
@@ -898,6 +905,17 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+[ ] CHƯA AI chứng minh chống được MẤT ĐIỆN THẬT. SIGKILL giữa lúc ghi chỉ
+    chứng minh tệp đích không rách khi TIẾN TRÌNH chết — dữ liệu vẫn có thể
+    còn nằm trong bộ nhớ đệm của hệ điều hành. Muốn chứng minh phải cắt điện
+    thật hoặc dùng dm-flakey (đòi quyền root). CA A11 tự khai đúng giới hạn
+    này ở tests/thu_an_ninh.py:962-968 — nó ghim THỨ TỰ fsync/replace, không
+    ghim độ bền vật lý. Đừng đọc bảng "cắt điện giả lập" mà tưởng đã xong.
+[ ] Quyền 600 của tai_khoan.json: mới đo được BIT ĐƯỢC LƯU VÀ ĐỌC LẠI ĐÚNG
+    trên ntfs3 (nhờ tuỳ chọn gắn "acl"). CHƯA đo được người dùng KHÁC có bị
+    chặn thật không — máy chỉ có một tài khoản (uid 1000) và không có sudo.
+    Suy luận là uid khác rơi vào lớp "other" nên 600 chặn, nhưng đó là suy
+    luận chứ không phải số đo.
 [ ] Tách 3 tài khoản RIÊNG cho 3 người, thay cho một tài khoản chung.
     Người dùng đã chốt: giữ một tài khoản chung cho GIAI ĐOẠN THỬ; khi mời
     đồng nghiệp vào tailnet thì tính lại. Việc này chữa GỐC của hai chuyện:
