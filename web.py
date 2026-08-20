@@ -146,6 +146,9 @@ DUONG_MO = frozenset({'/', '/index.html',
 DUONG_DAN_TAI_KHOAN = os.path.join(THU_MUC, 'tai_khoan.json')
 TAI_KHOAN = {}                       # ten -> bản ghi. RỖNG = máy chủ chưa cài xong
 BAM_GIA = None                       # bản ghi giả cho nhánh "tên không tồn tại"
+# Sổ khoá tạm (2B). SUY RA từ đường dẫn tai_khoan.json trong nap_tai_khoan_may_chu()
+# chứ không khai riêng — xem TK.duong_dan_khoa().
+DUONG_DAN_SO_KHOA = TK.duong_dan_khoa(DUONG_DAN_TAI_KHOAN)
 
 # scrypt cấp phát 16 MB và NHẢ GIL, nên nhiều lời gọi chạy song song THẬT —
 # đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB. /api/dang-nhap là đường
@@ -355,8 +358,9 @@ def nap_tai_khoan_may_chu(duong_dan=None):
        Sổ rỗng KHÔNG có nghĩa là "cho qua": _chan_neu_chua_dang_nhap() trả 503
        cho mọi đường. Trạng thái "chưa cài xong" phải là ĐÓNG.
     """
-    global TAI_KHOAN, BAM_GIA
+    global TAI_KHOAN, BAM_GIA, DUONG_DAN_SO_KHOA
     dd = duong_dan or DUONG_DAN_TAI_KHOAN
+    DUONG_DAN_SO_KHOA = TK.duong_dan_khoa(dd)
     if BAM_GIA is None:
         BAM_GIA = TK.ban_ghi_gia()
     try:
@@ -368,7 +372,14 @@ def nap_tai_khoan_may_chu(duong_dan=None):
 
 
 def dang_nhap(ma_cu, ten_tho, mat_khau):
-    """Đối chiếu mật khẩu. Trả (ma_moi, ten) nếu đúng, (None, None) nếu sai.
+    """Đối chiếu mật khẩu. Trả (ma_moi, ten, giay_khoa).
+
+       Ba nhánh, phân biệt bằng ĐÚNG hai giá trị đầu:
+         (ma, ten, 0)      đúng mật khẩu — ma là mã phiên MỚI
+         (None, None, 0)   sai, và không bị khoá   -> một câu chung
+         (None, ten, > 0)  ĐANG BỊ KHOÁ TẠM (2B)   -> câu nói rõ còn mấy phút
+       Nhánh ba trả `ten` vì câu trả lời cần nhắc đúng tên để gõ lệnh mo-khoa;
+       trả tên ở đây KHÔNG lộ thêm gì, vì chỉ tài khoản CÓ THẬT mới vào sổ khoá.
 
        XOAY MÃ PHIÊN — chống cố định phiên. Mã cũ bị HUỶ HẲN, mã mới do
        tao_phien() sinh ra. Không bao giờ nâng cấp tại chỗ một phiên vô danh:
@@ -385,17 +396,34 @@ def dang_nhap(ma_cu, ten_tho, mat_khau):
 
        MỘT lần scrypt ở MỌI nhánh, kể cả tên không tồn tại và tên sai cú pháp.
        Thoát sớm ở bất kỳ nhánh nào là mở một kênh đo thời gian để dò xem tài
-       khoản nào có thật.
+       khoản nào có thật. NHÁNH BỊ KHOÁ CŨNG VẬY — nó nằm SAU lời gọi TK.bam(),
+       không phải trước. Chặn trước cho "đỡ tốn CPU" là đổi 27 ms lấy một kênh
+       đo: gõ bậy 5 lần rồi xem lần thứ 6 trả lời nhanh hay chậm là biết tài
+       khoản có thật hay không. Hệ quả phải chấp nhận: khoá tạm KHÔNG giảm được
+       chút tải CPU nào — nó chống DÒ MẬT KHẨU, không chống làm nghẽn máy chủ.
+
+       ĐANG KHOÁ THÌ ĐÚNG MẬT KHẨU CŨNG KHÔNG VÀO. Cho vào là bỏ hẳn tác dụng
+       của khoá: kẻ dò cứ đoán tiếp trong lúc bị khoá, tới lúc trúng thì vào.
     """
     ten = TK.chuan_ten(ten_tho)
     bg = TAI_KHOAN.get(ten) if ten else None
     that = bg is not None
     if bg is None:
         bg = BAM_GIA
+    # Ghi nhận lần thử TRƯỚC khi băm, và kiểm+tăng trong cùng một lần giữ khoá.
+    # Xem docstring của TK.ghi_nhan_thu(): tách ra sau khi băm thì một loạt bắn
+    # dồn sẽ lọt hết, vì mọi yêu cầu đều đọc bộ đếm xong mới xếp hàng ở KHOA_BAM.
+    khoa = TK.ghi_nhan_thu(DUONG_DAN_SO_KHOA, ten) if that else 0
     with KHOA_BAM:
         d = TK.bam(mat_khau if isinstance(mat_khau, str) else '', bg['muoi'])
-    if not (TK.so_khop(d, bg['bam']) and that):
-        return None, None
+    dung = TK.so_khop(d, bg['bam']) and that
+    if khoa > 0:
+        return None, ten, khoa
+    if not dung:
+        if that:
+            TK.ghi_nhan_sai(DUONG_DAN_SO_KHOA, ten)
+        return None, None, 0
+    TK.xoa_khoa(DUONG_DAN_SO_KHOA, ten)     # vào được là bộ đếm về 0
 
     nhap_cu = list(nhap_cua(ma_cu)) if ma_cu else []
     if ma_cu:
@@ -403,7 +431,7 @@ def dang_nhap(ma_cu, ten_tho, mat_khau):
     ma_moi, _ = tao_phien(ten)           # mã HOÀN TOÀN MỚI
     if nhap_cu:
         nhap_cua(ma_moi).extend(nhap_cu)
-    return ma_moi, ten
+    return ma_moi, ten, 0
 
 
 def _chuan_ten_may(gt):
@@ -1616,10 +1644,37 @@ class May(BaseHTTPRequestHandler):
             self._json({'loi': _loi_su_co(_bao_su_co(f'{self.command} {duong}'))},
                        500)
 
+    def _cau_bi_khoa(self, ten, giay):
+        """Câu báo bị khoá tạm. Nói RÕ còn mấy phút, và cách gỡ ngay tại máy.
+
+           Cố ý KHÔNG dùng câu chung "tên hoặc mật khẩu không đúng": người bị
+           khoá gần như luôn là thầy cô gõ nhầm, và câu chung sẽ đẩy họ đi thử
+           lại thêm chục lần rồi đi đổi mật khẩu — trong khi thứ họ cần biết là
+           "đợi 12 phút". Cái giá của việc nói thật: ai chịu gõ sai đủ ngưỡng
+           thì biết được tên đó có tồn tại. Với một tài khoản dùng chung mang
+           tên khoa thì đó không phải bí mật, và đổi lại là một câu dùng được.
+
+           LÀM TRÒN LÊN: "còn 0 phút" là câu vô nghĩa với người đang đợi.
+        """
+        phut = max(1, -(-giay // 60))
+        return (f'Tài khoản "{ten}" đang bị khoá tạm — còn {phut} phút nữa mới '
+                f'thử lại được.\n'
+                f'Gõ sai mật khẩu {TK.SO_LAN_SAI_TOI_DA} lần liên tiếp thì khoá '
+                f'{TK.GIAY_KHOA // 60} phút; gõ thêm lúc này KHÔNG làm dài thêm.\n'
+                f'Cần vào ngay thì ra máy đang chạy phần mềm, mở cửa sổ dòng '
+                f'lệnh và gõ:\n'
+                f'    python3 tao_mat_khau.py mo-khoa {ten}')
+
     def _dang_nhap(self):
         d = self._than_json(bat_buoc=True)
         ma_cu = self._phien()
-        ma_moi, ten = dang_nhap(ma_cu, d.get('ten'), d.get('mat_khau'))
+        ma_moi, ten, khoa = dang_nhap(ma_cu, d.get('ten'), d.get('mat_khau'))
+        if ma_moi is None and khoa > 0:
+            # 429 chứ không 401: đây không phải "sai mật khẩu" mà là "thôi, đợi
+            # đã". Giao diện hiện thẳng câu này, không đẩy về ô mật khẩu trống.
+            print(f'[ĐĂNG NHẬP BỊ KHOÁ] {ascii(ten)} còn {khoa}s',
+                  file=sys.stderr)
+            return self._json({'loi': self._cau_bi_khoa(ten, khoa)}, 429)
         if ma_moi is None:
             # MỘT câu duy nhất cho mọi nhánh sai, giống nhau từng byte: sai mật
             # khẩu · tên không tồn tại · tên sai cú pháp · tài khoản đã tắt.

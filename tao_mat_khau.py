@@ -15,6 +15,7 @@
      python3 tao_mat_khau.py bat   <tên>       mở lại
      python3 tao_mat_khau.py xoa   <tên>       xoá hẳn
      python3 tao_mat_khau.py liet-ke           xem có những ai
+     python3 tao_mat_khau.py mo-khoa <tên>     gỡ khoá tạm khi gõ sai quá số lần
 
  KHÔNG có tuỳ chọn --mat-khau, và đó là cố ý: mọi thứ gõ trên dòng lệnh đều
  vào lịch sử shell và hiện ra trong "ps aux" cho mọi người dùng khác trên máy.
@@ -100,18 +101,31 @@ def lam(viec, ten, dd):
         if not ds:
             print('Chưa có tài khoản nào. Chạy: python3 tao_mat_khau.py them')
             return
+        khoa = TK.xem_khoa(TK.duong_dan_khoa(dd))
         print(f'{len(ds)} tài khoản trong {dd}:\n')
-        print(f'  {"TÊN ĐĂNG NHẬP":<24}{"TRẠNG THÁI":<12}NGÀY TẠO')
-        print('  ' + '-' * 58)
+        print(f'  {"TÊN ĐĂNG NHẬP":<24}{"TRẠNG THÁI":<12}{"NGÀY TẠO":<22}'
+              f'KHOÁ TẠM')
+        print('  ' + '-' * 76)
         for bg in ds:
+            ten = TK.chuan_ten(bg.get('ten_dang_nhap')) or ''
             tt = 'đang bật' if bg.get('bat', True) else 'ĐANG TẮT'
+            sai, con = khoa.get(ten, (0, 0))
+            if con:
+                k = f'BỊ KHOÁ, còn {max(1, -(-con // 60))} phút'
+            elif sai:
+                k = f'{sai}/{TK.SO_LAN_SAI_TOI_DA} lần sai'
+            else:
+                k = '—'
             print(f'  {bg.get("ten_dang_nhap", "?"):<24}{tt:<12}'
-                  f'{bg.get("ngay_tao", "?")}')
+                  f'{bg.get("ngay_tao", "?"):<22}{k}')
         so_bat = sum(1 for b in ds if b.get('bat', True))
         print(f'\n  {so_bat} tài khoản đang bật.')
         if not so_bat:
             print('  [!] KHÔNG có tài khoản nào bật — máy chủ sẽ không khởi '
                   'động được.')
+        if any(c for _, c in khoa.values()):
+            print('  [!] Có tài khoản đang bị khoá tạm. Gỡ ngay bằng: '
+                  'python3 tao_mat_khau.py mo-khoa <tên>')
         return
 
     ten = _hoi_ten(ten)
@@ -134,10 +148,38 @@ def lam(viec, ten, dd):
         _dung(f'Không có tài khoản nào tên "{ten}".\n'
               f'      Xem danh sách: python3 tao_mat_khau.py liet-ke')
 
+    if viec == 'mo-khoa':
+        # Cửa thoát hiểm của 2B, và là lý do sổ khoá tạm phải nằm trong TỆP:
+        # bộ đếm sống ở tiến trình web.py, script này là tiến trình KHÁC.
+        # KHÔNG gọi _ghi(): lệnh này không đụng tới tai_khoan.json.
+        dd_k = TK.duong_dan_khoa(dd)
+        sai, con = TK.xem_khoa(dd_k).get(ten, (0, 0))
+        if not TK.xoa_khoa(dd_k, ten):
+            print(f'\nTài khoản "{ten}" vốn không bị khoá, cũng chưa có lần gõ '
+                  f'sai nào được ghi. Không đổi gì.')
+            return
+        # ĐỌC LẠI để khẳng định. _ghi_so() cố ý nuốt lỗi ghi (thư mục chỉ đọc,
+        # đĩa đầy) để không làm hỏng cổng đăng nhập — nhưng ở ĐÂY thì im lặng
+        # báo "đã gỡ" trong khi sổ không đổi là nói dối đúng người đang cần tin.
+        if ten in TK.xem_khoa(dd_k):
+            _dung(f'Không ghi được sổ khoá tạm — "{ten}" VẪN đang bị khoá.\n'
+                  f'      Xem dòng [CẢNH BÁO] ngay trên để biết vì sao.\n'
+                  f'      Tệp: {dd_k}')
+        cu = (f'đang bị khoá (còn {max(1, -(-con // 60))} phút)' if con
+              else f'có {sai} lần gõ sai được ghi')
+        print(f'\nĐã gỡ khoá cho "{ten}" — trước đó {cu}.')
+        print('  Vào lại được NGAY, không phải chạy lại web.py.')
+        print(f'  Tệp: {dd_k}')
+        return
+
     if viec == 'doi':
         print(f'\n  Đổi mật khẩu cho "{ten}".')
         ds[i] = TK.ban_ghi_moi(ten, _hoi_mat_khau())
         ds[i]['ngay_tao'] = ds[i].get('ngay_tao')
+        # Đặt mật khẩu mới rồi mà vẫn phải ngồi đợi hết 15 phút là vô nghĩa:
+        # người quên mật khẩu đi đúng đường này, và bộ đếm cũ nói về mật khẩu
+        # đã không còn tồn tại.
+        TK.xoa_khoa(TK.duong_dan_khoa(dd), ten)
         _ghi(dd, ds, f'Đã đổi mật khẩu cho "{ten}".')
 
     elif viec in ('tat', 'bat'):
@@ -160,6 +202,7 @@ def lam(viec, ten, dd):
             _dung(f'"{ten}" là tài khoản BẬT cuối cùng.\n'
                   f'      Xoá nó thì máy chủ sẽ không khởi động lại được nữa.')
         ds.pop(i)
+        TK.xoa_khoa(TK.duong_dan_khoa(dd), ten)   # đừng để rác lại trong sổ
         _ghi(dd, ds, f'Đã xoá tài khoản "{ten}". Còn {len(ds)} tài khoản.')
 
 
@@ -167,7 +210,7 @@ def main():
     ap = argparse.ArgumentParser(
         description='Đặt tài khoản cho máy chủ quản trị xếp thời khoá biểu')
     ap.add_argument('viec', choices=['them', 'doi', 'tat', 'bat', 'xoa',
-                                     'liet-ke'])
+                                     'liet-ke', 'mo-khoa'])
     ap.add_argument('ten', nargs='?', default=None)
     ap.add_argument('--tep', default=MAC_DINH,
                     help='đường dẫn tai_khoan.json (dành cho ca thử)')

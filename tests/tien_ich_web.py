@@ -66,13 +66,19 @@ class MayChuTam:
     TEN = 'khcbcddl'
 
     def __init__(self, duong_dan_cauhinh, may_chu=None, tai_khoan=True,
-                 dang_nhap=True):
+                 dang_nhap=True, xoa_so_khoa=True):
         self.dd = duong_dan_cauhinh
         self.may_chu = may_chu          # đường dẫn cauhinh_may_chu.json, hoặc None
         # tai_khoan: True = dựng một tài khoản tạm; False = KHÔNG có tài khoản
         # nào (để thử nhánh máy-chủ-chưa-cài-xong); hoặc một đường dẫn sẵn.
         self.tai_khoan = tai_khoan
         self.dang_nhap = dang_nhap
+        # Sổ khoá tạm (2B) nằm trên ĐĨA, nên nó sống sót qua cả việc dựng lại
+        # máy chủ — khác hẳn CAC_PHIEN vốn ở trong RAM. Mặc định xoá, đúng
+        # tinh thần web.xoa_sach_phien(): ca thử nào cũng phải bắt đầu từ trạng
+        # thái sạch, nếu không thì kết quả phụ thuộc THỨ TỰ CHẠY.
+        # Ca thử nào cần đo tính bền qua khởi động lại thì truyền False.
+        self.xoa_so_khoa = xoa_so_khoa
 
     def __enter__(self):
         web.DUONG_DAN_CAUHINH = os.path.abspath(self.dd)
@@ -94,6 +100,11 @@ class MayChuTam:
         else:
             dd_tk = self.tai_khoan
         web.nap_tai_khoan_may_chu(dd_tk)
+        if self.xoa_so_khoa:
+            try:
+                os.remove(TK.duong_dan_khoa(dd_tk))
+            except OSError:
+                pass
 
         self.may = ThreadingHTTPServer(('127.0.0.1', 0), web.May)
         self.may.daemon_threads = True

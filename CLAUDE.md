@@ -32,6 +32,7 @@ python3 tests/thu_truong.py             # thử khai báo TRUONG của các lo�
 python3 tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
 python3 tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
 python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh là python3
+python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -81,10 +82,12 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
-| `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
+| `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản, và **`mo-khoa`** gỡ khoá tạm. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
 | `tai_khoan.json` | Bản băm mật khẩu. **Đã gitignore** | Thiếu thì máy chủ TỪ CHỐI khởi động |
+| `khoa_dang_nhap.json` | Sổ khoá tạm của 2B: bộ đếm lần gõ sai + mốc hết khoá. **Đã gitignore**, KHÔNG có bản `.mau` | Không ai tạo tay — `web.py` tự sinh. Thiếu hoặc hỏng thì coi như chưa ai bị khoá, và kêu to ra dòng lệnh |
 | `*.json.mau` | Bản mẫu của hai tệp bị gitignore, **có commit** | Để cài lại máy còn biết cấu trúc |
 | `tests/thu_dang_nhap.py` | Cổng đăng nhập: xoay mã phiên · câu chung · hai tài khoản · một lần scrypt mọi nhánh · bốn nhánh từ chối khởi động | Chạy khi sửa cổng đăng nhập |
+| `tests/thu_chong_do.py` | 2B: khoá đúng ngưỡng · **nhánh khoá vẫn chạy đủ 1 lượt scrypt** · mọi loại tên đúng 1 lượt · vào đúng thì xoá bộ đếm · gõ thêm không kéo dài · hết giờ và cửa sổ quên · `mo-khoa` từ **tiến trình khác** · **loạt bắn dồn** · sổ bền và không chứa bí mật · sổ hỏng thì fail-open | **Chạy khi sửa khoá tạm** |
 | `tests/thu_phien.py` | Hạ tầng phiên: nháp tách theo phiên · hai tên cookie · hết hạn · trần · **đồng hồ canh deadlock** | Chạy khi sửa `tao_phien`/`doc_phien`/cookie |
 | `tests/thu_tai_lap.py` | Chế độ tái lập: cùng seed cho cùng kết quả (cả giữa hai tiến trình), và cấu hình VÔ NGHIỆM vẫn DỪNG | Chạy khi sửa `gop_tim_kiem()` hoặc `tim_phuong_an()` |
 | `tests/thu_gop_bo_loc.py` | Hai chỗ lọc cho kết quả giống hệt nhau | Chạy khi sửa `khop_loc()` |
@@ -814,6 +817,14 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   thì tụt còn 15/23.
 - `python3 tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
+- `python3 tests/thu_chong_do.py`: **55/55 mục ĐẠT** (~15s), 12 ca. Lùi từng bản vá
+  ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
+  bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
+  đăng nhập đúng không xoá bộ đếm → 48/51 · gõ thêm lại dời mốc khoá → 50/51 ·
+  đem sổ vào RAM → 39/52 · gỡ hẳn 2B → 25/52 · để `_ghi_so()` NÉM thay vì kêu to
+  → 52/55 (và khi đó **mọi** lần đăng nhập, kể cả mật khẩu ĐÚNG, đều trả 500).
+  **Không lần nào Traceback** — bản đầu có vỡ ở `doc_so()` khi thiếu tệp, đã sửa
+  thành hàm toàn phần.
 - `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (~10s). Lùi `quy_tac.py:125` về
   `python` trần thì tụt còn 16/19; lùi thêm `web.py:1191` + `tai_khoan.py:123` thì 14/19.
   Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.
@@ -869,6 +880,12 @@ Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+[ ] QUYẾT: giữ ngưỡng khoá tạm 5 lần hay nâng lên 10? (xem mục 2B)
+[ ] web.py chỉ nạp tai_khoan.json MỘT LẦN lúc khởi động -> QĐ 3 ("tắt tài
+    khoản có hiệu lực NGAY") hiện KHÔNG đúng ngoài đời: tao_mat_khau.py tat
+    <tên> không có tác dụng cho tới khi chạy lại web.py. Ca thử ru ngủ điều
+    này vì nó gọi tay W.nap_tai_khoan_may_chu(). Sổ khoá tạm của 2B đã có cơ
+    chế đọc lại theo tệp; QĐ 3 nên đi theo cách đó.
 ```
 
 > **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
@@ -1039,6 +1056,148 @@ nào là mở một kênh đo thời gian để dò xem tài khoản nào có th
 `KHOA_BAM = Semaphore(2)`: `scrypt` cấp phát 16 MB và **nhả GIL**, nên nhiều lời
 gọi chạy song song thật — đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB.
 `/api/dang-nhap` là đường **chưa xác thực** duy nhất tốn kém như vậy.
+
+---
+
+## Chống dò mật khẩu (2B) — khoá tạm theo tài khoản
+
+QĐ 6: sai **5 lần** → khoá **15 phút**, đếm theo **TÀI KHOẢN**, cửa sổ quên
+**30 phút**. Đếm theo tài khoản chứ không theo IP là bắt buộc chứ không phải lựa
+chọn: sau Tailscale Serve **mọi** yêu cầu đều mang `127.0.0.1`, nên đếm theo IP
+là đếm tất cả mọi người vào chung một ô.
+
+Ba hằng số ở `tai_khoan.py`: `SO_LAN_SAI_TOI_DA` / `GIAY_KHOA` / `GIAY_QUEN`.
+Đổi ngưỡng là đổi **một dòng**, và `tests/thu_chong_do.py` đọc thẳng ba hằng đó
+nên không phải sửa ca thử theo.
+
+### Sổ khoá tạm nằm trong TỆP, và đó là lý do chính
+
+`khoa_dang_nhap.json` nằm cạnh `tai_khoan.json`, đường dẫn **suy ra** từ nó
+(`TK.duong_dan_khoa()`) chứ không khai riêng — khai riêng thì `--tai-khoan` của
+ca thử sẽ trỏ một nơi còn sổ trỏ nơi khác, và kết quả ca thử phụ thuộc **thứ tự
+chạy**.
+
+> **Vì sao không để trong RAM của `web.py`** — vì `mo-khoa` là **tiến trình
+> khác**. Cả khoa dùng chung MỘT tài khoản, nên một người quên mật khẩu là khoá
+> cả khoa; cửa thoát hiểm tại máy không phải thứ xa xỉ. Trạng thái nằm trong RAM
+> thì `tao_mat_khau.py` không có đường nào chạm tới. Đã đo: đem sổ vào RAM thì
+> `thu_chong_do.py` tụt còn **39/52**.
+
+Kèm theo, miễn phí: **khởi động lại `web.py` không phải là đường lách khoá.**
+`CAC_PHIEN` ở RAM nên mất, sổ khoá thì không — có ca thử riêng.
+
+| Tình huống | Xử lý |
+|---|---|
+| Không có tệp | Chưa ai bị khoá, **im lặng** — đây là trạng thái thường |
+| Tệp hỏng / sai kiểu | Chưa ai bị khoá, **kêu to**; lần gõ sai kế tiếp ghi lại sổ mới |
+| Ghi không được | Kêu to, lượt đăng nhập vẫn chạy tiếp |
+
+> **FAIL-OPEN, ngược hẳn `nap()` ngay bên trên — và đây là lý do.** Chiều kia
+> ("sổ hỏng thì coi như khoá hết") biến một byte lỗi thành cảnh **cả khoa bị
+> nhốt ở ngoài**, mà cách chữa duy nhất là ra tận máy. Khoá tạm là lớp phòng thủ
+> **THÊM**; lớp chính là chính mật khẩu, và nó còn nguyên khi sổ hỏng. Kẻ tấn
+> công cũng không gây được hỏng: chỉ `web.py` ghi tệp này, ghi nguyên tử.
+
+Sổ **không chứa bí mật nào** — tên tài khoản (đã có trong `tai_khoan.json`), một
+bộ đếm, hai mốc thời gian. Vẫn để quyền 600 và **đã gitignore**: nó là trạng
+thái CHẠY của đúng một máy. **Không có bản `.mau`** — khác `tai_khoan.json`,
+không ai tạo tệp này bằng tay.
+
+Ghi **không `fsync`** (khác `tai_khoan.json`): nội dung vứt đi được, mà nó lại bị
+ghi ở đường **chưa xác thực** — không đáng để một người gõ sai mật khẩu ép được
+máy chủ `fsync`. `_ghi_nguyen_tu(..., ben=)` là một bản cài cho cả hai.
+
+### Đồng hồ TREO TƯỜNG, không phải monotonic
+
+Ngược hẳn phiên trình duyệt (dùng **cả hai** đồng hồ). Lý do: `monotonic` của
+tiến trình này vô nghĩa với tiến trình kia, mà cả điểm của sổ là hai tiến trình
+cùng đọc. Giá phải trả là đồng hồ nhảy, nên `_kep_khoa_den()` kẹp mốc hết khoá
+không quá `GIAY_KHOA` — chặn đúng chiều nguy hiểm (nhảy **lùi** làm khoá dài vô
+hạn). Chiều kia chỉ mất một phần của 15 phút, không đáng đổi lấy thêm cơ chế.
+
+### Ba chỗ dễ sai, đã xử — và ca thử canh từng chỗ
+
+1. **Nhánh bị khoá VẪN chạy đủ một lượt `scrypt`.** Phép kiểm nằm **SAU**
+   `TK.bam()`, không phải trước. Chặn trước cho "đỡ tốn CPU" là đổi 27 ms lấy
+   một kênh đo: gõ bậy 5 lần rồi xem lần thứ 6 trả lời nhanh hay chậm là biết
+   tài khoản có thật hay không. **Hệ quả phải chấp nhận: khoá tạm KHÔNG giảm
+   được chút tải CPU nào** — nó chống dò mật khẩu, không chống làm nghẽn máy
+   chủ. Đừng trông cậy nhầm. Lùi ra: **46/51**.
+2. **KIỂM và TĂNG trong CÙNG một lần giữ khoá** (`TK.ghi_nhan_thu()`). Tách ra
+   hai lần giữ khoá thì một loạt bắn dồn lọt hết, vì mọi yêu cầu đều đọc bộ đếm
+   xong mới xếp hàng ở `KHOA_BAM` — đúng lỗi A4 mà `gianh_luot()` đã giải. Đo
+   được: bỏ chốt chặn thì 40 yêu cầu bắn cùng lúc **lọt 8 thay vì đúng 5**.
+3. **Đang khoá thì mật khẩu ĐÚNG cũng không vào.** Cho vào là bỏ hẳn tác dụng
+   của khoá: kẻ dò cứ đoán tiếp trong lúc bị khoá, tới lúc trúng thì vào.
+
+Thêm hai luật nhỏ nhưng phải giữ: **đăng nhập đúng xoá sạch bộ đếm** (bốn lần lỡ
+tay rải rác trong ngày không được cộng dồn thành khoá oan), và **gõ thêm lúc
+đang khoá KHÔNG dời mốc hết khoá** (dời mốc là trao cho kẻ dò cái nút nhốt cả
+khoa ở ngoài vĩnh viễn).
+
+### Chỉ đếm tài khoản CÓ THẬT — và cái giá của việc đó
+
+Tên không tồn tại / sai cú pháp / rỗng **không bao giờ vào sổ**. Hai lý do:
+
+- `/api/dang-nhap` là đường **chưa xác thực**, nên nếu đếm cả tên bịa thì kích
+  thước sổ do khách điều khiển — mười triệu tên bịa là mười triệu mục.
+- Bản nào "cũng đếm tên bịa cho công bằng" đều phải kèm **trần + phép đuổi**, mà
+  phép đuổi ấy **CHÍNH LÀ đường lách khoá**: bắn đủ tên bịa cho tràn sổ là đẩy
+  mục thật ra ngoài, bộ đếm về 0.
+
+> **Đánh đổi có chủ ý, đã ghi thành một mục ca thử riêng:** ai chịu gõ sai đủ 5
+> lần thì phân biệt được tên có thật (429) với tên bịa (401). Với **một** tài
+> khoản dùng chung mang tên khoa thì đó không phải bí mật. Đổi lại là một câu
+> báo dùng được cho thầy cô — và một cái khoá không lách được.
+>
+> Cái giá phụ: nhánh tên-có-thật ghi tệp (~1 ms) còn nhánh tên-bịa thì không.
+> So với 27 ms của `scrypt` thì đó là 4%. Biết, và chấp nhận — bịt nó bằng cách
+> đếm cả tên bịa là mở lại đúng đường lách ở trên.
+
+### Câu thông báo — cố ý KHÁC câu chung
+
+Nhánh khoá trả **429** kèm câu nói rõ **còn mấy phút** và **nguyên câu lệnh gỡ
+tại máy**; các nhánh sai khác vẫn giữ **401** với đúng một câu chung, giống nhau
+từng byte. Người bị khoá gần như luôn là thầy cô gõ nhầm, và câu chung sẽ đẩy họ
+đi thử lại thêm chục lần rồi đi đổi mật khẩu — trong khi thứ họ cần biết là
+"đợi 12 phút". Số phút **làm tròn LÊN**: "còn 0 phút" là câu vô nghĩa với người
+đang đợi.
+
+### Lệnh tại máy
+
+```bash
+python3 tao_mat_khau.py mo-khoa <tên>   # gỡ khoá ngay, máy chủ nhận ra liền
+python3 tao_mat_khau.py liet-ke         # cột KHOÁ TẠM: ai đang khoá, còn mấy phút
+```
+
+`doi` (đổi mật khẩu) và `xoa` cũng xoá mục trong sổ: đặt mật khẩu mới rồi mà vẫn
+phải ngồi đợi hết 15 phút là vô nghĩa, và bộ đếm cũ nói về một mật khẩu không
+còn tồn tại.
+
+### Câu hỏi CÒN MỞ — ngưỡng 5 với một tài khoản dùng chung
+
+Ngưỡng 5 đúng cho **tài khoản riêng từng người**: ai gõ sai thì người đó chịu.
+Từ khi cả khoa dùng chung **một** tài khoản `khoahoccoban` thì thầy A sai 3 lần
+cộng cô B sai 2 lần là **cả khoa** bị khoá. Đã đo bằng mô phỏng (200.000 ngày,
+3 người, 2% mỗi người mỗi ngày rơi vào cảnh "nhớ nhầm mật khẩu"):
+
+| Ngưỡng | Khoá oan | Tốc độ dò tối đa | So với không khoá |
+|---|---|---|---|
+| **5** (đang dùng) | ~7 lần/năm học | 20 lần/giờ | chậm hơn 11.916× |
+| 10 | ~0,15 lần/năm | 40 lần/giờ | chậm hơn 5.958× |
+| 20 | ~0 | 80 lần/giờ | chậm hơn 2.979× |
+
+Điểm gãy nằm giữa 5 và 10: **khoá oan giảm 48 lần, an ninh chỉ giảm 2 lần.** Từ
+10 lên 20 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giảm.
+**Chưa đổi** — chờ người dùng quyết. Đổi là sửa `SO_LAN_SAI_TOI_DA` ở
+`tai_khoan.py`, một dòng, ca thử tự theo.
+
+> **Đua tranh giữa hai tiến trình — biết, và cố ý không chữa thêm.** `web.py`
+> ghi sổ nhiều nhất 5 lần mỗi 15 phút mỗi tài khoản (chính cái khoá tự chặn tốc
+> độ ghi của nó), còn `mo-khoa` thì chạy tay. Khe trùng nhau là vài chục micro
+> giây, và hậu quả xấu nhất là lệnh gỡ khoá bị đè mất — chạy lại là xong. Thêm
+> một lớp khoá liên-tiến-trình cho khe đó là trả giá phức tạp cho một thứ không
+> ai gặp.
 
 ---
 

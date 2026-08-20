@@ -32,6 +32,12 @@ cauhinh_may_chu.json
 tai_khoan.json
 tai_khoan.json.tam.*.json
 
+# Sổ khoá tạm của cổng đăng nhập (2B chống dò): bộ đếm lần gõ sai + mốc hết
+# khoá. Không chứa bí mật, nhưng là trạng thái CHẠY của đúng một máy — commit
+# nó là đem trạng thái máy này áp cho máy khác. web.py tự tạo lại khi cần.
+khoa_dang_nhap.json
+khoa_dang_nhap.json.tam.*.json
+
 # File Excel mở dở
 ~$*.xlsx
 

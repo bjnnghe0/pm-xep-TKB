@@ -102,6 +102,26 @@ Nếu khai báo trong `cauhinh.json` bị sai, trang web hiện **nguyên văn**
 trong khung đỏ và máy chủ vẫn chạy — cứ sửa file rồi bấm xếp lại, không phải khởi
 động lại.
 
+### Khi trang báo "Tài khoản đang bị khoá tạm"
+
+Gõ sai mật khẩu **5 lần liên tiếp** thì tài khoản bị khoá **15 phút**. Đây là để
+người ngoài không dò được mật khẩu bằng cách thử mãi.
+
+Có hai cách vào lại, chọn cái nào cũng được:
+
+1. **Đợi.** Trang nói rõ còn bao nhiêu phút. Bấm thêm trong lúc chờ **không** làm
+   dài thêm thời gian khoá — nhưng cũng không rút ngắn được.
+2. **Gỡ ngay tại máy đang chạy phần mềm.** Mở Command Prompt tại thư mục này, gõ:
+
+   ```
+   python3 tao_mat_khau.py mo-khoa <tên đăng nhập>
+   ```
+
+   Vào lại được ngay, **không phải** tắt rồi bật lại `web.py`.
+
+Muốn xem ai đang bị khoá: `python3 tao_mat_khau.py liet-ke` — có cột **KHOÁ TẠM**.
+Quên hẳn mật khẩu thì `python3 tao_mat_khau.py doi <tên>`; đổi xong là khoá tự gỡ luôn.
+
 ## 3b. Chia sẻ thời khoá biểu cho giáo viên và học sinh
 
 `python3 xep_tkb.py --xuat-html` (hoặc nút **Xuất trang web** trên giao diện) sinh
