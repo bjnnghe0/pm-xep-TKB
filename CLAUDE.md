@@ -601,6 +601,53 @@ lại xem đã gác chưa.
 >    `_than_json()` — điểm **nằm trong** vùng chưa khoá của bản cũ và **nằm ngoài**
 >    ở bản mới. Nới khe hở có sẵn, không tạo lỗi mới.
 
+### Ổ NTFS, Windows song song, và phép tự kiểm GHI ĐƯỢC
+
+Máy này **có Windows cài song song** — đo bằng `efibootmgr`:
+`Boot0000* Windows Boot Manager`, cộng đủ bộ phân vùng Windows trên `nvme0n1`
+(EFI System · Microsoft reserved · Microsoft basic data · Windows recovery).
+Thư mục dự án thì nằm trên một phân vùng **NTFS** (`nvme1n1p2`, nhãn `NAM MEO`).
+
+> **Lỗi im lặng nhất của cả phần mềm.** Windows tắt kiểu **"khởi động nhanh"**
+> (fast startup) là ngủ đông chứ không tắt hẳn, nên phân vùng còn ở trạng thái
+> **BẨN**; Linux thấy vậy gắn **CHỈ ĐỌC** để khỏi làm hỏng dữ liệu. Hậu quả:
+> phần mềm chạy bình thường, xếp bình thường 50 giây, tới lúc bấm Lưu mới hỏng
+> — mà nguyên nhân thật là **một cái tắt máy sai cách hôm trước, trên hệ điều
+> hành khác**, và không có gì trong phần mềm chỉ ra điều đó.
+
+`web.main()` gọi `kiem_ghi_duoc()` **trước khi bind cổng** và trước cả dòng
+"Mở trình duyệt vào": ghi thật một tệp tạm rồi xoá. Không ghi được thì **DỪNG**
+kèm câu chỉ đúng cách chữa (vào Windows tắt "khởi động nhanh", rồi *Shut down*
+hẳn — đừng *Restart*, đừng đóng nắp máy).
+
+> **Không dùng `os.access(W_OK)`.** Nó chỉ hỏi bit quyền, mà tình huống đang lo
+> là hệ tệp gắn CHỈ ĐỌC — lúc đó bit quyền vẫn nói "được ghi". Phải ghi thật.
+
+`tests/thu_web.py` CA 7 dựng thư mục `chmod 500` rồi chạy `web.py` bằng **tiến
+trình con**. Hai chỗ đã phải sửa vì kỷ luật:
+- chạy bằng root thì `chmod` không chặn được → ca thử **tự khai mất khả năng
+  phân biệt** thay vì âm thầm xanh;
+- lùi bản vá ra thì máy chủ khởi động được và `serve_forever()` chạy mãi →
+  `subprocess.run` ném `TimeoutExpired`. Bản đầu **VỠ** đúng kiểu hỏng số 2;
+  nay bắt lấy và biến thành một mục **ĐỎ**.
+
+### Ổ dữ liệu đã có sẵn trong `/etc/fstab` — đừng thêm lần nữa
+
+Đo được, không suy: `systemctl show 'media-adminnam-NAM\x20MEO.mount'` cho
+`SourcePath=/etc/fstab`, `Loaded: loaded (/etc/fstab; generated)`. Dòng có sẵn
+từ **6/8/2026**, đã đủ `nofail`, `x-systemd.device-timeout=30`, `uid=1000`,
+`gid=1000`, `acl`:
+
+```
+UUID=8018451718450D9A /media/adminnam/NAM\040MEO ntfs3 rw,nosuid,nodev,relatime,uid=1000,gid=1000,acl,iocharset=utf8,prealloc,nofail,x-systemd.device-timeout=30 0 0
+```
+
+> **BẪY DẤU CÁCH đã bắt đúng người viết ra nó.** `grep "NAM MEO" /etc/fstab`
+> cho **0 dòng**, vì fstab ghi dấu cách thành `\040`. Kết luận "ổ do udisks tự
+> gắn" sinh ra từ đúng cú grep hụt đó. Ba cách viết cho ba nơi, đừng trộn:
+> `fstab` → `\040` · `systemd` (`RequiresMountsFor`, tên unit) → `\x20` ·
+> dòng lệnh → `"NAM MEO"` trong ngoặc kép.
+
 ### Cảnh báo sớm sau khi Lưu — CẢNH BÁO, không CHẶN
 
 Thầy cô bấm Lưu năm lần, thêm bốn quy tắc, và `cauhinh.json` thành **vô nghiệm**
@@ -853,7 +900,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   chỗ lọc thì tụt còn 5/25.
 - `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
-- `python3 tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python3 tests/thu_web.py`: **65/65 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
 - `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản

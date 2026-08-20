@@ -91,6 +91,50 @@ def thu_muc_cauhinh():
     return os.path.dirname(os.path.abspath(DUONG_DAN_CAUHINH))
 
 
+def kiem_ghi_duoc(thu_muc):
+    """Thư mục dự án có GHI được không? Trả (ok, câu lỗi hoặc None).
+
+       VÌ SAO PHẢI KIỂM LÚC KHỞI ĐỘNG, không đợi tới lúc bấm Lưu:
+       máy này có Windows cài song song (đã đo: efibootmgr thấy "Windows Boot
+       Manager"), mà thư mục dự án nằm trên một phân vùng NTFS. Windows tắt
+       kiểu "khởi động nhanh" là ngủ đông chứ không tắt hẳn, nên phân vùng còn
+       ở trạng thái BẨN; Linux thấy vậy sẽ gắn CHỈ ĐỌC để khỏi làm hỏng dữ
+       liệu. Hậu quả: phần mềm chạy bình thường, xếp bình thường, tới lúc bấm
+       Lưu thì hỏng — và nguyên nhân thật (một cái tắt máy sai cách từ hôm
+       trước, trên hệ điều hành khác) không hiện ra ở đâu trong phần mềm cả.
+
+       Kiểm bằng cách GHI THẬT rồi xoá. Không dùng os.access(W_OK): nó chỉ hỏi
+       bit quyền, mà tình huống đang lo là hệ tệp gắn CHỈ ĐỌC — bit quyền vẫn
+       nói "được ghi" trong khi mọi lần ghi đều nổ.
+    """
+    dd = os.path.join(thu_muc, f'.thu-ghi-{os.getpid()}.tam')
+    try:
+        with open(dd, 'w', encoding='utf-8') as f:
+            f.write('thu ghi')
+        os.remove(dd)
+        return True, None
+    except OSError as e:
+        try:
+            os.remove(dd)
+        except OSError:
+            pass
+        return False, (
+            f'[LỖI] KHÔNG GHI ĐƯỢC vào thư mục dự án:\n'
+            f'      {thu_muc}\n'
+            f'      Lý do hệ điều hành đưa ra: {e}\n'
+            f'\n'
+            f'      Máy chủ DỪNG ở đây thay vì chạy tiếp, vì chạy tiếp nghĩa là\n'
+            f'      thầy cô xếp xong 50 giây rồi mới phát hiện không Lưu được.\n'
+            f'\n'
+            f'      Nếu thư mục nằm trên ổ NTFS và máy có Windows cài song song:\n'
+            f'      hầu như chắc chắn là Windows tắt kiểu "khởi động nhanh"\n'
+            f'      (fast startup) nên ổ còn ở trạng thái bẩn, và Linux gắn ổ\n'
+            f'      CHỈ ĐỌC. Cách chữa: vào Windows, tắt "khởi động nhanh"\n'
+            f'      (Control Panel > Power Options > Choose what the power\n'
+            f'      buttons do > bỏ tick "Turn on fast startup"), rồi Shut down\n'
+            f'      hẳn — đừng Restart, đừng đóng nắp máy.')
+
+
 # ==========================================================================
 # 1. TRẠNG THÁI DÙNG CHUNG GIỮA CÁC LUỒNG
 # ==========================================================================
@@ -1897,6 +1941,14 @@ def main():
     ok_tk, loi_tk = nap_tai_khoan_may_chu(os.path.abspath(args.tai_khoan))
     if not ok_tk:
         print(loi_tk, file=sys.stderr)
+        raise SystemExit(1)
+
+    # Ghi thử TRƯỚC khi bind cổng, và trước cả dòng "Mở trình duyệt vào".
+    # Ổ chỉ-đọc là lỗi im lặng nhất trong cả phần mềm: mọi thứ chạy ngon cho
+    # tới đúng lúc bấm Lưu. Xem ghi chú dài ở kiem_ghi_duoc().
+    ok_ghi, loi_ghi = kiem_ghi_duoc(thu_muc_cauhinh())
+    if not ok_ghi:
+        print(loi_ghi, file=sys.stderr)
         raise SystemExit(1)
 
     dia_chi = ('127.0.0.1', args.port)                # CHỈ máy này, không mở ra mạng

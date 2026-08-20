@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tien_ich_web import (GOC_TM, MayChuTam, cau_hinh_tam,   # noqa: E402
                           doc_o_excel, doi_trang_thai)
 import xep_tkb as X          # noqa: E402
+import tai_khoan as TK       # noqa: E402
 import web                   # noqa: E402
 
 KQ = []
@@ -277,6 +278,81 @@ def ca_6_moi_ca_qua_http():
          f'Ít nhất 4 ca dựng máy chủ thật — {than.count("MayChuTam(")}')
 
 
+def ca_7_o_chi_doc(tm):
+    """Ổ CHỈ ĐỌC là lỗi im lặng nhất của cả phần mềm.
+
+       Máy có Windows cài song song (đã đo: efibootmgr thấy "Windows Boot
+       Manager"), thư mục dự án nằm trên NTFS. Windows tắt kiểu "khởi động
+       nhanh" là ngủ đông chứ không tắt hẳn -> phân vùng còn BẨN -> Linux gắn
+       CHỈ ĐỌC. Phần mềm chạy ngon, xếp ngon, tới lúc bấm Lưu mới hỏng — và
+       nguyên nhân thật nằm ở một cái tắt máy sai cách hôm trước, trên hệ điều
+       hành khác. Không có gì trong phần mềm chỉ ra điều đó.
+    """
+    print('\nCA 7 — thư mục dự án KHÔNG ghi được: máy chủ phải TỪ CHỐI khởi động')
+    print('-' * 74)
+    import subprocess
+    import stat as _stat
+
+    # --- hàm kiểm nói ĐÚNG ở cả hai chiều ---
+    ok, loi = web.kiem_ghi_duoc(tm)
+    kiem(ok and loi is None, f'Thư mục ghi được -> (True, None) — {ok}, {loi}')
+    ok, loi = web.kiem_ghi_duoc(os.path.join(tm, 'khong-co-thu-muc-nay'))
+    kiem(not ok and 'khởi động nhanh' in (loi or ''),
+         'Thư mục không ghi được -> False, và câu lỗi chỉ đích danh nguyên nhân '
+         'hay gặp nhất')
+    # Không dùng os.access(W_OK): nó chỉ hỏi bit quyền, mà tình huống đang lo
+    # là hệ tệp gắn CHỈ ĐỌC — lúc đó bit quyền vẫn nói "được ghi".
+    kiem(not os.path.exists(os.path.join(tm, f'.thu-ghi-{os.getpid()}.tam')),
+         'Và tệp thử đã được dọn, không để rác lại trong thư mục dự án')
+
+    # --- TẦNG THẬT: chạy web.py bằng tiến trình con, thư mục chỉ đọc ---
+    ro = os.path.join(tm, 'chi-doc')
+    os.makedirs(ro, exist_ok=True)
+    shutil.copy(os.path.join(GOC_TM, 'cauhinh.json'),
+                os.path.join(ro, 'cauhinh.json'))
+    dd_tk = os.path.join(tm, 'tk-cho-ca7.json')
+    TK.ghi(dd_tk, [TK.ban_ghi_moi('nguoithu', MayChuTam.MAT_KHAU)])
+    os.chmod(ro, 0o500)
+    try:
+        ghi_duoc_that = web.kiem_ghi_duoc(ro)[0]
+        try:
+            r = subprocess.run(
+                [sys.executable, os.path.join(GOC_TM, 'web.py'),
+                 '--port', '20994',
+                 '--cauhinh', os.path.join(ro, 'cauhinh.json'),
+                 '--tai-khoan', dd_tk],
+                capture_output=True, text=True, timeout=25)
+            ma_ra, ra = r.returncode, (r.stdout or '') + (r.stderr or '')
+        except subprocess.TimeoutExpired as e:
+            # Lùi bản vá ra thì máy chủ KHỞI ĐỘNG ĐƯỢC và serve_forever() chạy
+            # mãi -> subprocess.run ném TimeoutExpired. Bắt lấy và biến thành
+            # một mục ĐỎ: bộ thử phải biết đỏ, không phải biết vỡ. Bản đầu của
+            # ca này không bắt, và nó VỠ đúng kiểu hỏng số 2.
+            ma_ra = 0
+            ra = ((e.stdout or b'').decode('utf-8', 'replace')
+                  + (e.stderr or b'').decode('utf-8', 'replace')
+                  if isinstance(e.stdout, bytes) or isinstance(e.stderr, bytes)
+                  else (e.stdout or '') + (e.stderr or ''))
+    finally:
+        os.chmod(ro, 0o700)
+
+    if ghi_duoc_that:
+        # Chạy bằng root thì chmod không chặn được -> ca thử mất khả năng phân
+        # biệt. Nói thẳng ra chứ đừng âm thầm xanh.
+        kiem(False,
+             'Không dựng được thư mục chỉ-đọc (đang chạy bằng root?) — mục này '
+             'mất khả năng phân biệt, đừng tin nó')
+    else:
+        kiem(ma_ra != 0,
+             f'Thư mục chỉ đọc -> máy chủ thoát với mã != 0 — {ma_ra} '
+             f'(0 nghĩa là nó CHẠY TIẾP, hoặc chạy mãi tới hết giờ)')
+        kiem('Mở trình duyệt vào' not in ra,
+             'Và CHƯA HỀ in dòng "Mở trình duyệt vào" — không mời ai vào một '
+             'máy chủ sẽ hỏng lúc bấm Lưu')
+        kiem('KHÔNG GHI ĐƯỢC' in ra and 'khởi động nhanh' in ra,
+             f'Câu lỗi nói rõ chuyện gì và chữa thế nào — {ra.strip()[:90]!r}')
+
+
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ GIAO DIỆN WEB')
@@ -288,6 +364,7 @@ if __name__ == '__main__':
         ca_4_trang_tinh()
         ca_5_luu_quy_tac(tm)
         ca_6_moi_ca_qua_http()
+        ca_7_o_chi_doc(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
