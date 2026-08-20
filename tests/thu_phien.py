@@ -86,8 +86,14 @@ def ten_qt(dd):
         return []
 
 
+# Bộ lọc CỐ Ý KHÔNG KHỚP GÌ CẢ. Ca thử này đo việc NHÁP TÁCH THEO PHIÊN, nội
+# dung quy tắc hoàn toàn không liên quan — nên nó không được phép có ý kiến gì
+# về dữ liệu nhà trường. Bản cũ lọc "lop": "12B1" + "thu": [2], và đã vỡ thật:
+# thầy cô thêm quy tắc "Vật lý 12B1 chỉ Thứ 2" thì hai cái cộng lại làm Vật lý
+# 12B1 hết sạch ngày, _kiem_tra_so_bo() chặn đúng, /api/them-quy-tac trả 400,
+# và ca thử đỏ vì MÁY CHỦ LÀM ĐÚNG.
 NHAP_A = {'loai': 'khong_xep_thu', 'ghi_chu': 'NHAP-CUA-A-CHUA-DUYET',
-          'loc': {'lop': '12B1'}, 'thu': [2]}
+          'loc': {'lop': 'LOP-KHONG-CO-THAT'}, 'thu': [2]}
 
 
 # ==========================================================================

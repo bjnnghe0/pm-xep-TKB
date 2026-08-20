@@ -192,9 +192,11 @@ def ca_3_xoay_ma_phien(tm):
         # Quyết: CHUYỂN sang mã mới. Thứ kẻ tấn công cần là mã SAU khi đăng
         # nhập, mà mã đã xoay thì hắn không có — nháp chuyển hay không không
         # đụng tới tính chất đó. Bỏ nháp thì làm mất việc của người dùng.
+        # Bộ lọc CỐ Ý KHÔNG KHỚP GÌ CẢ — xem ghi chú ở NHAP_A trong
+        # tests/thu_phien.py. Ca thử này đo việc XOAY MÃ PHIÊN, không đo quy tắc.
         k.post('/api/them-quy-tac', {'quy_tac': {
             'loai': 'khong_xep_thu', 'ghi_chu': 'NHAP-TRUOC-KHI-VAO-LAI',
-            'loc': {'lop': '12B1'}, 'thu': [2]}})
+            'loc': {'lop': 'LOP-KHONG-CO-THAT'}, 'thu': [2]}})
         _, d = k.js('/api/quy-tac')
         kiem(d['so_moi'] == 1, 'Dựng sẵn: đang có 1 nháp')
         ma_g1 = k.ma_phien()

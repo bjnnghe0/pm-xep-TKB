@@ -190,7 +190,7 @@ def ca_4_luu(B, tm, dd):
     kiem(sau['quy_tac'][3].get('bat') is False, 'Công tắc tắt cũng được ghi')
     _, dq = goi(B, '/api/quy-tac')
     kiem(dq['so_moi'] == 0, 'Ghi xong thì kho nháp của phiên rỗng')
-    kiem(len(sau['_quy_tac_de_san_chua_bat']) == 7,
+    kiem(sau['_quy_tac_de_san_chua_bat'] == truoc['_quy_tac_de_san_chua_bat'],
          'Mục _quy_tac_de_san_chua_bat không bị đụng')
 
     r = subprocess.run([sys.executable, os.path.join(GOC_TM, 'xep_tkb.py'),

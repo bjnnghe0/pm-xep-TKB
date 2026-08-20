@@ -490,6 +490,13 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
         W.nap_cau_hinh_may_chu(mc)
         k.dang_nhap()
 
+        # CHỤP trạng thái tệp NGAY BÂY GIỜ, rồi mới bắn. Điều cần khẳng định
+        # sau mỗi loạt bị chặn là "tệp KHÔNG ĐỔI" — mà "không đổi" phải so với
+        # chính nó lúc đầu, không so với một hằng số lấy từ dữ liệu nhà trường.
+        tat_ban_dau = so_tat(dd)
+        kiem(tat_ban_dau is not None,
+             f'Chụp được trạng thái tắt/bật ban đầu của tệp — {tat_ban_dau}')
+
         # --- 1. Host LẠ: mọi đường, đọc lẫn ghi, đều phải 400 ---
         lot = []
         for d in TINH_D + duong_api:
@@ -509,7 +516,14 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
                    if k.post(d, THAN[d], them={'Host': 'evil.com'})[0] != 400]
         kiem(not lot_ghi,
              f'Riêng 5 đường GHI: Host lạ đều 400 — lọt: {lot_ghi}')
-        kiem(so_tat(dd) == [], 'Và cauhinh.json không hề bị đụng tới')
+        # So với TRẠNG THÁI BAN ĐẦU của chính tệp, không so với [].
+        # "== []" ngầm giả định cauhinh.json không có quy tắc nào bị tắt — một
+        # con số lấy từ dữ liệu nhà trường, và nó đã vỡ thật khi thầy cô tắt
+        # bớt vài quy tắc qua giao diện. Điều CẦN khẳng định là "KHÔNG ĐỔI",
+        # chứ không phải "rỗng".
+        kiem(so_tat(dd) == tat_ban_dau,
+             f'Và cauhinh.json không hề bị đụng tới — {so_tat(dd)} vs '
+             f'{tat_ban_dau} lúc đầu')
 
         # --- 3. Host đúng nhưng Origin của TRANG LẠ: đường ghi phải 400 ---
         lot_org = []
@@ -521,7 +535,9 @@ def ca_a1c_moi_duong_deu_bi_gac(tm):
                 lot_org.append(f'{d}:{ma}')
         kiem(not lot_org,
              f'Origin trang lạ bị chặn ở cả 5 đường ghi — lọt: {lot_org}')
-        kiem(so_tat(dd) == [], 'Và cauhinh.json vẫn không bị đụng')
+        kiem(so_tat(dd) == tat_ban_dau,
+             f'Và cauhinh.json vẫn không bị đụng — {so_tat(dd)} vs '
+             f'{tat_ban_dau} lúc đầu')
 
         # --- 4. Chiều ngược lại: đúng cả hai thì KHÔNG được chặn oan ---
         oan = []

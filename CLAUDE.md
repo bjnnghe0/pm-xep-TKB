@@ -33,6 +33,7 @@ python3 tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ g
 python3 tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
 python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh là python3
 python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
+python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -81,6 +82,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
+| `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
 | `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản, và **`mo-khoa`** gỡ khoá tạm. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
 | `tai_khoan.json` | Bản băm mật khẩu. **Đã gitignore** | Thiếu thì máy chủ TỪ CHỐI khởi động |
@@ -797,14 +799,14 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
   khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
-- `python3 tests/thu_loc_tru.py`: **25/25 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
+- `python3 tests/thu_loc_tru.py`: **26/26 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
   chỗ lọc thì tụt còn 5/25.
 - `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
 - `python3 tests/thu_web.py`: **59/59 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
-- `python3 tests/thu_an_ninh.py`: **202/202 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
+- `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
   vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
   A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
   tiêu đề trùng → 166 (6× CA A1). Danh sách tên máy đo trên bộ 202 mục:
@@ -817,6 +819,10 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   thì tụt còn 15/23.
 - `python3 tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
+- `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
+  phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
+  lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
+  danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**
 - `python3 tests/thu_chong_do.py`: **55/55 mục ĐẠT** (~15s), 12 ca. Lùi từng bản vá
   ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
   bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
@@ -849,7 +855,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -857,6 +863,8 @@ Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 2 | `list.index()` ném `ValueError` | Ca thử **chết giữa chừng** thay vì báo đỏ; mọi ca sau nó không bao giờ chạy |
 | 3 | Chỉ xem giá trị trả về của hàm nạp | Bản fail-open trả `(None, None)` y hệt bản đúng → xanh giả, trong khi máy chủ mở toang |
 | 4 | Khớp chuỗi trong mã nguồn | Chuỗi đó cũng nằm trong **dòng chú thích** ngay trên — ca thử kiểm lời chú thích chứ không kiểm mã |
+| 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
+| 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
 
 **Danh sách kiểm cho ca thử mới:**
@@ -871,6 +879,13 @@ Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
    canh chưa** (`dat_dong_ho_canh()` trong `thu_phien.py` là mẫu)?
 6. Có mục tự khẳng định **điều kiện tiên quyết** chưa — để khi dữ liệu đổi khiến
    ca thử mất khả năng phân biệt thì nó báo đỏ chứ không âm thầm xanh?
+7. Có chỗ nào so bằng với **hằng số lấy từ `cauhinh.json`** không (số quy tắc,
+   tên lớp, tên môn, tên GVCN)? Dựng kỳ vọng TỪ tệp, đừng chép giá trị ra.
+   `tests/thu_ghim_du_lieu.py` canh việc này, nhưng đừng đợi nó nhắc.
+8. Nếu ca thử phải **tự dựng trạng thái** (thêm quy tắc nháp, tắt bớt quy tắc)
+   thì dữ liệu dựng ra có **mâu thuẫn được** với `cauhinh.json` thật không?
+   Bộ lọc nên chọn thứ KHÔNG KHỚP GÌ CẢ, để nó không bao giờ có ý kiến về dữ
+   liệu nhà trường — xem `NHAP_A` trong `tests/thu_phien.py`.
 
 ---
 

@@ -32,6 +32,15 @@ GOC = X.doc_cau_hinh(os.path.join(GOC_TM, 'cauhinh.json'))
 NEN = X.BaiToan(copy.deepcopy(GOC))
 DM = GOC['dinh_muc_mon']
 
+# Kỳ vọng dựng TỪ dữ liệu, không viết cứng — xem ghi chú dài ở thu_loc_tru.py.
+MOI_LOP = sorted(l['ten'] for l in GOC['lop'])
+# Một môn THƯỜNG (không chuyên đề) được dạy ở MỌI lớp, chọn từ chính dữ liệu.
+_THEO_MON = {}
+for _c in NEN.cac_cum:
+    if not _c.la_trong and not _c.la_cd:
+        _THEO_MON.setdefault(_c.mon, set()).add(_c.lop)
+MON_MOI_LOP = sorted(m for m, s in _THEO_MON.items() if s == set(MOI_LOP))
+
 KQ = []
 
 
@@ -112,22 +121,25 @@ def ca_2_gom_tiet_hieu_la_chuyen_de():
     kiem(len(q.cac_cum()) == 24 and all(c.la_cd for c in q.cac_cum()),
          f'Cùng bộ lọc đó ở QuyTac.khop(): đúng 24 cụm và đều là chuyên đề')
 
-    doi = doi_gom_tiet({'la_chuyen_de': False, 'mon': 'Hoá học'}, [1, 1])
-    kiem(sorted({k[1] for k in doi}) == ['Hoá học'] and len(doi) == 6,
-         f'"la_chuyen_de": false + mon Hoá: đổi đúng 6 lớp môn Hoá — {len(doi)} cặp')
+    mon = MON_MOI_LOP[0]
+    doi = doi_gom_tiet({'la_chuyen_de': False, 'mon': mon}, [1, 1])
+    kiem(sorted({k[1] for k in doi}) == [mon] and len(doi) == len(MOI_LOP),
+         f'"la_chuyen_de": false + mon "{mon}": đổi đúng {len(MOI_LOP)} lớp '
+         f'môn đó — {len(doi)} cặp')
 
 
 def ca_3_gom_tiet_hieu_tru_long_nhau():
     print('\nCA 3 — gom_tiet hiểu "tru" lồng nhau y như khop()')
     print('-' * 74)
-    loc = {'mon': 'Hoá học', 'tru': {'lop': ['12B1', '12B2'],
-                                     'tru': {'lop': '12B1'}}}
-    # tru loại 12B1+12B2, nhưng tru-lồng lại kéo 12B1 ra khỏi diện loại
-    # => rốt cuộc chỉ 12B2 bị loại
+    mon = MON_MOI_LOP[0]
+    l1, l2 = MOI_LOP[0], MOI_LOP[1]
+    loc = {'mon': mon, 'tru': {'lop': [l1, l2], 'tru': {'lop': l1}}}
+    # tru loại l1+l2, nhưng tru-lồng lại kéo l1 ra khỏi diện loại
+    # => rốt cuộc chỉ l2 bị loại
     doi = doi_gom_tiet(loc, [1, 1])
     lop_doi = sorted(k[0] for k in doi)
-    kiem(lop_doi == ['12B1', '12B3', '12B4', '12B5', '12B6'],
-         f'gom_tiet: chỉ 12B2 bị loại — đổi {lop_doi}')
+    kiem(lop_doi == [l for l in MOI_LOP if l != l2],
+         f'gom_tiet: chỉ {l2} bị loại — đổi {lop_doi}')
 
     q = qt_voi(loc)
     lop_khop = sorted(c.lop for c in q.cac_cum())
@@ -165,10 +177,13 @@ def ca_5_khong_hoi_quy():
     kiem(bat_loi(lambda: X.BaiToan(copy.deepcopy(GOC))) is None,
          'cauhinh.json thật vẫn dựng được')
     md = X.BaiToan(copy.deepcopy(GOC)).mong_doi
-    kiem(md[('12B1', 'Toán học')] == [2, 1] and md[('12B1', 'HĐTN&HN')] == [3],
-         'Cách gom tiết mặc định không đổi (Toán [2,1], HĐTN [3])')
-    kiem(sorted(c.lop for c in qt_voi({'nhom_mon': 'SHCN'}).cac_cum())
-         == ['12B1', '12B2', '12B3', '12B4', '12B5', '12B6'],
+    # So với chính dinh_muc_mon, không với [2,1] / [3] viết cứng: đổi cách gom
+    # tiết trong cauhinh.json là việc hợp lệ của thầy cô, không phải hồi quy.
+    lech = sorted(k for k, v in md.items()
+                  if v != DM.get(k[1], {}).get('cum', v))
+    kiem(not lech,
+         f'Cách gom tiết khớp đúng "cum" khai trong dinh_muc_mon — lệch: {lech[:4]}')
+    kiem(sorted(c.lop for c in qt_voi({'nhom_mon': 'SHCN'}).cac_cum()) == MOI_LOP,
          'Bộ lọc thường vẫn hoạt động y như cũ')
 
 

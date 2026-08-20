@@ -114,8 +114,8 @@ def ca_2_khop_tung_o(bt, pa, xlsx, d):
 def ca_3_du_lop_du_gv(bt, d):
     print('\nCA 3 — đủ lớp, đủ giáo viên, đúng số tiết')
     print('-' * 74)
-    kiem(d['lop'] == list(bt.lop) and len(d['lop']) == 6,
-         f'Đủ 6 lớp — {d["lop"]}')
+    kiem(d['lop'] == list(bt.lop) and len(d['lop']) == len(bt.lop),
+         f'Đủ {len(bt.lop)} lớp — {d["lop"]}')
     kiem(all(d['gvcn'].get(l) for l in d['lop']), 'Lớp nào cũng có tên GVCN')
 
     that = sorted({c.gv for c in bt.cac_cum if not c.la_trong})

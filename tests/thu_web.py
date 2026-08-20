@@ -150,8 +150,14 @@ def ca_3_may_chu(tm):
             kiem(k.get(xau)[0] == 404, f'Chặn đường dẫn lạ {xau}')
 
         ma, d = k.js('/api/quy-tac')
-        kiem(ma == 200 and len(d['quy_tac']) == 13,
-             f'GET /api/quy-tac liệt kê {len(d["quy_tac"])} quy tắc')
+        # So với chính TỆP, không so với một số cứng. Ghim "== 13" ở đây đã vỡ
+        # đúng một lần: thầy cô thêm quy tắc qua giao diện là ca thử đỏ, mà mã
+        # thì không sai một dòng nào. CLAUDE.md đã cấm ghim số kiểu này.
+        with io.open(dd, encoding='utf-8') as f:
+            so_trong_tep = len(json.load(f)['quy_tac'])
+        kiem(ma == 200 and len(d['quy_tac']) == so_trong_tep,
+             f'GET /api/quy-tac liệt kê đủ số quy tắc của tệp — '
+             f'{len(d["quy_tac"])}/{so_trong_tep}')
         kiem(all({'i', 'loai', 'ghi_chu', 'bat'} <= set(r) for r in d['quy_tac']),
              'Mỗi dòng có đủ ghi_chu + loai + cờ bật/tắt')
 
@@ -249,7 +255,7 @@ def ca_5_luu_quy_tac(tm):
         lai = X.doc_cau_hinh(dd)
         kiem(all('bat' not in r for r in lai['quy_tac']),
              'Bật lại thì khoá "bat" biến mất hẳn, không để rác')
-        kiem(len(lai['_quy_tac_de_san_chua_bat']) == 7
+        kiem(lai['_quy_tac_de_san_chua_bat'] == truoc['_quy_tac_de_san_chua_bat']
              and all(r['bat'] is False for r in lai['_quy_tac_de_san_chua_bat']),
              'Không đụng tới mục _quy_tac_de_san_chua_bat')
 
