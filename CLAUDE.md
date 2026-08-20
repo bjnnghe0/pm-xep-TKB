@@ -809,6 +809,37 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 
 ---
 
+## Kỷ luật ca thử — bất biến
+
+> **Bản hỏng phải vá vào MÃ CHẠY THẬT và quan sát qua HTTP THẬT.**
+> **Không gọi thẳng hàm rồi xem giá trị trả về.**
+> **Ca thử phải biết ĐỎ, không phải biết VỠ.**
+>
+> **Ca thử KHÔNG khẳng định trên VĂN BẢN MÃ NGUỒN. Khẳng định trên HÀNH VI quan
+> sát qua HTTP. Nếu buộc phải đọc mã nguồn thì LỘT CHÚ THÍCH TRƯỚC.**
+
+Bốn lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+
+| # | Kiểu | Nó đã che giấu gì |
+|---|---|---|
+| 1 | Gọi tắt vào hàm Python | Bỏ qua cả tầng HTTP, tức bỏ qua đúng chỗ sắp đặt cổng đăng nhập |
+| 2 | `list.index()` ném `ValueError` | Ca thử **chết giữa chừng** thay vì báo đỏ; mọi ca sau nó không bao giờ chạy |
+| 3 | Chỉ xem giá trị trả về của hàm nạp | Bản fail-open trả `(None, None)` y hệt bản đúng → xanh giả, trong khi máy chủ mở toang |
+| 4 | Khớp chuỗi trong mã nguồn | Chuỗi đó cũng nằm trong **dòng chú thích** ngay trên — ca thử kiểm lời chú thích chứ không kiểm mã |
+
+**Danh sách kiểm cho ca thử mới:**
+
+1. Có dựng máy chủ thật và đi qua HTTP không? Nếu không, vì sao?
+2. Lùi bản vá ra thì mục này **đỏ** hay **vỡ**? Nếu vỡ thì sửa (đừng `.index()`,
+   đừng chỉ số cứng, đừng đọc khoá chắc chắn có).
+3. Có mục nào chỉ xem giá trị trả về mà không xem hành vi không?
+4. Nếu có đọc mã nguồn: đã lột chú thích chưa? Đã có guard cho trường hợp phép
+   bóc trả về rỗng chưa?
+5. Có mục tự khẳng định **điều kiện tiên quyết** chưa — để khi dữ liệu đổi khiến
+   ca thử mất khả năng phân biệt thì nó báo đỏ chứ không âm thầm xanh?
+
+---
+
 ## Việc treo
 
 ```
@@ -823,6 +854,117 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 > được, và thông báo lỗi sẽ không hề nhắc tới nó. Vì vậy Giai đoạn 2 **cố ý chưa
 > thêm cờ vào mã**: thêm một công tắc chỉ có thể sai chứ không bao giờ đúng là
 > tự đặt bẫy. Khi nào thật sự có proxy TLS thì làm cả ba dòng cùng lúc.
+
+---
+
+## Đợt 2 — chín quyết định đã duyệt (20/8/2026)
+
+| # | Quyết định |
+|---|---|
+| 1 | Hạn phiên: **nghỉ 8 giờ, tuyệt đối 12 giờ**. Ô đăng nhập là lớp phủ, việc đang dở tự chạy lại |
+| 2 | Đóng trình duyệt → phải đăng nhập lại (cookie kiểu phiên, không `Max-Age`) |
+| 3 | Tắt tài khoản có hiệu lực **ngay**, phiên đang mở của người đó chết theo |
+| 4 | Kết quả xếp dùng chung, **dán tên** người xếp **và có DẤU BẢN riêng** — xem dưới |
+| 5 | Mật khẩu tối thiểu **12 ký tự**, không đòi chữ hoa / ký tự lạ |
+| 6 | Khoá tạm **5 lần sai → 15 phút**, đếm theo tài khoản, cửa sổ quên 30 phút |
+| 7 | Chống mất bản sửa: dấu bản + 409 + "Tải lại danh sách", **và** tách nháp theo phiên |
+| 8 | Thứ tự: 2A-2a hạ tầng phiên → 2A-1 đăng nhập → 2A-3 di trú → 2A-4 giao diện → 2A-5 ca thử → 2B chống dò → 2C chống mất bản sửa |
+| 9 | Cookie **`SameSite=Lax`**, không phải `Strict` — xem dưới |
+
+### QĐ 4 — kết quả xếp cũng cần dấu bản, không chỉ dán tên
+
+Dấu bản của QĐ 7 canh `cauhinh.json`, **không** canh kết quả xếp. Lỗ còn lại:
+cô B bấm Xếp đè kết quả thầy A đang mở; A bấm Tải về và nhận tệp của B mà không
+biết. Cùng một lỗi, khác tầng.
+
+- Mỗi lượt xếp xong sinh một dấu mới (`secrets.token_hex(8)`), trả kèm
+  `/api/trang-thai`.
+- `/api/tai-ve` và `/api/tai-web` nhận `?dau=…`; lệch thì **chặn** kèm câu
+  *"Kết quả đã bị thay bởi lượt xếp của <tên>, xem lại trước khi tải."*
+- **Dán tên để BIẾT, dấu bản để CHẶN — cần cả hai.**
+- Ngoại lệ có chủ ý: máy chủ vừa khởi động lại thì chưa có dấu nào, mà tệp hôm
+  qua vẫn nằm trên đĩa. Lúc đó **cho tải**, kèm ghi chú tệp thuộc lượt chạy
+  trước. Từ chối lúc này là từ chối oan — đúng cái bẫy đã bác một lần.
+
+### QĐ 9 — vì sao `Lax` chứ không `Strict`
+
+Đã thử tìm một kịch bản tấn công mà `Lax` + kiểm `Origin` + mọi đường ghi là
+POST vẫn thủng. **Không tìm được**, và có một lý do khiến `Strict` còn kém hấp
+dẫn hơn nữa:
+
+> Mối đe doạ đáng lo nhất ở đây là **một máy khác trong tailnet**
+> (`other.tail7dc28e.ts.net`). Máy đó **same-site** với máy quản trị vì cùng tên
+> đăng ký `tail7dc28e.ts.net`. `SameSite` — dù `Lax` hay `Strict` — **không chặn
+> nó**. Đối với đúng mối đe doạ đó, `Strict` mua được con số không. Cái chặn nó
+> là kiểm `Origin` và tiền tố `__Host-`.
+
+Bốn hướng đã rà: không đường GET nào đổi trạng thái · không nhận
+`X-HTTP-Method-Override` · điều hướng cấp cao nhất không mang `Origin` nhưng lúc
+đó cookie chỉ đi với GET · và:
+
+> **Phải khai `SameSite=Lax` TƯỜNG MINH.** Chrome có ngoại lệ "Lax+POST 2 phút"
+> cho phép POST cross-site cấp cao nhất mang cookie — nhưng ngoại lệ đó **chỉ áp
+> cho cookie KHÔNG khai SameSite**. Bỏ trống không giống khai `Lax`.
+
+Đổi lại: giáo viên gửi link cho nhau qua Zalo là cách làm việc thật, và `Strict`
+làm **mọi** lần bấm link đều văng về ô mật khẩu — ghi vào tài liệu không chữa
+được, chỉ giải thích cho một phiền toái hằng ngày.
+
+---
+
+## Bảng đường dẫn — NGUỒN DUY NHẤT
+
+**Mọi chỗ khác trỏ về bảng này, đừng đếm lại ở nơi khác.** Con số đã trôi ba lần
+(14 → 15 → 18) vì mỗi chỗ đếm một kiểu; chỗ nào cũng "gần đúng" thì lỗi trốn được.
+
+Đếm bằng cách bắn thật vào máy chủ và xem đường nào KHÔNG trả 404 kèm câu
+"Không có trang này" — không suy từ mã nguồn:
+
+| Nhóm | Số đường |
+|---|---|
+| Tĩnh (GET) | **5** |
+| API GET | **6** |
+| API POST | **5** |
+| **Đang có** | **16** |
+| Sẽ thêm ở Đợt 2 | 3 |
+| **Sau Đợt 2** | **19** |
+
+> **Chỗ đã đếm sót:** `/web/index.html` phục vụ được (200) vì `_tinh()` nhận cả
+> `/web/<tệp>` cho mọi tên trong `TINH`, mà `index.html` nằm trong đó. Nó không
+> phải đường giao diện dùng — giao diện vào bằng `/` — nhưng vẫn là một URL có
+> thật, và trước đây cả `ca_a1c` lẫn bảng thiết kế đều bỏ quên nó.
+>
+> `/api/tai-ve` từng bị đếm nhầm thành "không có" khi chạy trong thư mục tạm:
+> nó trả 404 với câu *"Chưa có file kết quả"* — khác hẳn câu *"Không có trang
+> này"*. Phân biệt hai câu 404 đó, đừng chỉ nhìn mã.
+
+| # | Đường | Cách | Có sẵn? | Cần **phiên** | Cần **xác thực** | Lý do |
+|---|---|---|---|---|---|---|
+| 1 | `/` | GET | có | không | **không** | Vỏ trang; phải mở thì mới có chỗ hiện ô mật khẩu |
+| 2 | `/index.html` | GET | có | không | **không** | Cùng tệp với `/` |
+| 3 | `/web/index.html` | GET | có | không | **không** | Đường sót; cùng tệp, giao diện không dùng |
+| 4 | `/web/style.css` | GET | có | không | **không** | Trang đăng nhập phải tải được CSS |
+| 5 | `/web/app.js` | GET | có | không | **không** | Chính nó vẽ ô đăng nhập |
+| 6 | `/api/toi-la-ai` | GET | **MỚI** | không | **không** | Trả đúng một khoá `{"dang_nhap": …}`, không kèm dữ liệu. Trang gọi lúc vừa tải để biết vẽ gì |
+| 7 | `/api/dang-nhap` | POST | **MỚI** | không | **không** | Gác cổng bằng chính nó thì không ai vào được |
+| 8 | `/api/dang-xuat` | POST | **MỚI** | không | **không** | Hết hạn rồi vẫn phải bấm được cho sạch cookie; luỹ đẳng |
+| 9 | `/api/trang-thai` | GET | có | **CÓ** | **CÓ** | Chở toàn bộ nhật ký + lưới TKB + lịch 28 giáo viên |
+| 10 | `/api/quy-tac` | GET | có | **CÓ** | **CÓ** | Bộ ràng buộc nội bộ; cũng là nơi phát **dấu bản** |
+| 11 | `/api/loai-quy-tac` | GET | có | **CÓ** | **CÓ** | Không chứa dữ liệu trường — vẫn gác, vì mặc-định-cấm chỉ đáng tin khi không có ngoại lệ |
+| 12 | `/api/gia-tri` | GET | có | **CÓ** | **CÓ** | Danh sách 28 tên giáo viên |
+| 13 | `/api/tai-ve` | GET | có | **CÓ** | **CÓ** | Cả tệp Excel. Lỗi trả `text/plain` vì mở bằng `window.location` |
+| 14 | `/api/tai-web` | GET | có | **CÓ** | **CÓ** | Bản chưa qua mắt ban giám hiệu. Như trên |
+| 15 | `/api/xep` | POST | có | **CÓ** | **CÓ** | 60 giây CPU, ghi đè hai tệp kết quả |
+| 16 | `/api/luu-quy-tac` | POST | có | **CÓ** | **CÓ** | **Ghi đè `cauhinh.json`** — đường đắt nhất |
+| 17 | `/api/them-quy-tac` | POST | có | **CÓ** | **CÓ** | Đổi bản nháp **của phiên đó** |
+| 18 | `/api/xoa-quy-tac` | POST | có | **CÓ** | **CÓ** | Như trên, chiều ngược lại |
+| 19 | `/api/thu-quy-tac` | POST | có | **CÓ** | **CÓ** | Giải ngay trong luồng HTTP |
+| — | *mọi đường khác* | — | — | — | **CÓ** | **401 trước 404**, để không tiết lộ đường nào tồn tại |
+
+**Hai cột khác nhau, đừng gộp.** *Cần phiên* = cần một mã phiên để biết bản nháp
+là của ai (dựng ở 2A-2a, **chưa có mật khẩu**). *Cần xác thực* = phải đăng nhập
+(lắp ở 2A-1). Năm đường tĩnh không cần cả hai; ba đường mới cần phiên-để-cấp chứ
+không cần xác thực-để-vào.
 
 ---
 
