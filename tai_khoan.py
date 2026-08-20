@@ -293,7 +293,15 @@ def so_khop(a, b):
 #  nhảy; _kep_khoa_den() chặn chiều nguy hiểm (nhảy LÙI làm khoá dài vô hạn).
 # ==========================================================================
 
-SO_LAN_SAI_TOI_DA = 5                    # QĐ 6
+# QĐ 6 đặt 5, đã nâng lên 10 sau khi đo — vì cả khoa dùng CHUNG một tài khoản
+# nên số lần gõ sai của ba người CỘNG DỒN vào một ô. Đo được (mô phỏng 200.000
+# ngày, 3 người, 2%/người/ngày rơi vào cảnh nhớ nhầm mật khẩu):
+#     ngưỡng  5 -> khoá oan ~7 lần/năm học,   tốc độ dò tối đa 20 lần/giờ
+#     ngưỡng 10 -> khoá oan ~0,15 lần/năm,    tốc độ dò tối đa 40 lần/giờ
+# Khoá oan giảm 48 lần, an ninh giảm 2 lần, và vẫn chậm hơn bản KHÔNG khoá
+# 6.282 lần (đo trên máy này: scrypt 27,0 ms, KHOA_BAM=2 -> 69,8 lần/giây).
+# Trên 10 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giảm tuyến tính.
+SO_LAN_SAI_TOI_DA = 10                   # QĐ 6, đã duyệt nâng từ 5
 GIAY_KHOA = 15 * 60                      # QĐ 6
 GIAY_QUEN = 30 * 60                      # QĐ 6 — cửa sổ quên
 TRAN_SO_KHOA = 64                        # trần sổ, xem _don_so()

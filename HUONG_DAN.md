@@ -104,7 +104,7 @@ trong khung đỏ và máy chủ vẫn chạy — cứ sửa file rồi bấm x�
 
 ### Khi trang báo "Tài khoản đang bị khoá tạm"
 
-Gõ sai mật khẩu **5 lần liên tiếp** thì tài khoản bị khoá **15 phút**. Đây là để
+Gõ sai mật khẩu **10 lần liên tiếp** thì tài khoản bị khoá **15 phút**. Đây là để
 người ngoài không dò được mật khẩu bằng cách thử mãi.
 
 Có hai cách vào lại, chọn cái nào cũng được:

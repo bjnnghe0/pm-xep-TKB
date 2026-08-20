@@ -898,7 +898,12 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
-[ ] QUYẾT: giữ ngưỡng khoá tạm 5 lần hay nâng lên 10? (xem mục 2B)
+[ ] Tách 3 tài khoản RIÊNG cho 3 người, thay cho một tài khoản chung.
+    Người dùng đã chốt: giữ một tài khoản chung cho GIAI ĐOẠN THỬ; khi mời
+    đồng nghiệp vào tailnet thì tính lại. Việc này chữa GỐC của hai chuyện:
+    khoá oan chỉ ảnh hưởng một người thay vì cả khoa, và QĐ 4 ("dán tên người
+    xếp") mới có nghĩa — hiện mọi lượt xếp đều mang tên "khoahoccoban", nên
+    câu "Kết quả đã bị thay bởi lượt xếp của <tên>" không nói được gì.
 ```
 
 > **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
@@ -919,7 +924,7 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 3 | Tắt tài khoản có hiệu lực **ngay**, phiên đang mở của người đó chết theo |
 | 4 | Kết quả xếp dùng chung, **dán tên** người xếp **và có DẤU BẢN riêng** — xem dưới |
 | 5 | Mật khẩu tối thiểu **12 ký tự**, không đòi chữ hoa / ký tự lạ |
-| 6 | Khoá tạm **5 lần sai → 15 phút**, đếm theo tài khoản, cửa sổ quên 30 phút |
+| 6 | Khoá tạm **10 lần sai → 15 phút** (duyệt nâng từ 5 — xem mục 2B), đếm theo tài khoản, cửa sổ quên 30 phút |
 | 7 | Chống mất bản sửa: dấu bản + 409 + "Tải lại danh sách", **và** tách nháp theo phiên |
 | 8 | Thứ tự: 2A-2a hạ tầng phiên → 2A-1 đăng nhập → 2A-3 di trú → 2A-4 giao diện → 2A-5 ca thử → 2B chống dò → 2C chống mất bản sửa |
 | 9 | Cookie **`SameSite=Lax`**, không phải `Strict` — xem dưới |
@@ -1103,14 +1108,15 @@ gọi chạy song song thật — đã đo 32 lần cùng lúc đẩy tiến tr�
 
 ## Chống dò mật khẩu (2B) — khoá tạm theo tài khoản
 
-QĐ 6: sai **5 lần** → khoá **15 phút**, đếm theo **TÀI KHOẢN**, cửa sổ quên
+QĐ 6: sai **10 lần** → khoá **15 phút**, đếm theo **TÀI KHOẢN**, cửa sổ quên
 **30 phút**. Đếm theo tài khoản chứ không theo IP là bắt buộc chứ không phải lựa
 chọn: sau Tailscale Serve **mọi** yêu cầu đều mang `127.0.0.1`, nên đếm theo IP
 là đếm tất cả mọi người vào chung một ô.
 
 Ba hằng số ở `tai_khoan.py`: `SO_LAN_SAI_TOI_DA` / `GIAY_KHOA` / `GIAY_QUEN`.
 Đổi ngưỡng là đổi **một dòng**, và `tests/thu_chong_do.py` đọc thẳng ba hằng đó
-nên không phải sửa ca thử theo.
+nên không phải sửa ca thử theo — đã thử: nâng 5 → 10 thì bộ thử tự chạy theo,
+vẫn 55/55.
 
 ### Sổ khoá tạm nằm trong TỆP, và đó là lý do chính
 
@@ -1161,7 +1167,8 @@ hạn). Chiều kia chỉ mất một phần của 15 phút, không đáng đổ
 
 1. **Nhánh bị khoá VẪN chạy đủ một lượt `scrypt`.** Phép kiểm nằm **SAU**
    `TK.bam()`, không phải trước. Chặn trước cho "đỡ tốn CPU" là đổi 27 ms lấy
-   một kênh đo: gõ bậy 5 lần rồi xem lần thứ 6 trả lời nhanh hay chậm là biết
+   một kênh đo: gõ bậy cho đủ ngưỡng rồi xem lần kế tiếp trả lời nhanh hay
+   chậm là biết
    tài khoản có thật hay không. **Hệ quả phải chấp nhận: khoá tạm KHÔNG giảm
    được chút tải CPU nào** — nó chống dò mật khẩu, không chống làm nghẽn máy
    chủ. Đừng trông cậy nhầm. Lùi ra: **46/51**.
@@ -1216,26 +1223,40 @@ python3 tao_mat_khau.py liet-ke         # cột KHOÁ TẠM: ai đang khoá, cò
 phải ngồi đợi hết 15 phút là vô nghĩa, và bộ đếm cũ nói về một mật khẩu không
 còn tồn tại.
 
-### Câu hỏi CÒN MỞ — ngưỡng 5 với một tài khoản dùng chung
+### Ngưỡng 10 — đã duyệt, và điều QUAN TRỌNG HƠN con số
 
-Ngưỡng 5 đúng cho **tài khoản riêng từng người**: ai gõ sai thì người đó chịu.
-Từ khi cả khoa dùng chung **một** tài khoản `khoahoccoban` thì thầy A sai 3 lần
-cộng cô B sai 2 lần là **cả khoa** bị khoá. Đã đo bằng mô phỏng (200.000 ngày,
-3 người, 2% mỗi người mỗi ngày rơi vào cảnh "nhớ nhầm mật khẩu"):
+Ngưỡng 5 của QĐ 6 đúng cho **tài khoản riêng từng người**: ai gõ sai thì người
+đó chịu. Cả khoa dùng CHUNG một tài khoản thì số lần gõ sai của ba người **cộng
+dồn vào một ô**. Đo (mô phỏng 200.000 ngày, 3 người, 2%/người/ngày rơi vào cảnh
+nhớ nhầm mật khẩu; tốc độ dò đo trên máy này: scrypt 27,0 ms, `KHOA_BAM=2` →
+69,8 lần/giây = 251.284 lần/giờ nếu không khoá):
 
 | Ngưỡng | Khoá oan | Tốc độ dò tối đa | So với không khoá |
 |---|---|---|---|
-| **5** (đang dùng) | ~7 lần/năm học | 20 lần/giờ | chậm hơn 11.916× |
-| 10 | ~0,15 lần/năm | 40 lần/giờ | chậm hơn 5.958× |
-| 20 | ~0 | 80 lần/giờ | chậm hơn 2.979× |
+| 5 (QĐ 6 gốc) | ~7 lần/năm học | 20 lần/giờ | chậm hơn 12.564× |
+| **10 (đang dùng)** | ~0,15 lần/năm | 40 lần/giờ | chậm hơn **6.282×** |
+| 20 | ~0 | 80 lần/giờ | chậm hơn 3.141× |
 
-Điểm gãy nằm giữa 5 và 10: **khoá oan giảm 48 lần, an ninh chỉ giảm 2 lần.** Từ
-10 lên 20 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giảm.
-**Chưa đổi** — chờ người dùng quyết. Đổi là sửa `SO_LAN_SAI_TOI_DA` ở
-`tai_khoan.py`, một dòng, ca thử tự theo.
+Điểm gãy nằm giữa 5 và 10: **khoá oan giảm 48 lần, an ninh chỉ giảm 2 lần.**
+Trên 10 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giảm tuyến tính.
+
+> **⚠ HẠN CHẾ ĐÃ BIẾT — ngưỡng chỉ quyết định TAI NẠN, KHÔNG quyết định TẤN
+> CÔNG.** Ai vào được tailnet vẫn **nhốt được cả khoa ở ngoài, vô hạn**, chỉ
+> bằng cách gõ sai cho đủ ngưỡng mỗi 15 phút. Nâng 5 lên 10 chỉ bắt họ gõ 10
+> lần thay vì 5 — không mua được gì trước một kẻ cố ý. Gỡ khoá đòi **ra tận
+> máy**, tức đúng thứ người bị nhốt từ xa không có.
+>
+> Đây là cái giá cố hữu của MỌI cơ chế khoá theo tài khoản, không phải lỗi cài
+> đặt, và **không chữa được bằng cách chỉnh ngưỡng**. Thứ chữa được nó là
+> **tài khoản riêng từng người** (mỗi người tự nhốt mình, không nhốt người
+> khác) — đã ghi vào "Việc treo".
+>
+> Cũng vì vậy: khoá tạm **không** thay được cho một mật khẩu tử tế. Với cụm 4
+> từ kiểu `khoa-co-ban-da-lat`, ngay cả bản KHÔNG khoá cũng cần hàng nghìn năm;
+> khoá tạm chỉ thật sự mua được thời gian khi mật khẩu đoán được từ ngữ cảnh.
 
 > **Đua tranh giữa hai tiến trình — biết, và cố ý không chữa thêm.** `web.py`
-> ghi sổ nhiều nhất 5 lần mỗi 15 phút mỗi tài khoản (chính cái khoá tự chặn tốc
+> ghi sổ nhiều nhất 10 lần mỗi 15 phút mỗi tài khoản (chính cái khoá tự chặn tốc
 > độ ghi của nó), còn `mo-khoa` thì chạy tay. Khe trùng nhau là vài chục micro
 > giây, và hậu quả xấu nhất là lệnh gỡ khoá bị đè mất — chạy lại là xong. Thêm
 > một lớp khoá liên-tiến-trình cho khe đó là trả giá phức tạp cho một thứ không
