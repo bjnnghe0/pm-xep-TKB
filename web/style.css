@@ -140,13 +140,20 @@ tr.tat { opacity: .5; }
   .dong-nhap { gap: 14px; }
 }
 
-/* ---------------- lớp phủ đăng nhập ---------------- */
-.phu {
+/* ---------------- lớp phủ đăng nhập ----------------
+   TÊN LỚP PHẢI DUY NHẤT. Bản đầu tôi đặt là ".phu" — trùng đúng tên lớp đã có
+   ở dòng 8 cho dòng phụ đề trong header. Khai sau đè khai trước, nên dòng chữ
+   "Khoa Khoa học Cơ bản · Trường Cao đẳng Đà Lạt" biến thành một tấm phủ
+   position:fixed; inset:0 kín màn hình, z-index 90, và VÌ NÓ CHẶN MỌI CÚ BẤM
+   nên nút Đăng nhập bấm không ăn — không một yêu cầu POST nào được gửi đi.
+   Nhìn ra thì là "chữ tràn đè lên ô nhập"; thật ra là không đăng nhập được. */
+.lop-phu {
   position: fixed; inset: 0; z-index: 90;
   background: rgba(20, 24, 20, .55);
-  display: flex; align-items: center; justify-content: center; padding: 16px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; overflow-y: auto;
 }
-.phu.an { display: none; }
+.lop-phu.an { display: none; }
 .hop-dn {
   background: #fff; border-radius: 10px; padding: 26px 24px;
   width: 100%; max-width: 380px;

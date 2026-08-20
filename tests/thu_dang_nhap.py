@@ -400,6 +400,111 @@ def ca_8_thoi_gian_bang_nhau(tm):
 
 
 # ==========================================================================
+def ca_10_ten_hoa_thuong(tm):
+    print('\nCA 10 — tên đăng nhập KHÔNG phân biệt hoa thường')
+    print('-' * 74)
+    dd, tmx = dung(tm, 'd10')
+    dd_tk = os.path.join(tmx, 'tai_khoan.json')
+
+    # Tạo tài khoản đi qua ĐÚNG đường mà tao_mat_khau.py đi: người gõ tên có
+    # chữ hoa, chuan_ten() hạ xuống, rồi mới băm và ghi.
+    ten_go = 'CDDLdalat'
+    ten_ghi = TK.chuan_ten(ten_go)
+    kiem(ten_ghi == 'cddldalat',
+         f'Người gõ {ten_go!r} -> ghi xuống {ten_ghi!r}')
+    TK.ghi(dd_tk, [TK.ban_ghi_moi(ten_ghi, MK)])
+
+    with MayChuTam(dd, tai_khoan=dd_tk, dang_nhap=False) as (k, (dia, cong)):
+        hong = []
+        for dang in ('CDDLdalat', 'cddldalat', 'CDDLDALAT', 'cDdLdAlAt',
+                     '  CDDLdalat  '):
+            kh = Khach(cong)
+            ma, t = kh.post('/api/dang-nhap', {'ten': dang, 'mat_khau': MK})
+            if ma != 200:
+                hong.append((dang, ma))
+        kiem(not hong,
+             f'Đăng nhập được bằng MỌI dạng hoa/thường của cùng một tên — '
+             f'hỏng: {hong}')
+        # và chiều ngược lại: mật khẩu vẫn phải PHÂN BIỆT hoa thường
+        kh = Khach(cong)
+        ma, _ = kh.post('/api/dang-nhap', {'ten': 'cddldalat',
+                                           'mat_khau': MK.upper()})
+        kiem(ma == 401,
+             f'Nhưng MẬT KHẨU thì vẫn phân biệt hoa thường — {ma}')
+
+
+# ==========================================================================
+def ca_11_giao_dien_khong_de_len_nhau():
+    print('\nCA 11 — giao diện: không lớp CSS nào trùng tên, không đè lên nhau')
+    print('-' * 74)
+    import re as _re
+    import collections
+    goc = os.path.join(GOC_TM, 'web')
+    css = io.open(os.path.join(goc, 'style.css'), encoding='utf-8').read()
+    html = io.open(os.path.join(goc, 'index.html'), encoding='utf-8').read()
+    css_sach = _re.sub(r'/\*.*?\*/', '', css, flags=_re.S)
+
+    # ---- TRÙNG TÊN LỚP: đây chính là lỗi đã làm không đăng nhập được ----
+    # Bản đầu của lớp phủ đăng nhập đặt tên ".phu", trùng đúng lớp đã có cho
+    # dòng phụ đề trong header. Khai sau đè khai trước, nên dòng chữ đó biến
+    # thành một tấm position:fixed;inset:0 phủ kín màn hình và CHẶN MỌI CÚ BẤM.
+    # Nhìn ra là "chữ tràn đè lên ô nhập"; thật ra là nút bấm không ăn.
+    #
+    # Chỉ tính khai ở CẤP CAO NHẤT: khai lại trong @media là hợp lệ và cần thiết.
+    ngoai_media = []
+    sau = 0
+    for m in _re.finditer(r'@media[^{]*\{', css_sach):
+        ngoai_media.append(css_sach[sau:m.start()])
+        # nhảy qua trọn khối @media
+        i, sau_ngoac = m.end(), 1
+        while i < len(css_sach) and sau_ngoac:
+            if css_sach[i] == '{':
+                sau_ngoac += 1
+            elif css_sach[i] == '}':
+                sau_ngoac -= 1
+            i += 1
+        sau = i
+    ngoai_media.append(css_sach[sau:])
+    tren = '\n'.join(ngoai_media)
+
+    dem = collections.Counter()
+    for khoi in _re.findall(r'([^{}]+)\{', tren):
+        for bo in khoi.split(','):
+            bo = bo.strip()
+            if _re.fullmatch(r'\.[a-z0-9-]+', bo):
+                dem[bo] += 1
+    trung = sorted(k for k, v in dem.items() if v > 1)
+    kiem(not trung,
+         f'Không lớp CSS nào bị khai HAI LẦN ở cấp cao nhất — trùng: {trung}')
+
+    # ---- lớp phủ phải có tên RIÊNG, và tên đó phải được HTML dùng ----
+    kiem('.lop-phu' in css and 'class="lop-phu' in html,
+         'Lớp phủ đăng nhập có tên riêng và HTML dùng đúng tên đó')
+
+    # ---- ngưỡng chạm: ô nhập và nút của form đăng nhập ----
+    # Cùng ngưỡng đã bắt được nút "Đăng xuất" 14px/34px.
+    for bo, khoa, nguong in (('.hop-dn input', 'min-height', 40),
+                             ('.hop-dn input', 'font-size', 16),
+                             ('.hop-dn button', 'min-height', 40),
+                             ('.hop-dn button', 'font-size', 16),
+                             ('button.nho', 'min-height', 40),
+                             ('button.nho', 'font-size', 15)):
+        m = _re.search(_re.escape(bo) + r'[^{]*\{([^}]*)\}', css)
+        gt = None
+        if m:
+            m2 = _re.search(khoa + r'\s*:\s*(\d+)', m.group(1))
+            gt = int(m2.group(1)) if m2 else None
+        kiem(gt is not None and gt >= nguong,
+             f'{bo} có {khoa} >= {nguong}px — {gt}')
+
+    # ---- không cho chữ tràn ra ngoài khung ----
+    kiem('overflow-y: auto' in css.split('.lop-phu')[1][:200],
+         'Lớp phủ cho cuộn dọc — màn hình thấp thì không cắt cụt form')
+    kiem('max-width' in css.split('.hop-dn')[1][:260],
+         'Hộp đăng nhập có max-width — màn hình rộng thì không kéo dài ra')
+
+
+# ==========================================================================
 def ca_9_thieu_tai_khoan(tm):
     print('\nCA 9 — thiếu/hỏng tai_khoan.json: máy chủ TỪ CHỐI KHỞI ĐỘNG')
     print('-' * 74)
@@ -459,6 +564,8 @@ if __name__ == '__main__':
         ca_7_hai_tai_khoan(tm)
         ca_8_thoi_gian_bang_nhau(tm)
         ca_9_thieu_tai_khoan(tm)
+        ca_10_ten_hoa_thuong(tm)
+        ca_11_giao_dien_khong_de_len_nhau()
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
