@@ -150,6 +150,21 @@ BAM_GIA = None                       # bản ghi giả cho nhánh "tên không t
 # chứ không khai riêng — xem TK.duong_dan_khoa().
 DUONG_DAN_SO_KHOA = TK.duong_dan_khoa(DUONG_DAN_TAI_KHOAN)
 
+# QĐ 3 — "tắt tài khoản có hiệu lực NGAY". Trước đây nap_tai_khoan_may_chu()
+# CHỈ được gọi một lần trong main(), nên ngoài đời QĐ 3 SAI: chạy
+# "python3 tao_mat_khau.py tat <tên>" không có tác dụng gì cho tới khi khởi
+# động lại web.py. Ca thử ru ngủ điều đó vì nó gọi TAY hàm nạp ngay trước khi
+# khẳng định — nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ.
+#
+# Chữa theo đúng cách sổ khoá tạm của 2B đã làm: ĐỌC LẠI THEO TỆP. Đo được
+# trên chính ổ ntfs3 của dự án: os.replace() đổi st_ino mỗi lần, 5 lần ghi
+# liên tiếp cho 5 mốc mtime phân biệt, và os.stat tốn 0,78 µs — rẻ hơn bốn bậc
+# so với một lượt scrypt, nên soi ở mỗi yêu cầu là chuyện không phải cân nhắc.
+DUONG_DAN_TK_DANG_DUNG = DUONG_DAN_TAI_KHOAN
+DAU_TEP_TAI_KHOAN = None             # (ino, mtime_ns, size) của lần nạp gần nhất
+DAU_DA_KEU = None                    # dấu tệp đã kêu rồi — đừng kêu lại mỗi yêu cầu
+KHOA_NAP_TK = threading.Lock()
+
 # scrypt cấp phát 16 MB và NHẢ GIL, nên nhiều lời gọi chạy song song THẬT —
 # đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB. /api/dang-nhap là đường
 # CHƯA XÁC THỰC duy nhất tốn kém như vậy, nên phải chặn số lần chạy cùng lúc,
@@ -307,8 +322,17 @@ def tao_phien(ten=None):
 def doc_phien(ma):
     """Tra phiên còn hiệu lực. Hết hạn thì XOÁ rồi trả None.
 
-       NƠI DUY NHẤT quyết định "phiên này còn dùng được không".
+       NƠI DUY NHẤT quyết định "phiên này còn dùng được không" — nên cũng là
+       nơi duy nhất phải soi lại sổ tài khoản. Đặt tuoi_tai_khoan() ở đây chứ
+       không rải ra do_GET/do_POST: phép kiểm QĐ 3 ("tài khoản còn trong sổ
+       không") nằm ngay bên dưới, hai thứ đó phải đi liền một mạch, nếu tách ra
+       là đẻ ra một khe hở tính bằng số yêu cầu.
+
+       Gọi TRƯỚC khi lấy KHOA_PHIEN, và tuoi_tai_khoan() có khoá riêng
+       (KHOA_NAP_TK) — hai khoá KHÔNG BAO GIỜ lồng nhau. threading.Lock không
+       tái nhập, và dự án đã trả giá một lần cho bài học đó.
     """
+    tuoi_tai_khoan()
     if not ma:
         return None
     m, w = time.monotonic(), time.time()
@@ -359,8 +383,12 @@ def nap_tai_khoan_may_chu(duong_dan=None):
        cho mọi đường. Trạng thái "chưa cài xong" phải là ĐÓNG.
     """
     global TAI_KHOAN, BAM_GIA, DUONG_DAN_SO_KHOA
+    global DUONG_DAN_TK_DANG_DUNG, DAU_TEP_TAI_KHOAN, DAU_DA_KEU
     dd = duong_dan or DUONG_DAN_TAI_KHOAN
     DUONG_DAN_SO_KHOA = TK.duong_dan_khoa(dd)
+    DUONG_DAN_TK_DANG_DUNG = dd
+    DAU_TEP_TAI_KHOAN = _dau_tep(dd)
+    DAU_DA_KEU = None
     if BAM_GIA is None:
         BAM_GIA = TK.ban_ghi_gia()
     try:
@@ -369,6 +397,67 @@ def nap_tai_khoan_may_chu(duong_dan=None):
     except SystemExit as e:
         TAI_KHOAN = {}
         return False, str(e)
+
+
+def _dau_tep(dd):
+    """Dấu nhận biết "tệp đã đổi chưa". None nếu không stat được.
+
+       Ba thành phần chứ không chỉ mtime: TK.ghi() ghi ra tệp tạm rồi
+       os.replace(), nên st_ino đổi MỖI lần ghi — dấu hiệu chắc chắn nhất, không
+       phụ thuộc độ mịn đồng hồ của hệ tệp.
+    """
+    try:
+        st = os.stat(dd)
+        return (st.st_ino, st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
+def tuoi_tai_khoan():
+    """Nạp lại tai_khoan.json NẾU tệp đã đổi. Trả True nếu vừa nạp lại.
+
+       GIỮ SỔ CŨ KHI ĐỌC KHÔNG ĐƯỢC — khác hẳn lúc khởi động, và có lý do:
+       lúc khởi động chưa có sổ nào để giữ, nên từ chối chạy là đúng. Đang chạy
+       mà tệp hỏng thì đó là một SỰ CỐ MỚI (đĩa lỗi, ai đó sửa tay), không phải
+       một quyết định về quyền. Đổ sổ về rỗng lúc đó là tự tay cho cả khoa nghỉ
+       việc giữa buổi vì một byte lỗi; giữ sổ cũ thì KHÔNG AI được thêm quyền
+       nào — người vừa hợp lệ một giây trước vẫn hợp lệ.
+
+       Hệ quả phải biết: sổ hỏng thì lệnh "tat" chưa có hiệu lực. Đúng — tệp
+       hỏng không phải là một lệnh tắt. Và tao_mat_khau.py không cho tắt/xoá
+       tài khoản BẬT cuối cùng, nên trạng thái "tắt hết" chỉ tới được bằng cách
+       sửa tay.
+
+       KHÔNG cập nhật dấu tệp khi hỏng -> yêu cầu sau vẫn thử lại. Nhưng chỉ
+       KÊU MỘT LẦN cho mỗi dấu, nếu không thì một tệp hỏng làm ngập cửa sổ dòng
+       lệnh với 1,4 dòng mỗi giây (trang hỏi trạng thái mỗi 0,7 giây).
+    """
+    global TAI_KHOAN, DAU_TEP_TAI_KHOAN, DAU_DA_KEU
+    dau = _dau_tep(DUONG_DAN_TK_DANG_DUNG)
+    if dau == DAU_TEP_TAI_KHOAN:
+        return False
+    with KHOA_NAP_TK:
+        # Soi lại TRONG khoá: hai yêu cầu cùng thấy tệp đổi thì chỉ một cái nạp.
+        dau = _dau_tep(DUONG_DAN_TK_DANG_DUNG)
+        if dau == DAU_TEP_TAI_KHOAN:
+            return False
+        try:
+            moi = TK.nap(DUONG_DAN_TK_DANG_DUNG)
+        except SystemExit as e:
+            if dau != DAU_DA_KEU:
+                DAU_DA_KEU = dau
+                print(f'[CẢNH BÁO] tai_khoan.json vừa đổi nhưng đọc KHÔNG '
+                      f'được:\n{e}\n'
+                      f'           Giữ nguyên danh sách tài khoản đang có. '
+                      f'Sửa xong tệp là máy chủ tự nhận, không phải chạy lại.',
+                      file=sys.stderr)
+            return False
+        cu_ds, TAI_KHOAN = set(TAI_KHOAN), moi
+        DAU_TEP_TAI_KHOAN, DAU_DA_KEU = dau, None
+        if cu_ds != set(moi):
+            print(f'[TÀI KHOẢN] Đã đọc lại tai_khoan.json — đang bật: '
+                  f'{", ".join(sorted(moi)) or "(không ai)"}', file=sys.stderr)
+        return True
 
 
 def dang_nhap(ma_cu, ten_tho, mat_khau):

@@ -133,7 +133,9 @@ def ca_2_dang_nhap_sai(tm):
         ds = TK.doc_tho(dd_tk)
         ds.append(dict(TK.ban_ghi_moi('nguoitat', MK), bat=False))
         TK.ghi(dd_tk, ds)
-        W.nap_tai_khoan_may_chu(dd_tk)
+        # KHÔNG gọi W.nap_tai_khoan_may_chu() ở đây. Gọi tay hàm nạp ngay trước
+        # khi khẳng định là kiểu hỏng số 6 trong bảng kỷ luật: nó chứng minh HỆ
+        # QUẢ mà bỏ qua CÁI CÒ. Máy chủ phải tự soi tệp — xem tuoi_tai_khoan().
         ma, t = k.post('/api/dang-nhap', {'ten': 'nguoitat', 'mat_khau': MK})
         kiem(ma == 401 and t == list(than_khac)[0],
              'Tài khoản đã TẮT: đúng câu chung đó, không lộ là nó có tồn tại')
@@ -342,7 +344,7 @@ def ca_7_hai_tai_khoan(tm):
             if bg['ten_dang_nhap'] == 'nguoihai':
                 bg['bat'] = False
         TK.ghi(dd_tk, ds)
-        W.nap_tai_khoan_may_chu(dd_tk)
+        # Không gọi tay hàm nạp — xem ghi chú ở CA 2. Máy chủ tự soi tệp.
 
         kiem(Khach(cong).post('/api/dang-nhap',
                               {'ten': 'nguoihai',
@@ -354,6 +356,90 @@ def ca_7_hai_tai_khoan(tm):
         kiem(k2.js('/api/quy-tac')[0] == 401,
              'Và phiên ĐANG MỞ của người hai chết theo ngay, '
              'không phải đợi khởi động lại (QĐ 3)')
+
+
+# ==========================================================================
+def ca_7b_tat_tu_tien_trinh_khac(tm):
+    """QĐ 3 đo ĐÚNG CHỖ: cái cò, không phải hệ quả.
+
+       CA 7 ở trên sửa tệp bằng TK.ghi() ngay trong tiến trình bộ thử. Ca này
+       chạy hẳn tao_mat_khau.py như người quản trị gõ ở cửa sổ dòng lệnh —
+       tiến trình KHÁC, không dùng chung một byte bộ nhớ nào với máy chủ — rồi
+       chỉ quan sát qua HTTP. Không một lời gọi hàm nạp nào.
+    """
+    print('\nCA 7b — QĐ 3: tắt tài khoản từ TIẾN TRÌNH KHÁC, có hiệu lực NGAY')
+    print('-' * 74)
+    dd, tmx = dung(tm, 'd7b')
+    dd_tk = os.path.join(tmx, 'tai_khoan.json')
+    TK.ghi(dd_tk, [TK.ban_ghi_moi('nguoimot', MK),
+                   TK.ban_ghi_moi('nguoihai', MK + '-khac')])
+
+    def go_lenh(*doi):
+        return subprocess.run(
+            [sys.executable, os.path.join(GOC_TM, 'tao_mat_khau.py')]
+            + list(doi) + ['--tep', dd_tk],
+            capture_output=True, text=True, timeout=60)
+
+    with MayChuTam(dd, tai_khoan=dd_tk, dang_nhap=False) as (k, (dia, cong)):
+        k1, k2 = Khach(cong), Khach(cong)
+        kiem(k1.post('/api/dang-nhap',
+                     {'ten': 'nguoimot', 'mat_khau': MK})[0] == 200
+             and k2.post('/api/dang-nhap',
+                         {'ten': 'nguoihai', 'mat_khau': MK + '-khac'})[0] == 200,
+             'Điều kiện tiên quyết: cả hai người đang đăng nhập được')
+
+        r = go_lenh('tat', 'nguoihai')
+        kiem(r.returncode == 0 and 'TẮT' in (r.stdout + r.stderr),
+             f'Tiến trình KHÁC chạy xong lệnh tat — mã {r.returncode}')
+
+        # KHÔNG khởi động lại máy chủ, KHÔNG gọi hàm nạp nào. Chỉ bắn HTTP.
+        kiem(Khach(cong).post('/api/dang-nhap',
+                              {'ten': 'nguoihai',
+                               'mat_khau': MK + '-khac'})[0] == 401,
+             'Người hai KHÔNG đăng nhập lại được — máy chủ tự đọc lại tệp')
+        kiem(k2.js('/api/quy-tac')[0] == 401,
+             'Và phiên ĐANG MỞ của người hai chết theo NGAY (QĐ 3), '
+             'không phải đợi chạy lại web.py')
+        kiem(k1.js('/api/quy-tac')[0] == 200,
+             'Người một không bị vạ lây, vẫn làm việc bình thường')
+
+        # Bật lại cũng phải có hiệu lực ngay, không chỉ một chiều.
+        r = go_lenh('bat', 'nguoihai')
+        kiem(r.returncode == 0, f'Bật lại — mã {r.returncode}')
+        kiem(Khach(cong).post('/api/dang-nhap',
+                              {'ten': 'nguoihai',
+                               'mat_khau': MK + '-khac'})[0] == 200,
+             'Bật lại thì vào được ngay, cũng không phải chạy lại web.py')
+
+        # Đổi mật khẩu từ tiến trình khác: mật khẩu CŨ phải chết ngay.
+        ds = TK.doc_tho(dd_tk)
+        for bg in ds:
+            if bg['ten_dang_nhap'] == 'nguoihai':
+                bg.update(TK.ban_ghi_moi('nguoihai', MK + '-moi-toanh'))
+        TK.ghi(dd_tk, ds)
+        kiem(Khach(cong).post('/api/dang-nhap',
+                              {'ten': 'nguoihai',
+                               'mat_khau': MK + '-khac'})[0] == 401,
+             'Đổi mật khẩu ngoài tiến trình: mật khẩu CŨ chết ngay')
+        kiem(Khach(cong).post('/api/dang-nhap',
+                              {'ten': 'nguoihai',
+                               'mat_khau': MK + '-moi-toanh'})[0] == 200,
+             'và mật khẩu MỚI dùng được ngay')
+
+        # Tệp HỎNG: giữ sổ cũ, KÊU TO, và không ai bị đá ra ngoài.
+        cu_err, sys.stderr = sys.stderr, io.StringIO()
+        try:
+            io.open(dd_tk, 'w', encoding='utf-8').write('{ hong be bet')
+            ma_hong = k1.js('/api/quy-tac')[0]
+            keu = sys.stderr.getvalue()
+        finally:
+            sys.stderr = cu_err
+        kiem(ma_hong == 200,
+             f'Tệp tài khoản HỎNG: người đang làm việc KHÔNG bị đá ra — '
+             f'{ma_hong}. Đổ sổ về rỗng lúc này là cho cả khoa nghỉ giữa buổi '
+             f'vì một byte lỗi, mà không ai được thêm quyền gì')
+        kiem('[CẢNH BÁO]' in keu,
+             f'Nhưng KÊU TO ra cửa sổ dòng lệnh — {keu.strip()[:80]!r}')
 
 
 # ==========================================================================
@@ -564,6 +650,7 @@ if __name__ == '__main__':
         ca_5_cookie_gia_va_het_han(tm)
         ca_6_dang_xuat(tm)
         ca_7_hai_tai_khoan(tm)
+        ca_7b_tat_tu_tien_trinh_khac(tm)
         ca_8_thoi_gian_bang_nhau(tm)
         ca_9_thieu_tai_khoan(tm)
         ca_10_ten_hoa_thuong(tm)

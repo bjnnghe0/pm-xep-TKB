@@ -819,6 +819,9 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   thì tụt còn 15/23.
 - `python3 tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
+- `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
+  `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
+  QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.
 - `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
@@ -896,11 +899,6 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
 [ ] QUYẾT: giữ ngưỡng khoá tạm 5 lần hay nâng lên 10? (xem mục 2B)
-[ ] web.py chỉ nạp tai_khoan.json MỘT LẦN lúc khởi động -> QĐ 3 ("tắt tài
-    khoản có hiệu lực NGAY") hiện KHÔNG đúng ngoài đời: tao_mat_khau.py tat
-    <tên> không có tác dụng cho tới khi chạy lại web.py. Ca thử ru ngủ điều
-    này vì nó gọi tay W.nap_tai_khoan_may_chu(). Sổ khoá tạm của 2B đã có cơ
-    chế đọc lại theo tệp; QĐ 3 nên đi theo cách đó.
 ```
 
 > **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
@@ -1036,6 +1034,35 @@ tự khoá là **treo cứng máy chủ** ngay phiên hết hạn đầu tiên. 
 | Thiếu/hỏng/rỗng/sai kiểu | Máy chủ **TỪ CHỐI KHỞI ĐỘNG**, và chưa hề in dòng "Mở trình duyệt vào" |
 | Sổ rỗng lúc chạy | **503** ("chưa cài xong"), không phải 401 ("chưa đăng nhập") |
 | Tắt một tài khoản | Có hiệu lực **ngay**, phiên đang mở của người đó chết theo (QĐ 3) |
+
+### QĐ 3 "có hiệu lực NGAY" — đọc lại theo TỆP
+
+`nap_tai_khoan_may_chu()` từng **chỉ được gọi một lần trong `main()`**, nên
+ngoài đời QĐ 3 **sai suốt**: `python3 tao_mat_khau.py tat <tên>` không có tác
+dụng gì cho tới khi chạy lại `web.py`. Ca thử vẫn xanh vì nó **gọi tay hàm
+nạp** ngay trước khi khẳng định — nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua
+CÁI CÒ. Đó là kiểu hỏng số 6 trong bảng kỷ luật.
+
+`tuoi_tai_khoan()` soi dấu tệp `(st_ino, st_mtime_ns, st_size)` ở **đầu
+`doc_phien()`** — cùng chỗ với phép kiểm QĐ 3 đã có, để hai thứ đi liền một
+mạch. Đo trên **chính ổ ntfs3 của dự án**: `os.replace()` đổi `st_ino` mỗi lần
+ghi, 5 lần ghi liên tiếp cho 5 mốc `mtime` phân biệt, `os.stat` tốn **0,78 µs**
+— rẻ hơn bốn bậc so với một lượt scrypt.
+
+> **Đọc lại KHÔNG được thì GIỮ SỔ CŨ, ngược với lúc khởi động — và có lý do.**
+> Lúc khởi động chưa có sổ nào để giữ nên từ chối chạy là đúng. Đang chạy mà
+> tệp hỏng thì đó là **sự cố mới** (đĩa lỗi, ai đó sửa tay), không phải một
+> quyết định về quyền. Đổ sổ về rỗng lúc đó là cho cả khoa nghỉ việc giữa buổi
+> vì một byte lỗi; giữ sổ cũ thì **không ai được thêm quyền nào**.
+> Hệ quả phải biết: tệp hỏng thì lệnh `tat` chưa có hiệu lực — đúng, tệp hỏng
+> không phải một lệnh tắt.
+
+Kêu **một lần cho mỗi dấu tệp**, không kêu lại mỗi yêu cầu: trang hỏi trạng
+thái mỗi 0,7 giây, kêu mỗi lần là 1,4 dòng/giây ngập cửa sổ dòng lệnh.
+
+Ca thử `thu_dang_nhap.py` CA 7b chạy hẳn `tao_mat_khau.py` bằng **tiến trình
+con** rồi chỉ quan sát qua HTTP — không một lời gọi hàm nạp nào. Hai lời gọi
+tay cũ ở CA 2 và CA 7 đã bỏ; giờ chúng cũng đỏ nếu lùi bản vá.
 
 ### Xoay mã phiên — chống cố định phiên
 
