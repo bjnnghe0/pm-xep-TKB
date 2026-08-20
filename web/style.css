@@ -130,6 +130,12 @@ tr.tat { opacity: .5; }
 .nut-xoa { padding: 6px 14px; font-size: 15px; min-height: 40px; }
 .thu-ok { background: #dff3e3; border: 1px solid #a9d9b5; color: #14601f; }
 .thu-canh-bao { background: #fdf3f3; border: 1px solid #e0b4b4; color: #8a1f1f; }
+.thu-cho { background: #eef2f7; border: 1px solid #b9c3cf; color: #33404d; }
+.thu-loi { background: #fbe6e6; border: 2px solid #c0392b; color: #7b1a12; }
+/* Nút gỡ nhanh nằm trong khung cảnh báo. KHÔNG hạ min-height/font-size:
+   khai báo chung ở trên đã cho 40px/15px, và tests/thu_them_quy_tac.py CA 6
+   đọc thẳng tệp này để canh. */
+.thu-hop button { margin-top: 10px; }
 .thu-hop { margin-top: 12px; padding: 11px; border-radius: 6px; font-size: 13px; }
 
 /* Màn hình hẹp: ô vuông giãn đều, danh sách dài thấp lại cho đỡ chiếm chỗ. */

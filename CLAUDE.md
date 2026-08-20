@@ -427,7 +427,7 @@ sửa gì trong đó.
 | `GET /api/loai-quy-tac` | Danh mục 17 loại: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
 | `GET /api/gia-tri` | Lớp / GV / môn / nhóm môn / thứ / tiết — đọc từ `cauhinh.json` |
 | `POST /api/them-quy-tac` · `POST /api/xoa-quy-tac` | Chỉ đổi cấu hình **của phiên**, không ghi file |
-| `POST /api/thu-quy-tac` | Xếp thử rút gọn (30 lần thử / 8 giây) để xem còn xếp được không |
+| `POST /api/thu-quy-tac` | Xếp thử rút gọn (30 lần thử / 8 giây) để xem còn xếp được không. Thêm `"nhanh": true` thì hạ xuống **1 lần thử / 1 giây** — dùng cho cảnh báo sớm sau khi Lưu |
 | `GET /api/tai-ve` · `GET /api/tai-web` | Tải `TKB_Khoi12.xlsx` / `tkb_web.html` |
 
 `PHIEN['them']` giữ các quy tắc người dùng thêm ở màn hình Quy tắc — **chỉ trong
@@ -601,6 +601,48 @@ lại xem đã gác chưa.
 >    `_than_json()` — điểm **nằm trong** vùng chưa khoá của bản cũ và **nằm ngoài**
 >    ở bản mới. Nới khe hở có sẵn, không tạo lỗi mới.
 
+### Cảnh báo sớm sau khi Lưu — CẢNH BÁO, không CHẶN
+
+Thầy cô bấm Lưu năm lần, thêm bốn quy tắc, và `cauhinh.json` thành **vô nghiệm**
+mà giao diện không nói một tiếng. Vì sao lọt: `them_quy_tac()` **có** dựng
+`X.BaiToan(cfg)`, nhưng phép kiểm đó (`_kiem_tra_so_bo`) chỉ bắt được *"có cụm
+nào hết sạch ô hợp lệ không"* — kiểm **TĨNH**. Cấu hình hỏng thật lại vô nghiệm
+kiểu **TỔ HỢP**: mỗi cụm đều còn ô, chỉ là không xếp chung được. Đo: `BaiToan()`
+trên bản hỏng dựng xong trong **1 ms, không kêu một tiếng**. Còn `luu_quy_tac()`
+thì không dựng `BaiToan` gì cả.
+
+**Không có phép kiểm rẻ tiền nào bắt được lỗi này — muốn biết thì phải xếp thử.**
+
+| | Cấu hình TỐT | Cấu hình VÔ NGHIỆM |
+|---|---|---|
+| 1 lần thử / 1 giây | **0,1 s** | 1,1 s |
+| 3 lần thử / 1 giây | 0,2 s | 3,3 s |
+| 3 lần thử / 3 giây | 0,2 s | 9,3 s |
+
+Chọn **1 lần thử / 1 giây**: câu hỏi lúc đó là *"còn xếp được không"*, không
+phải *"xếp tối ưu chưa"*. Chiều đánh đổi thuận — lúc mọi thứ ổn thì gần như
+không tốn gì, chỉ chậm đúng lúc có chuyện.
+
+> **CẢNH BÁO chứ không CHẶN — người dùng đã chốt, đừng tự đổi.** Nút Lưu là
+> thao tác làm hằng ngày; bắt nó đợi 1–9 giây thì thầy cô tưởng máy treo rồi
+> bấm lại, sinh ra đúng cái tranh chấp hai lượt vừa bịt. Và **chặn oan** (cấu
+> hình khó nhưng vẫn có nghiệm — bộ giải quay lui có xác suất) còn tệ hơn: bị
+> từ chối mà không hiểu vì sao, không có cách tự gỡ. Tệp hỏng nằm trên đĩa là
+> chấp nhận được vì đã có `cauhinh.bak.json` **và** git.
+
+> **KHÔNG BAO GIỜ nói "vô nghiệm" khi `vet_can = false`.** Một giây không đủ để
+> chứng minh điều đó. Ba câu, ba mức chắc chắn khác nhau:
+> `co_loi_giai` → *"vẫn xếp được"* · `vet_can` → *"CHẮC CHẮN không xếp được"* ·
+> còn lại → *"ĐÁNG NGỜ … nhưng một giây thì chưa đủ để khẳng định là vô
+> nghiệm"*. Nói quá dù chỉ một lần là thầy cô thôi tin mọi cảnh báo sau.
+> `thu_them_quy_tac.py` CA 7 thử **cả ba** nhánh qua HTTP thật; lùi cờ
+> `het_gio` ra là mục về nhánh thứ ba đỏ ngay.
+
+Khung cảnh báo nói rõ **quy tắc nào vừa lưu** (nghi phạm đầu tiên) và có nút
+**tắt đúng những quy tắc đó rồi thử lại**. Nút nằm SẴN trong `index.html`, không
+dựng bằng `innerHTML`: mọi id JS gọi tới đều phải có trong HTML —
+`tests/thu_web.py` canh đúng bất biến đó và đã bắt được bản đầu.
+
 ### Ba chỗ dễ sai, đã xử
 
 1. **Không giải trong hàm xử lý HTTP.** Một lượt xếp mất ~50 giây; giải ngay trong
@@ -621,7 +663,15 @@ lại xem đã gác chưa.
    `tk` truyền vào là **dict đã gộp sẵn** tuỳ chọn dòng lệnh với mục `tim_kiem`,
    đủ 5 khoá `so_lan_thu` / `seed` / `gioi_han_buoc` / `gioi_han_giay_moi_lan` /
    `gioi_han_tong_giay`. Trả về `KetQuaTim` (namedtuple):
-   `tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay`.
+   `tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay vet_can`.
+
+   **`vet_can`** = đã có ít nhất một lượt **vét cạn** không gian mà không tìm
+   được gì, tức **chắc chắn** vô nghiệm. `BoGiai.giai()` trả `None` cho **cả
+   hai** lý do — `_quay_lui` trả `False` (vét cạn) và `TimeoutError` (đụng trần)
+   — nên trước đây không ai phân biệt nổi, và bất cứ ai muốn báo "cấu hình này
+   vô nghiệm" đều buộc phải **nói quá**. `self.het_gio` phân biệt hai đường đó.
+   Với 90 cụm thì vét cạn gần như **không bao giờ** xảy ra trong ngân sách
+   thật, nên `vet_can=False` **KHÔNG** có nghĩa là "có nghiệm".
 
    `tests/thu_web.py` vẫn so **từng ô của vùng D8:I32** giữa hai đường chạy
    (150 ô, 0 lệch). Sau khi gộp, ca thử này canh đúng chỗ đáng canh: phần còn lại
@@ -817,7 +867,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.
 - `python3 tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
-- `python3 tests/thu_them_quy_tac.py`: **50/50 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
+- `python3 tests/thu_them_quy_tac.py`: **61/61 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
 - `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về

@@ -556,15 +556,108 @@ $('nut-thu').onclick = async () => {
   }
 };
 
+// -------------------------------------------------- cảnh báo sớm sau khi Lưu
+// VÌ SAO CẢNH BÁO chứ không CHẶN: nút Lưu là thao tác thầy cô làm hằng ngày.
+// Bắt nó đợi 1-9 giây thì họ tưởng máy treo rồi bấm lại — sinh ra đúng cái
+// tranh chấp hai lượt vừa bịt. Và chặn oan (cấu hình khó nhưng vẫn có nghiệm)
+// thì tệ hơn nữa: bị từ chối mà không hiểu vì sao, không có cách tự gỡ.
+// Nên: LƯU LUÔN, rồi kiểm ở NỀN và nói ra.
+//
+// KHÔNG BAO GIỜ nói "vô nghiệm" khi máy chủ trả vet_can = false. Một giây
+// không đủ để khẳng định điều đó; nói quá một lần là thầy cô thôi tin mọi
+// cảnh báo sau.
+let nghiPhamCuoi = [];          // quy tắc vừa được Lưu — nghi phạm đầu tiên
+
+// Nút gỡ nhanh nằm SẴN trong index.html chứ không dựng bằng innerHTML: mọi id
+// mà JS gọi tới đều phải có trong HTML — tests/thu_web.py canh đúng bất biến đó,
+// và nó vừa bắt được bản đầu của hàm này.
+function hienCanhBao(lop, html, nhanNut) {
+  const h = $('canh-bao-luu');
+  h.className = 'thu-hop ' + lop;
+  $('canh-bao-chu').innerHTML = html;
+  const g = $('nut-go-nhanh');
+  g.textContent = nhanNut || '';
+  g.disabled = false;
+  g.classList.toggle('an', !nhanNut);
+  h.classList.remove('an');
+}
+
+async function kiemNhanhSauLuu() {
+  const ds = nghiPhamCuoi;
+  hienCanhBao('thu-cho', 'Đang kiểm nhanh xem còn xếp được không...', '');
+  let kq;
+  try {
+    const tl = await goiCu('/api/thu-quy-tac',
+      { nhanh: true, tat: quyTac.filter((r) => !r.bat).map((r) => r.i) });
+    kq = await tl.json();
+    if (!tl.ok) throw new Error(kq.loi || '');
+  } catch (e) {
+    hienCanhBao('thu-canh-bao',
+      '<b>Chưa kiểm được.</b> Đã lưu xong, nhưng lượt kiểm nhanh không chạy '
+      + 'được. Bấm <b>Xếp thời khoá biểu</b> ở màn hình 1 để biết chắc.');
+    return;
+  }
+  if (kq.co_loi_giai) {
+    hienCanhBao('thu-ok',
+      `<b>Đã lưu — vẫn xếp được.</b> Kiểm nhanh ${kq.giay} giây, tìm được `
+      + 'phương án ngay.');
+    return;
+  }
+  const ten = ds.length
+    ? '<br>Nghi phạm đầu tiên là quy tắc vừa lưu:<ul>'
+      + ds.map((r) => `<li>${ma(r.ghi_chu)} <span class="loai">${ma(r.loai)}</span></li>`)
+        .join('') + '</ul>'
+    : '<br>Lần Lưu này không thêm quy tắc mới nào — hãy xem lại các công tắc '
+      + 'vừa gạt.';
+  const nhanNut = ds.length
+    ? `Tắt ${ds.length} quy tắc vừa lưu rồi thử lại` : '';
+  if (kq.vet_can) {
+    hienCanhBao('thu-loi',
+      '<b>Đã lưu, nhưng cấu hình này CHẮC CHẮN KHÔNG xếp được.</b> Bộ giải đã '
+      + `vét cạn mọi khả năng trong ${kq.giay} giây.` + ten, nhanNut);
+  } else {
+    hienCanhBao('thu-canh-bao',
+      `<b>Đã lưu, nhưng ĐÁNG NGỜ.</b> Kiểm nhanh ${kq.giay} giây không tìm được `
+      + 'phương án nào. Cấu hình bình thường tìm ra ngay trong khoảng 0,1 giây, '
+      + 'nên đây là dấu hiệu xấu — <b>nhưng một giây thì chưa đủ để khẳng định '
+      + 'là vô nghiệm.</b> Muốn biết chắc thì bấm <b>Xếp thời khoá biểu</b> ở '
+      + 'màn hình 1.' + ten, nhanNut);
+  }
+}
+
+$('nut-go-nhanh').onclick = async () => {
+  const ds = nghiPhamCuoi;
+  if (!ds.length) return;
+  const g = $('nut-go-nhanh');
+  g.disabled = true;
+  const bo = new Set(ds.map((r) => r.i));
+  quyTac.forEach((r) => { if (bo.has(r.i)) r.bat = false; });
+  veQuyTac();
+  const tl = await goiCu('/api/luu-quy-tac',
+    { tat: quyTac.filter((r) => !r.bat).map((r) => r.i) });
+  const k2 = await tl.json();
+  $('chu-luu').textContent = tl.ok
+    ? `Đã tắt ${bo.size} quy tắc và ghi lại. Bản cũ: ${k2.sao_luu}`
+    : 'Lỗi: ' + (k2.loi || '');
+  nghiPhamCuoi = [];
+  napQuyTac();
+  kiemNhanhSauLuu();
+};
+
 $('nut-luu').onclick = async () => {
   const tat = quyTac.filter((r) => !r.bat).map((r) => r.i);
   if (!confirm('Ghi cờ bật/tắt vào cauhinh.json?\n'
              + 'Bản cũ sẽ được sao lưu thành cauhinh.bak.json.')) return;
+  // CHỤP nghi phạm TRƯỚC khi lưu: sau khi lưu thì cờ "moi" biến mất hết.
+  nghiPhamCuoi = quyTac.filter((r) => r.moi).map((r) => ({ ...r }));
   const tl = await goiCu('/api/luu-quy-tac', { tat });
   const kq = await tl.json();
   $('chu-luu').textContent = tl.ok
     ? `Đã ghi. ${kq.doi} quy tắc đổi trạng thái. Bản cũ: ${kq.sao_luu}`
     : 'Lỗi: ' + (kq.loi || '');
+  if (!tl.ok) { $('canh-bao-luu').classList.add('an'); return; }
+  napQuyTac();
+  kiemNhanhSauLuu();          // KHÔNG await: nút Lưu đã xong, khung tự hiện sau
 };
 
 // ---------------------------------------------------------- 4. lịch giáo viên

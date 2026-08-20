@@ -1038,10 +1038,17 @@ def xoa_quy_tac(ma_phien, i):
     return doc_quy_tac(ma_phien)
 
 
-def thu_quy_tac(ma_phien, r, tat):
+def thu_quy_tac(ma_phien, r, tat, nhanh=False):
     """Xếp thử rút gọn để xem thêm quy tắc này còn xếp được không.
        Chạy thẳng trong luồng HTTP vì đã chặn cứng 30 lần thử / 8 giây —
-       khác hẳn lượt xếp thật (~50 giây) nên không được làm như vậy ở /api/xep."""
+       khác hẳn lượt xếp thật (~50 giây) nên không được làm như vậy ở /api/xep.
+
+       nhanh=True: KIỂM SAU KHI LƯU. Ngân sách 1 lần thử / 1 giây, vì câu hỏi
+       lúc đó chỉ là "còn xếp được không", KHÔNG phải "xếp tối ưu chưa". Đo
+       được: cấu hình lành cho lời giải trong 0,1 giây; cấu hình hỏng đốt hết
+       1,1 giây mà không ra gì. Chiều đánh đổi thuận — lúc mọi thứ ổn thì gần
+       như không tốn gì, chỉ chậm đúng lúc có chuyện.
+    """
     cfg, _ = cau_hinh_phien(ma_phien)
     if r:
         cfg['quy_tac'].append(copy.deepcopy(r))
@@ -1053,8 +1060,10 @@ def thu_quy_tac(ma_phien, r, tat):
     # che_do_tai_lap=False là CỐ Ý, kể cả khi cauhinh.json bật nó: đường này
     # giải NGAY trong luồng HTTP nên bắt buộc phải giữ chặn bằng đồng hồ, không
     # thì một lượt thử quy tắc có thể giữ luồng rất lâu.
-    tk = X.gop_tim_kiem(goc, so_lan_thu=30, gioi_han_giay_moi_lan=2,
-                        gioi_han_tong_giay=8, che_do_tai_lap=False)
+    tk = (X.gop_tim_kiem(goc, so_lan_thu=1, gioi_han_giay_moi_lan=1,
+                         gioi_han_tong_giay=4, che_do_tai_lap=False) if nhanh
+          else X.gop_tim_kiem(goc, so_lan_thu=30, gioi_han_giay_moi_lan=2,
+                              gioi_han_tong_giay=8, che_do_tai_lap=False))
     kqt = X.tim_phuong_an(bt, tk)
     pa = kqt.tot or kqt.du_phong
     vi_pham = []
@@ -1064,7 +1073,12 @@ def thu_quy_tac(ma_phien, r, tat):
     return {'xep_duoc': kqt.tot is not None, 'co_loi_giai': pa is not None,
             'so_hop_le': kqt.so_hop_le, 'so_lan': kqt.da_thu,
             'giay': round(kqt.giay, 1), 'diem': kqt.diem,
-            'vi_pham': vi_pham}
+            'vi_pham': vi_pham,
+            # CHẮC CHẮN vô nghiệm (đã vét cạn) hay chỉ là "thử mãi không ra"?
+            # Giao diện KHÔNG được nói "vô nghiệm" khi cờ này False — một giây
+            # không đủ để khẳng định điều đó, và nói quá một lần là thầy cô
+            # thôi tin mọi cảnh báo sau.
+            'vet_can': bool(kqt.vet_can)}
 
 
 def _tap_chi_so(ds):
@@ -1834,7 +1848,8 @@ class May(BaseHTTPRequestHandler):
             return self._json({'loi': 'Đang thử một quy tắc khác, đợi vài giây '
                                       'rồi bấm lại.'}, 409)
         try:
-            return self._json(thu_quy_tac(self._phien(), d.get('quy_tac'), tat))
+            return self._json(thu_quy_tac(self._phien(), d.get('quy_tac'),
+                                          tat, nhanh=bool(d.get('nhanh'))))
         finally:
             KHOA_THU.release()
 

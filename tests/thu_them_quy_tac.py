@@ -303,6 +303,111 @@ def ca_6_kich_thuoc_css():
          'Không còn <select multiple> nào trong giao diện')
 
 
+def ca_7_kiem_nhanh_sau_luu(tm):
+    """Cảnh báo sớm sau khi Lưu — và bất biến QUAN TRỌNG NHẤT của nó:
+       máy chủ KHÔNG BAO GIỜ được khẳng định "vô nghiệm" khi nó chỉ hết giờ.
+
+       Một giây không đủ để chứng minh vô nghiệm. Nói quá dù chỉ một lần là
+       thầy cô thôi tin mọi cảnh báo sau — thà nói "đáng ngờ, chưa kết luận
+       được" còn hơn nói chắc rồi sai.
+    """
+    print('\nCA 7 — kiểm nhanh sau khi Lưu: nhanh, và KHÔNG nói quá')
+    print('-' * 74)
+    import time as _t
+    from tien_ich_web import cau_hinh_tam
+
+    # --- (a) cấu hình LÀNH: phải ra lời giải, phải nhanh, và KHÔNG vet_can ---
+    tmx = os.path.join(tm, 'q7a')
+    os.makedirs(tmx, exist_ok=True)
+    dd_a = cau_hinh_tam(tmx)
+    with MayChuTam(dd_a) as (k, _):
+        t0 = _t.perf_counter()
+        ma, kq = k.js('/api/thu-quy-tac', {'nhanh': True, 'tat': []})
+        giay = _t.perf_counter() - t0
+        kiem(ma == 200 and kq.get('co_loi_giai') is True,
+             f'Cấu hình lành: kiểm nhanh tìm được phương án — {ma}, {kq}')
+        kiem(kq.get('so_lan') == 1,
+             f'Đúng MỘT lần thử, không phải 30 như đường thử quy tắc — '
+             f'{kq.get("so_lan")}')
+        kiem(giay < 3,
+             f'Và trả lời trong {giay:.2f}s — nút Lưu không được biến thành '
+             f'chỗ đợi')
+        kiem(kq.get('vet_can') is False,
+             f'vet_can=False khi CÓ lời giải — không bao giờ được khẳng định '
+             f'vô nghiệm lúc vừa tìm ra phương án. {kq.get("vet_can")!r}')
+
+        # Bắn 5 lần: cờ vet_can phải ổn định, không chớp.
+        cac = [k.js('/api/thu-quy-tac', {'nhanh': True, 'tat': []})[1]
+               .get('vet_can') for _ in range(5)]
+        kiem(set(cac) == {False},
+             f'5 lần liên tiếp đều vet_can=False, không chớp — {cac}')
+
+    # --- (b) cấu hình VÔ NGHIỆM THẬT (nhỏ, vét cạn được): vet_can phải True --
+    def teo_lai(cfg):
+        """Bài toán tí hon vừa khít số ô nhưng bí về tổ hợp: 1 lớp, 2 ngày,
+           hai môn bị ép chung vào MỘT ngày."""
+        mot = cfg['lop'][0]['ten']
+        cfg['lop'] = [cfg['lop'][0]]
+        cfg['phan_cong'] = {'_doc': cfg['phan_cong']['_doc'],
+                            mot: [['Toán học', 'M.Hạnh', 6],
+                                  ['Ngữ văn', 'H.Trang', 4]]}
+        cfg['khung_gio'] = {'cac_thu': [2, 3], 'buoi': 'Chiều',
+                            'cac_tiet': [6, 7, 8, 9, 10]}
+        cfg['quy_tac'] = [
+            {'loai': 'chi_xep_thu', 'ghi_chu': 'Văn dồn vào Thứ 2',
+             'loc': {'mon': 'Ngữ văn'}, 'thu': [2]},
+            {'loai': 'chi_xep_thu', 'ghi_chu': 'Toán dồn vào Thứ 2',
+             'loc': {'mon': 'Toán học'}, 'thu': [2]}]
+
+    tmb = os.path.join(tm, 'q7b')
+    os.makedirs(tmb, exist_ok=True)
+    dd_b = cau_hinh_tam(tmb, sua=teo_lai)
+    with MayChuTam(dd_b) as (k, _):
+        ma, kq = k.js('/api/thu-quy-tac', {'nhanh': True, 'tat': []})
+        kiem(ma == 200 and kq.get('co_loi_giai') is False,
+             f'Cấu hình vô nghiệm: không ra lời giải — {ma}, {kq}')
+        kiem(kq.get('vet_can') is True,
+             f'Và vet_can=True — bộ giải VÉT CẠN được, nên lần này khẳng định '
+             f'"chắc chắn" là đúng. {kq.get("vet_can")!r}')
+
+    # --- (c) HẠN GIỜ chứ không vô nghiệm: vet_can phải là False -------------
+    # Bài toán thật (90 cụm) không bao giờ vét cạn nổi trong một giây. Ép nó
+    # không tìm ra bằng một quy tắc mâu thuẫn, rồi đòi máy chủ THÚ NHẬN là nó
+    # chỉ hết giờ chứ không chứng minh được gì.
+    tmc = os.path.join(tm, 'q7c')
+    os.makedirs(tmc, exist_ok=True)
+
+    def bi_nhung_to(cfg):
+        """Ép ba môn vào ba ngày. ĐÚNG hình dạng lỗi thật của thầy cô: mỗi cụm
+           vẫn còn ô hợp lệ (nên _kiem_tra_so_bo cho qua), nhưng không xếp
+           chung được — và không gian 90 cụm thì một giây không vét cạn nổi."""
+        mon = [m for m in cfg['dinh_muc_mon'] if not m.startswith('_')][:3]
+        cfg['quy_tac'].append(
+            {'loai': 'chi_xep_thu', 'ghi_chu': 'ép ba môn vào ba ngày',
+             'loc': {'mon': mon}, 'thu': cfg['khung_gio']['cac_thu'][:3]})
+
+    dd_c = cau_hinh_tam(tmc, sua=bi_nhung_to)
+    with MayChuTam(dd_c) as (k, _):
+        ma, kq = k.js('/api/thu-quy-tac', {'nhanh': True, 'tat': []})
+        kiem(ma == 200,
+             f'Cấu hình bí kiểu TỔ HỢP đi lọt _kiem_tra_so_bo — {ma}. '
+             f'(Nếu mục này đỏ nghĩa là dữ liệu đã đổi tới mức ca thử không còn '
+             f'dựng được đúng vùng cần thử, phải chỉnh lại bi_nhung_to.)')
+        kiem(kq and kq.get('co_loi_giai') is False,
+             f'Bài toán to và bí: không ra lời giải — {kq}')
+        kiem(kq and kq.get('vet_can') is False,
+             f'NHƯNG vet_can=False: máy chủ THÚ NHẬN nó chỉ HẾT GIỜ, không '
+             f'chứng minh được vô nghiệm. Đây là nhánh đúng với lỗi thật của '
+             f'thầy cô, và là chỗ dễ nói quá nhất — {kq.get("vet_can") if kq else "?"!r}')
+
+    # --- (d) giao diện có đủ ba mảnh, và nút gỡ nhanh nằm SẴN trong HTML ----
+    html = io.open(os.path.join(GOC_TM, 'web', 'index.html'),
+                   encoding='utf-8').read()
+    thieu = [i for i in ('canh-bao-luu', 'canh-bao-chu', 'nut-go-nhanh')
+             if f'id="{i}"' not in html]
+    kiem(not thieu, f'Khung cảnh báo có đủ ba mảnh trong HTML — thiếu {thieu}')
+
+
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ THÊM / XOÁ / LƯU QUY TẮC')
@@ -318,6 +423,7 @@ if __name__ == '__main__':
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()
+        ca_7_kiem_nhanh_sau_luu(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')

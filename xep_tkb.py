@@ -387,7 +387,16 @@ class BoGiai:
         return False
 
     def giai(self):
+        """Trả phương án, hoặc None. Xem self.het_gio để biết VÌ SAO là None.
+
+           Hai lý do trả None hoàn toàn khác nhau về mặt kết luận:
+             _quay_lui trả False  -> đã VÉT CẠN không gian, CHẮC CHẮN vô nghiệm
+             TimeoutError         -> đụng trần bước/giây, KHÔNG kết luận được
+           Trước đây cả hai cùng ra None nên người gọi không phân biệt nổi, và
+           bất cứ ai muốn báo "cấu hình này vô nghiệm" đều buộc phải nói quá.
+        """
         self.moc_gio = time.time()
+        self.het_gio = False
         self._khoi_tao()
         for c in self.bt.cac_cum:
             c.ngay = c.vitri = None
@@ -397,6 +406,7 @@ class BoGiai:
             if not self._quay_lui(con_lai):
                 return None
         except TimeoutError:
+            self.het_gio = True
             return None
         return {c.ma: (c.ngay, c.vitri) for c in self.bt.cac_cum}
 
@@ -498,7 +508,11 @@ def hau_kiem(bt, pa):
 
 KetQuaTim = namedtuple(
     'KetQuaTim',
-    'tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay')
+    # vet_can = ĐÃ có ít nhất một lượt vét cạn không gian mà không tìm được gì,
+    # tức CHẮC CHẮN vô nghiệm. Khác hẳn "thử mãi không ra": với 90 cụm thì vét
+    # cạn gần như không bao giờ xảy ra trong ngân sách thật, nên ai đọc cờ này
+    # phải hiểu vet_can=False KHÔNG có nghĩa là "có nghiệm".
+    'tot diem so_ok so_hop_le da_thu du_phong diem_dp loi_dp giay vet_can')
 
 
 def gop_tim_kiem(goc, **ghi_de):
@@ -575,11 +589,15 @@ def tim_phuong_an(bt, tk, bao_tien_do=None):
     t0 = time.time()
     tot, diem_tot, so_ok, so_hop_le, da_thu = None, None, 0, 0, 0
     du_phong, diem_dp, loi_dp = None, None, None
+    vet_can = False
     for i in range(so_lan):
         if tong_giay is not None and time.time() - t0 > tong_giay:
             break
         da_thu += 1
-        pa = BoGiai(bt, random.Random(seed + i), gh, gh_giay).giai()
+        bg = BoGiai(bt, random.Random(seed + i), gh, gh_giay)
+        pa = bg.giai()
+        if pa is None and not bg.het_gio:
+            vet_can = True          # vét cạn: chắc chắn vô nghiệm, khỏi thử nữa
         if pa is not None:
             so_ok += 1
             d = cham_diem(bt, pa)
@@ -600,7 +618,7 @@ def tim_phuong_an(bt, tk, bao_tien_do=None):
                    else max(0, round(tong_giay - (time.time() - t0))))
             bao_tien_do(da_thu, so_lan, so_hop_le, con)
     return KetQuaTim(tot, diem_tot, so_ok, so_hop_le, da_thu,
-                     du_phong, diem_dp, loi_dp, time.time() - t0)
+                     du_phong, diem_dp, loi_dp, time.time() - t0, vet_can)
 
 
 # ==========================================================================
