@@ -1416,6 +1416,41 @@ học `khop_loc()` / `_cum_cua()`.
 > luôn: bấm Thêm ngay mà không sửa thì vẫn qua, nhưng bấm Thêm hai lần liên
 > tiếp thì bị chặn.
 
+### Màn hình Quy tắc — bốn phần giao diện (ĐÃ LÀM 21/8)
+
+| Phần | Làm gì | Chỗ ca thử KHÔNG canh được |
+|---|---|---|
+| 1 | **Thẻ** thay bảng dài, gom theo `NHOM_LOAI` | Chữ có tràn khung không; lưới nhiều cột có so le khó nhìn không |
+| 2 | **Tìm + lọc** theo GV / môn / lớp / nhóm | Thanh lọc trên điện thoại có chật không |
+| 3 | **Huy hiệu** Bắt buộc/Ưu tiên, dòng phạm vi, **Sửa**/Tạo giống/Xoá | Ba nút cùng hàng trên điện thoại; ba màu huy hiệu có phân biệt được không |
+| 4 | **Bốn trạng thái** tải · rỗng · lỗi · xong, và **bàn phím** | Viền lấy nét có thấy rõ trên nền thẻ không |
+
+> **`CA 6` và `CA 11` đọc CSS và mã nguồn, KHÔNG dựng trình duyệt.** Chúng bắt
+> được việc khai sai cỡ và việc **bỏ hẳn** một nhánh; chúng **không** bắt được
+> lỗi bố cục. Bốn dòng cuối bảng trên là việc phải mở trình duyệt xem bằng mắt.
+
+**Nút "Sửa" CHỈ có ở quy tắc NHÁP — ràng buộc thật, không phải chưa làm tới.**
+`luu_quy_tac()` ghi cờ bật/tắt cộng danh sách nháp; nó **không** ghi được thân
+một quy tắc đã có trong `cauhinh.json`. Cho nút Sửa hiện ở đó là hứa một việc
+không làm được: thầy cô sửa, bấm Lưu, mở tệp ra thấy y như cũ. Quy tắc trong
+file có **Tạo giống + công tắc**, đúng cơ chế máy chủ làm được.
+
+**Sửa = XOÁ nháp rồi ĐIỀN form, đúng thứ tự đó.** Điền trước mà xoá hỏng thì
+bấm Thêm sẽ đụng cửa chặn trùng câu `ghi_chu`, và câu từ chối ấy nói về một
+chuyện khác hẳn.
+
+> **Lỗ đã bịt ở phần 4:** `napQuyTac()` từng viết `if (!d) return;` — máy chủ
+> 500 hoặc câu trả lời không phải JSON thì màn hình **đứng im với danh sách cũ,
+> không một chữ nào**. Cùng hạng lỗi im lặng cả dự án này chống, chỉ khác là nó
+> nằm ở giao diện. Nay có **hai** nhánh lỗi (mạng hỏng ≠ câu trả lời hỏng, hai
+> câu khác nhau) và một nút **Thử lại** nằm SẴN trong HTML.
+
+> **Bàn phím: chỉ Esc trong ô Tìm, KHÔNG chiếm phím tắt toàn trang.** `/` hay
+> `Ctrl+K` là thói quen của lập trình viên; thầy cô không biết chúng tồn tại,
+> mà chúng lại cướp phím của người đang gõ ở ô khác. Viền lấy nét dùng
+> `:focus-visible` chứ không `:focus` trần — `:focus` trần để lại khung xanh
+> sau **mỗi cú bấm chuột**, thứ ai cũng tưởng là lỗi hiển thị. CA 11 canh cả hai.
+
 ### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
 
 Đợt 4 (chatbox) chia làm **ba lớp độc lập**, và **hai trong ba lớp đó chính là

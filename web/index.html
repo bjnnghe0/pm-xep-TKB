@@ -129,6 +129,16 @@
     <p id="dem-quy-tac" class="dem-qt"></p>
   </div>
 
+  <!-- Đợt 3 phần 4 — BỐN TRẠNG THÁI: đang tải · rỗng · lỗi · xong.
+       Nằm SẴN trong HTML, không dựng bằng innerHTML — thu_web.py canh bất
+       biến "mọi id JS gọi tới đều có trong HTML", và nút "Thử lại" mà JS
+       phải tự tạo ra là đúng chỗ bất biến đó gãy. -->
+  <p id="qt-dang-tai" class="trang-thai an">Đang tải danh sách quy tắc…</p>
+  <div id="qt-loi" class="trang-thai qt-loi-hop an">
+    <p id="qt-loi-chu"></p>
+    <button id="nut-tai-lai-qt">Thử lại</button>
+  </div>
+
   <!-- Đợt 3 phần 1 — THẺ thay cho bảng dài. Mỗi quy tắc một thẻ, gom theo
        nhóm loại (NHOM_LOAI của quy_tac.py). Bảng 17 dòng chữ nhỏ không đọc
        nổi trên điện thoại, mà thầy cô dùng điện thoại. -->

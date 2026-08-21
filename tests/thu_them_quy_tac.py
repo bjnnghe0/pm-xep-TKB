@@ -706,6 +706,70 @@ def ca_10_sua_nhap(B, dd):
          'cauhinh.json trên đĩa không suy suyển suốt cả ca thử')
 
 
+def ca_11_bon_trang_thai():
+    """Đợt 3 phần 4 — đang tải · rỗng · lỗi · xong.
+
+       Bản trước viết `if (!d) return;`: máy chủ 500 hay câu trả lời không
+       phải JSON thì màn hình đứng im với danh sách cũ, KHÔNG một chữ nào.
+       Đó đúng là hạng lỗi im lặng cả dự án này chống, chỉ khác là nó nằm ở
+       giao diện chứ không ở chỗ ghi tệp.
+
+       Đây là ca thử ĐỌC MÃ NGUỒN — không có trình duyệt để chạy JS. Nên nó
+       LỘT CHÚ THÍCH TRƯỚC (kiểu hỏng số 4), và canh CẤU TRÚC chứ không canh
+       một chuỗi chữ nào: chuỗi thì đổi lời là gãy mà chẳng ai sai gì.
+    """
+    print('\nCA 11 — bốn trạng thái của danh sách quy tắc')
+    print('-' * 74)
+    print('  Lưu ý: ca thử này ĐỌC MÃ NGUỒN, không dựng trình duyệt. Nó bắt')
+    print('  được việc BỎ HẲN nhánh báo lỗi, không bắt được lỗi hiển thị.')
+    goc = os.path.join(GOC_TM, 'web')
+    html = io.open(os.path.join(goc, 'index.html'), encoding='utf-8').read()
+    js = io.open(os.path.join(goc, 'app.js'), encoding='utf-8').read()
+    js = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+    js = re.sub(r'^\s*//.*$', '', js, flags=re.M)          # LỘT CHÚ THÍCH
+
+    # (a) bốn trạng thái phải là PHẦN TỬ THẬT trong HTML
+    thieu = [i for i in ('qt-dang-tai', 'qt-loi', 'qt-loi-chu',
+                         'nut-tai-lai-qt', 'ds-quy-tac')
+             if f'id="{i}"' not in html]
+    kiem(not thieu, f'Bốn trạng thái nằm SẴN trong index.html — thiếu {thieu}')
+
+    # (b) LỖ ĐÃ BỊT: không còn chỗ nào nuốt câu trả lời hỏng rồi return trơn
+    nap = re.search(r'async function napQuyTac\(\).*?\n\}', js, re.S)
+    than = nap.group(0) if nap else ''
+    kiem(bool(nap), 'Đọc được hàm napQuyTac()')
+    kiem(than and not re.search(r'if \(!d\)\s*return;', than),
+         'napQuyTac() KHÔNG còn nhánh "if (!d) return" nuốt lỗi trong im lặng')
+    kiem("trangThaiDs('loi'" in than,
+         'và có nhánh chuyển sang trạng thái LỖI')
+    kiem(than.count("trangThaiDs('loi'") >= 2,
+         f'đủ HAI nhánh lỗi — mạng hỏng và câu trả lời hỏng là hai chuyện '
+         f'khác nhau, câu báo phải khác nhau ({than.count("trangThaiDs(\'loi\'")})')
+
+    # (c) hết phiên KHÔNG được báo là lỗi mạng — lớp phủ đăng nhập lo việc đó
+    kiem('hetPhien' in than,
+         'Hết phiên đi nhánh riêng, không bị báo nhầm thành lỗi nối máy chủ')
+
+    # (d) trạng thái RỖNG vẫn còn, và khác trạng thái LỖI
+    kiem('trong-rong' in js, 'Trạng thái RỖNG có câu riêng')
+
+    # (e) bàn phím: có viền lấy nét, và là :focus-visible chứ không :focus trần
+    css = io.open(os.path.join(goc, 'style.css'), encoding='utf-8').read()
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    kiem('focus-visible' in css and 'outline' in css,
+         'Có viền lấy nét cho người đi bằng bàn phím')
+    tran = re.findall(r'(?<!-)\bbutton:focus\s*[,{]', css)
+    kiem(not tran,
+         f'và dùng :focus-visible chứ không :focus trần — bấm chuột không '
+         f'để lại khung xanh ({tran})')
+    kiem("$('tim-qt').onkeydown" in js, 'Ô Tìm có xử lý phím')
+
+    # (f) KHÔNG chiếm phím tắt toàn trang — nó cướp phím của người đang gõ
+    cuop = re.findall(r'document\.(?:addEventListener\(\s*.keydown|onkeydown)',
+                      js)
+    kiem(not cuop, f'Không bắt phím ở cấp toàn trang — {cuop}')
+
+
 # ==========================================================================
 if __name__ == '__main__':
     print('=' * 74)
@@ -726,6 +790,7 @@ if __name__ == '__main__':
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()
+        ca_11_bon_trang_thai()
         ca_7_kiem_nhanh_sau_luu(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]

@@ -222,11 +222,44 @@ $('nut-tai').onclick = () => { window.location = kemDau('/api/tai-ve'); };
 $('nut-tai-web').onclick = () => { window.location = kemDau('/api/tai-web'); };
 
 // ---------------------------------------------------------------- 3. quy tắc
+// ---------------------------------------------------------------------------
+// Đợt 3 phần 4 — BỐN TRẠNG THÁI của danh sách quy tắc
+//
+// Bản trước viết `if (!d) return;` — máy chủ 500 hay câu trả lời không phải
+// JSON thì màn hình đứng im với danh sách cũ, KHÔNG một chữ nào. Thầy cô sửa
+// một quy tắc, bấm, không thấy gì đổi, và không có cách nào biết vì sao. Đó
+// đúng là hạng lỗi im lặng cả dự án này viết ra để chống — chỉ khác là lần
+// này nó nằm ở giao diện chứ không ở chỗ ghi tệp.
+// ---------------------------------------------------------------------------
+function trangThaiDs(trang, chu) {
+  $('qt-dang-tai').classList.toggle('an', trang !== 'tai');
+  $('qt-loi').classList.toggle('an', trang !== 'loi');
+  $('ds-quy-tac').classList.toggle('an', trang !== 'xong');
+  if (trang === 'loi') $('qt-loi-chu').textContent = chu || '';
+}
+
 async function napQuyTac() {
+  // Chỉ hiện "đang tải" khi CHƯA có gì trên màn hình. Nạp lại sau mỗi lần
+  // thêm/xoá mà chớp một khung "đang tải" thì danh sách nhảy giật, và thầy cô
+  // mất chỗ đang đọc.
+  if (!quyTac.length) trangThaiDs('tai');
   let d;
   try { d = (await goi('/api/quy-tac', undefined, { lai: napQuyTac })).d; }
-  catch (e) { return; }
-  if (!d) return;
+  catch (e) {
+    // Hết phiên thì lớp phủ đăng nhập đã hiện — báo lỗi thêm là báo sai
+    // nguyên nhân. Việc đang dở tự chạy lại sau khi đăng nhập (QĐ 1).
+    if (!(e && e.hetPhien)) {
+      trangThaiDs('loi', 'Không nối được tới máy chủ. Kiểm tra xem cửa sổ '
+                       + 'dòng lệnh còn chạy không, rồi bấm "Thử lại".');
+    }
+    return;
+  }
+  if (!d || !Array.isArray(d.quy_tac)) {
+    trangThaiDs('loi', 'Máy chủ trả về câu trả lời không đọc được. Xem cửa sổ '
+                     + 'dòng lệnh để biết chi tiết, rồi bấm "Thử lại".');
+    return;
+  }
+  trangThaiDs('xong');
   // giữ lại các công tắc người dùng vừa gạt, đừng nạp đè lên
   const daGat = new Map(quyTac.map((r) => [r.i, r.bat]));
   quyTac = d.quy_tac.map((r) => ({ ...r, bat: daGat.has(r.i) ? daGat.get(r.i) : r.bat }));
@@ -391,6 +424,22 @@ function noiSuKienThe(hop) {
     };
   });
 }
+
+$('nut-tai-lai-qt').onclick = () => { quyTac = []; napQuyTac(); };
+
+// BÀN PHÍM. Hai phím, cả hai đều là thói quen sẵn có, không phải phím bí mật:
+//   Esc trong ô Tìm  -> xoá bộ lọc (giống Esc đóng hộp thoại)
+//   Enter trong ô Tìm -> không gửi gì cả; lọc đã chạy theo từng phím rồi.
+// KHÔNG chiếm phím tắt toàn trang kiểu "/" hay "Ctrl+K": thầy cô không biết
+// chúng tồn tại, mà chúng lại cướp phím của người đang gõ trong ô khác.
+$('tim-qt').onkeydown = (e) => {
+  if (e.key === 'Escape' && $('tim-qt').value) {
+    e.preventDefault();
+    $('tim-qt').value = '';
+    veQuyTac();
+  }
+  if (e.key === 'Enter') e.preventDefault();
+};
 
 ['tim-qt', 'loc-nhom', 'loc-gv', 'loc-mon', 'loc-lop'].forEach((id) => {
   const o = $(id);
