@@ -636,6 +636,27 @@ trình con**. Hai chỗ đã phải sửa vì kỷ luật:
   `subprocess.run` ném `TimeoutExpired`. Bản đầu **VỠ** đúng kiểu hỏng số 2;
   nay bắt lấy và biến thành một mục **ĐỎ**.
 
+### Đường vào từ ngoài — ĐO LẠI 21/8, đã tách hai cổng
+
+| Cổng | Phạm vi | Phục vụ |
+|---|---|---|
+| `:443` | **Funnel — cả Internet** | chỉ `/nbv` (trang công khai Nguyên Bản Việt) |
+| `:8443` | **chỉ tailnet** | `/` → `127.0.0.1:20266`, tức trang quản trị TKB |
+
+> **Funnel bật theo cặp TÊN-MÁY:CỔNG, KHÔNG theo đường dẫn.** Trước 21/8 cả hai
+> đường cùng nằm ở `:443`, nên bật Funnel cho trang công khai `/nbv` đã **kéo
+> theo `/`** — trang quản trị TKB phơi ra Internet mà không ai cố ý làm vậy.
+> Câu "ranh giới thật đang là chính tailnet" ở mục A1 khi đó **sai**; ranh giới
+> thật là mật khẩu, đối diện Internet.
+>
+> Đo lại bằng `tailscale serve status --json`, xem khoá `AllowFunnel` — đừng
+> đọc dòng chữ tóm tắt, nó không nói rõ đường nào thuộc cổng nào.
+> Đo được 21/8: `AllowFunnel: {"admin.tail7dc28e.ts.net:443": true}` và cổng
+> 443 chỉ còn `/nbv`. TKB **không còn** trên Internet.
+
+Đổi cổng thì phải thêm tên máy mới vào **cả hai** danh sách của
+`cauhinh_may_chu.json`; hiện có `admin.tail7dc28e.ts.net:8443` ở cả hai.
+
 ### Ổ dữ liệu đã có sẵn trong `/etc/fstab` — đừng thêm lần nữa
 
 Đo được, không suy: `systemctl show 'media-adminnam-NAM\x20MEO.mount'` cho
@@ -1056,6 +1077,22 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
+
+> ### KIỂU HỎNG SỐ 2 ĐÃ DÍNH BỐN LẦN — đếm lại cho khỏi quên
+>
+> | # | Vỡ ở đâu | Vì sao |
+> |---|---|---|
+> | 1 | `list.index()` ném `ValueError` | Lùi bản vá ra thì thao tác biến mất |
+> | 2 | `MayChuTam.__exit__` gọi `shutdown()` | Chờ mãi một luồng kẹt trong khoá — **treo**, còn tệ hơn vỡ |
+> | 3 | `doc_so()` ném khi thiếu tệp | Bản hỏng đang thử làm sổ khoá biến mất |
+> | 4 | `KeyError: 'nhom'` | Ca thử nhét một lớp giả **thiếu `NHAN`**, API trả 500, phép bóc `d2['nhom']` ném |
+>
+> Lần 4 đáng nhớ nhất vì dữ liệu hỏng **chính là đầu vào mong đợi** của ca thử
+> đó — nó cố ý dựng một lớp thiếu khai báo để thử lưới đỡ.
+>
+> **LUẬT: ca thử cố ý dựng dữ liệu HỎNG phải bọc phép gọi trong `try`, hoặc
+> kiểm HÌNH DẠNG câu trả lời TRƯỚC khi bóc. Dữ liệu hỏng là đầu vào mong đợi
+> của ca thử đó, không phải sự cố.**
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.

@@ -152,10 +152,21 @@ dựa vào đó.
 ```
 tailscaled            enabled · active     -> tự chạy cùng máy
 tailscale serve status:
-  https://admin.tail7dc28e.ts.net (Funnel on)
-  |-- /    proxy http://127.0.0.1:20266
-  |-- /nbv proxy http://127.0.0.1:8080
+  https://admin.tail7dc28e.ts.net        (Funnel on)   |-- /nbv -> 127.0.0.1:8080
+  https://admin.tail7dc28e.ts.net:8443   (tailnet only)|-- /    -> 127.0.0.1:20266
 ```
+
+> **⚠ HAI CỔNG, HAI PHẠM VI KHÁC HẲN NHAU — đừng trộn.**
+> `:443` bật **Funnel**, tức mở ra **cả Internet**; `:8443` chỉ trong **tailnet**.
+> Funnel bật theo cặp **tên-máy:cổng**, KHÔNG theo đường dẫn — nên trước đây bật
+> Funnel cho trang công khai `/nbv` là **kéo theo cả `/`**, và trang quản trị TKB
+> phơi ra Internet mà không ai cố ý làm vậy. Đã tách: TKB dời sang `:8443`,
+> đường `/` gỡ khỏi `:443`. Đo lại bất cứ lúc nào bằng:
+> `tailscale serve status --json` → xem khoá `AllowFunnel`.
+>
+> Đổi cổng thì phải thêm tên máy MỚI vào **cả hai** danh sách của
+> `cauhinh_may_chu.json` (`host_cho_phep` và `origin_cho_phep`), nếu không mọi
+> yêu cầu đều 400. Hiện có: `admin.tail7dc28e.ts.net:8443`.
 
 Khai báo `serve`/`funnel` nằm trong trạng thái của `tailscaled` chứ không phải
 trong một lệnh phải gõ lại, nên **về nguyên tắc nó sống qua khởi động lại**.
@@ -168,11 +179,19 @@ tailscale status | head -3              # máy này phải có địa chỉ 100.
 tailscale serve status                  # phải còn nguyên hai dòng proxy
 ```
 
-Nếu khai báo mất thì dựng lại:
+Nếu khai báo mất thì dựng lại — **đúng hai lệnh này, đừng gõ tắt**:
 
 ```bash
-tailscale serve --bg --set-path / 20266
+# TKB: chỉ trong tailnet, cổng 8443
+tailscale serve --bg --https=8443 --set-path / 20266
+
+# trang công khai: Funnel, cổng 443
+tailscale funnel --bg --set-path /nbv 8080
 ```
+
+> **ĐỪNG gõ `tailscale serve --bg --set-path / 20266`.** Thiếu `--https=8443`
+> thì nó gắn `/` vào cổng **443** — cổng đang bật Funnel — và trang quản trị
+> TKB lại phơi ra Internet. Đó đúng là cấu hình vừa gỡ đi.
 
 ---
 
@@ -181,7 +200,8 @@ tailscale serve --bg --set-path / 20266
 Không gõ lệnh nào sau khi máy lên. Từ điện thoại **dùng 4G, tắt Wi-Fi** (để chắc
 chắn không đi vòng qua mạng nhà):
 
-1. Mở `https://admin.tail7dc28e.ts.net`
+1. Mở `https://admin.tail7dc28e.ts.net:8443/` — **nhớ `:8443`**; địa chỉ
+   không có cổng là trang công khai, không phải trang quản trị
 2. Đăng nhập
 3. Sửa một quy tắc rồi bấm **Lưu vào cauhinh.json**
 4. Về máy, kiểm tệp thật sự đổi trên đĩa:
@@ -203,6 +223,7 @@ nó lên · và ghi được xuống đĩa.
 |---|---|
 | Trang không mở được | `systemctl --user status xeptkb.service` |
 | Dịch vụ ở `failed` | `journalctl --user -u xeptkb.service -n 30` — câu lỗi tiếng Việt của `web.py` nằm nguyên ở đó |
+| **Sửa xong nguyên nhân mà dịch vụ vẫn `failed`** | Trạng thái `failed` **DÍNH**, không tự gỡ. Phải:<br>`systemctl --user reset-failed xeptkb.service`<br>`systemctl --user start xeptkb.service`<br>Đây **không phải lỗi** — bẫy fail-closed cố ý bắt systemd bỏ cuộc và **nằm yên** ở `failed` để người vận hành nhìn thấy. Cái giá là phải gỡ tay. |
 | Vào được nhưng bấm **Lưu** hỏng | Ổ NTFS đang ở chế độ **chỉ đọc**. Máy chủ lẽ ra đã từ chối khởi động và nói rõ — xem journal. Chữa: vào Windows tắt "khởi động nhanh" rồi *Shut down* hẳn |
 | Xếp xong báo thiếu `openpyxl` | `ExecStart` đang trỏ nhầm `/usr/bin/python3`. Phải là `~/.venvs/xeptkb/bin/python3` |
 | Chỉ hỏng lúc vừa bật máy | `RequiresMountsFor` khai sai — xem lại mục 3c |
