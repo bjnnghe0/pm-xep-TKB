@@ -357,9 +357,15 @@ function theQuyTac(r, k) {
     + `<p class="the-chu">${ma(r.ghi_chu)}</p>`
     + `<p class="the-loai">${ma(nhan || r.loai)}`
     + `<code>${ma(r.loai)}</code></p>`
+    + (r.pham_vi ? `<p class="the-pv">Chạm vào ${r.pham_vi.so_cum} cụm · `
+        + `${r.pham_vi.so_tiet} tiết · ${r.pham_vi.lop.length} lớp</p>` : '')
     + '<div class="the-nut">'
     + `<label class="cong-tac"><input type="checkbox" data-k="${k}" `
     + `${r.bat ? 'checked' : ''}> ${r.bat ? 'Bật' : 'Tắt'}</label>`
+    // "Sửa" CHỈ có ở quy tắc nháp. Quy tắc đã nằm trong cauhinh.json thì
+    // luu_quy_tac() chỉ ghi được cờ bật/tắt, không ghi được thân — nên một nút
+    // "Sửa" ở đó là nút hứa cái nó không làm được. Xem ghi chú ở suaQuyTac().
+    + (r.moi ? `<button class="nut-sua" data-sua="${k}">Sửa</button>` : '')
     + `<button class="nut-nhan-ban" data-nhan-ban="${k}">Tạo giống</button>`
     + (r.moi ? `<button class="nut-xoa" data-xoa="${r.i}">Xoá</button>` : '')
     + '</div></article>';
@@ -371,6 +377,9 @@ function noiSuKienThe(hop) {
   });
   hop.querySelectorAll('[data-nhan-ban]').forEach((o) => {
     o.onclick = () => nhanBan(quyTac[+o.dataset.nhanBan]);
+  });
+  hop.querySelectorAll('[data-sua]').forEach((o) => {
+    o.onclick = () => suaQuyTac(quyTac[+o.dataset.sua]);
   });
   hop.querySelectorAll('[data-xoa]').forEach((o) => {
     o.onclick = async () => {
@@ -393,6 +402,44 @@ $('nut-bo-loc').onclick = () => {
   veQuyTac();
   $('tim-qt').focus();
 };
+
+// ---------------------------------------------------------------------------
+// Đợt 3 phần 3 — SỬA một quy tắc NHÁP
+//
+// Chỉ quy tắc nháp mới sửa được, và đây là ràng buộc THẬT chứ không phải chưa
+// làm tới: luu_quy_tac() ghi cờ bật/tắt cộng danh sách nháp, KHÔNG ghi được
+// thân một quy tắc đã có trong cauhinh.json. Cho nút "Sửa" hiện ở đó là hứa
+// một việc không làm được — thầy cô sửa, bấm Lưu, rồi mở tệp ra thấy y như cũ.
+//
+// Sửa = XOÁ nháp rồi ĐIỀN form. Xoá TRƯỚC, điền SAU: nếu điền trước mà xoá
+// hỏng thì bấm Thêm sẽ đụng cửa chặn trùng câu ghi_chu, và câu từ chối đó nói
+// về một chuyện khác hẳn — người dùng không cách nào hiểu.
+// ---------------------------------------------------------------------------
+async function suaQuyTac(r) {
+  if (!r || !r.moi) return;
+  const luu = { loai: r.loai, ghi_chu: r.ghi_chu,
+                noi_dung: r.noi_dung, bat: r.bat };
+  baoLoi('');
+  const tl = await goiCu('/api/xoa-quy-tac', { i: r.i });
+  const kq = await tl.json();
+  if (!tl.ok) { baoLoi(kq.loi || 'Không sửa được: xoá bản nháp cũ thất bại.'); return; }
+  quyTac = kq.quy_tac.map((x) => ({ ...x }));
+  veQuyTac();
+  if (![...$('o-loai').options].some((o) => o.value === luu.loai)) {
+    baoLoi('Loại "' + luu.loai + '" không còn trong danh mục.');
+    return;
+  }
+  $('o-loai').value = luu.loai;
+  $('o-ghi-chu').value = luu.ghi_chu || '';   // giữ NGUYÊN câu, không thêm hậu tố
+  veTruong(luu.noi_dung || {});
+  henDocLai();
+  $('chu-luu').textContent = 'Đã đưa quy tắc xuống form để sửa. Sửa xong bấm '
+    + '"Thêm vào danh sách" để đưa lại lên trên.';
+  $('o-ghi-chu').scrollIntoView({ block: 'center' });
+  $('o-ghi-chu').focus();
+  $('o-ghi-chu').setSelectionRange($('o-ghi-chu').value.length,
+                                   $('o-ghi-chu').value.length);
+}
 
 // ---------------------------------------------------------------------------
 // Đợt 3 việc 4 — "Tạo giống quy tắc này"

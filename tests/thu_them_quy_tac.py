@@ -612,6 +612,100 @@ def ca_9_loc_quy_tac(B):
          'và có dùng khoá pham_vi của máy chủ')
 
 
+def ca_10_sua_nhap(B, dd):
+    """Đợt 3 phần 3 — nút Sửa, và vì sao nó CHỈ có ở quy tắc nháp.
+
+       luu_quy_tac() ghi cờ bật/tắt cộng danh sách nháp; nó KHÔNG ghi được
+       thân một quy tắc đã có trong cauhinh.json. Nên nút "Sửa" ở đó là nút
+       hứa việc không làm được — thầy cô sửa, bấm Lưu, mở tệp ra thấy y cũ.
+    """
+    print('\nCA 10 — sửa quy tắc nháp (và vì sao quy tắc trong file thì không)')
+    print('-' * 74)
+    # CA 4 đã Lưu nên mọi nháp cũ thành quy tắc trong file — ca thử này phải
+    # tự dựng nháp của mình. Bộ lọc chọn thứ KHÔNG KHỚP GÌ CẢ, để nó không bao
+    # giờ có ý kiến về dữ liệu nhà trường (xem NHAP_A trong thu_phien.py).
+    NHAP = {'loai': 'chi_xep_thu', 'ghi_chu': 'CA10 nháp để thử nút Sửa',
+            'loc': {'mon': 'MÔN-KHÔNG-CÓ-THẬT-CA10'}, 'thu': [2, 3]}
+    ma, _ = B.js('/api/them-quy-tac', {'quy_tac': dict(NHAP)})
+    kiem(ma == 200, f'Dựng được một quy tắc nháp để thử — mã {ma}')
+
+    ma, d = B.js('/api/quy-tac')
+    qt = d.get('quy_tac') if isinstance(d, dict) else None
+    if not qt:
+        kiem(False, f'Không đọc được danh sách — mã {ma}')
+        return
+    so_file = d.get('so_file')
+
+    # điều kiện tiên quyết: phải có CẢ HAI loại thẻ, không thì mục dưới vô nghĩa
+    nhap = [r for r in qt if r.get('moi')]
+    tep = [r for r in qt if not r.get('moi')]
+    kiem(len(nhap) > 0 and len(tep) > 0,
+         f'Có cả quy tắc nháp lẫn quy tắc từ file — {len(nhap)} nháp, '
+         f'{len(tep)} từ file')
+    if not (nhap and tep):
+        return
+
+    # (a) VÒNG TRÒN: xoá nháp rồi thêm lại y nguyên -> ra đúng quy tắc cũ
+    r = nhap[0]
+    goc = {'loai': r['loai'], 'ghi_chu': r['ghi_chu'],
+           'noi_dung': r.get('noi_dung')}
+    ma, kq = B.js('/api/xoa-quy-tac', {'i': r['i']})
+    kiem(ma == 200, f'Bước 1 của Sửa — xoá bản nháp cũ, mã {ma}')
+    ma, kq = B.js('/api/them-quy-tac', {'quy_tac': dict(
+        goc['noi_dung'] or {}, loai=goc['loai'], ghi_chu=goc['ghi_chu'])})
+    kiem(ma == 200, f'Bước 2 — thêm lại bản đã sửa, mã {ma}')
+    ds = (kq or {}).get('quy_tac') or []
+    sau = ds[-1] if ds else {}
+    kiem(sau.get('loai') == goc['loai']
+         and sau.get('ghi_chu') == goc['ghi_chu']
+         and sau.get('noi_dung') == goc['noi_dung'],
+         'Vòng tròn khép kín: ra đúng quy tắc ban đầu, không rơi khoá nào')
+    kiem(len(ds) == len(qt),
+         f'và số quy tắc không đổi — {len(ds)} (trước {len(qt)})')
+
+    # (b) máy chủ TỪ CHỐI xoá quy tắc nằm trong file — đây là ràng buộc thật
+    #     đứng sau việc nút Sửa không hiện ở đó.
+    ma, kq = B.js('/api/xoa-quy-tac', {'i': 0})
+    kiem(ma == 400, f'Máy chủ từ chối xoá quy tắc đã có trong file — mã {ma}')
+    kiem('công tắc' in str((kq or {}).get('loi', '')),
+         f'và chỉ đúng cách làm thay thế — {str((kq or {}).get("loi"))[:60]!r}')
+
+    # (c) giao diện: nút Sửa và nút Xoá cùng bị khoá sau ĐÚNG một điều kiện
+    js = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
+    js = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+    js = re.sub(r'^\s*//.*$', '', js, flags=re.M)          # LỘT CHÚ THÍCH
+    the = re.search(r'function theQuyTac\([^)]*\)\s*\{(.*?)\n\}', js, re.S)
+    than = the.group(1) if the else ''
+    kiem(bool(the), 'Đọc được hàm dựng thẻ')
+    for nut, co_dk in (('data-sua', True), ('data-xoa', True),
+                       ('data-nhan-ban', False)):
+        m = re.search(r'r\.moi \?[^\n]*' + nut, than)
+        kiem(bool(m) == co_dk,
+             f'Nút {nut} {"chỉ hiện khi r.moi" if co_dk else "hiện ở MỌI thẻ"}'
+             f' — {"đúng" if bool(m) == co_dk else "SAI"}')
+    kiem('suaQuyTac' in js and 'nut-sua' in js,
+         'app.js có hàm suaQuyTac() và lớp nút riêng')
+
+    # (d) xoá TRƯỚC, điền SAU — thứ tự này là cái chống câu báo lỗi vô nghĩa
+    sua = re.search(r'async function suaQuyTac\(.*?\n\}', js, re.S)
+    t = sua.group(0) if sua else ''
+    kiem(sua and t.index('xoa-quy-tac') < t.index("$('o-ghi-chu').value ="),
+         'suaQuyTac() XOÁ trước rồi mới ĐIỀN form — không để lại nháp trùng câu')
+
+    # (e) huy hiệu Bắt buộc / Ưu tiên bám theo khoá mem của máy chủ
+    kiem("r.mem ?" in than and 'chip-mem' in than and 'chip-cung' in than,
+         'Huy hiệu Bắt buộc/Ưu tiên lấy từ khoá mem của máy chủ, không đoán')
+    css = io.open(os.path.join(GOC_TM, 'web', 'style.css'),
+                  encoding='utf-8').read()
+    m = re.search(r'\.chip\s*\{([^{}]*)\}', css)
+    fs = re.search(r'font-size:\s*([\d.]+)px', m.group(1)) if m else None
+    kiem(fs and float(fs.group(1)) >= 15,
+         f'Chữ trên huy hiệu >= 15px — {fs.group(1) if fs else "KHÔNG KHAI"}')
+
+    kiem(len(json.load(io.open(dd, encoding='utf-8'))['quy_tac']) == so_file,
+         'cauhinh.json trên đĩa không suy suyển suốt cả ca thử')
+
+
 # ==========================================================================
 if __name__ == '__main__':
     print('=' * 74)
@@ -628,6 +722,7 @@ if __name__ == '__main__':
             ca_8_nhan_ban(B, dd)
             B_DD[0] = dd
             ca_9_loc_quy_tac(B)
+            ca_10_sua_nhap(B, dd)
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()

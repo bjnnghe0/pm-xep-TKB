@@ -233,3 +233,14 @@ button.nho.an { display: none; }
 .loc-o-tim { flex: 1 1 260px; }
 .loc-o-tim input { width: 100%; }
 .dem-qt { flex-basis: 100%; margin: 2px 0 0; font-size: 15px; color: #4a5666; }
+
+/* --- Đợt 3 phần 3 — huy hiệu, dòng phạm vi, nút Sửa ---------------------- */
+.the-pv { margin: 0 0 8px; font-size: 15px; color: #5a6673; }
+.nut-sua { padding: 6px 14px; font-size: 15px; min-height: 40px; }
+.chip {
+  display: inline-block; border-radius: 10px; padding: 2px 10px;
+  font-size: 15px; font-weight: 600; line-height: 1.5;
+}
+.chip-cung { background: #e6eefb; color: #274b86; }
+.chip-mem { background: #fdf3e0; color: #7a5406; }
+.chip-moi { background: #fff3cd; color: #7a5c00; }
