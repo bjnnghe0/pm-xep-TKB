@@ -1084,7 +1084,13 @@ def danh_muc_loai():
     ra = []
     for ten_nhom, ds in QT.nhom_danh_muc():
         ra.append({'nhom': ten_nhom, 'loai': [
-            {'ten': t, 'mo_ta': QT.DANH_MUC[t].MO_TA,
+            # getattr chứ không QT.DANH_MUC[t].NHAN: cửa ÉP là @dang_ky,
+            # nó đã từ chối mọi lớp thiếu NHAN. Ai nhét thẳng vào DANH_MUC
+            # (ca thử vẫn làm vậy) thì đây là tầng HIỂN THỊ, không phải tầng
+            # kiểm — để nó ném AttributeError là đổi một lỗi khai báo thành
+            # một mã sự cố 500 vô nghĩa.
+            {'ten': t, 'nhan': getattr(QT.DANH_MUC[t], 'NHAN', '') or t,
+             'mo_ta': QT.DANH_MUC[t].MO_TA,
              'truong': [dict(x) for x in QT.DANH_MUC[t].TRUONG],
              'vi_du': QT.DANH_MUC[t].VI_DU,
              'mem': t.startswith('uu_tien')} for t in ds]})

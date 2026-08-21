@@ -182,6 +182,67 @@ def ca_6_khong_hoi_quy():
     kiem(r, 'cauhinh.json có quy tắc mang khoá ghi chú "_doc" — vẫn qua được')
 
 
+def ca_7_loai_thu_18_khong_lot():
+    """ĐIỀU KIỆN 2 của người dùng: "CHƯA XẾP NHÓM" phải ĐỎ, không được im.
+
+       Tôi từng nói loại mới "thừa hưởng nhóm CHƯA XẾP NHÓM nên không phải khai
+       thêm" — và người dùng chỉ ra ngay: đó CHÍNH LÀ dạng lỗi im lặng mà cả
+       tài liệu này viết ra để chống. Nhóm quyết định loại đó hiện ở đâu trên ô
+       chọn, và quyết định luôn bộ từ khoá dùng so với ghi chú người gõ; rơi
+       vào một nhóm vô danh nghĩa là mất cả hai mà không ai biết.
+
+       HAI TẦNG, và ca thử này canh cả hai:
+         · cửa ÉP lúc nạp mô-đun (@dang_ky + phép kiểm sau NHOM_LOAI)
+         · lưới ĐỠ lúc chạy (nhom_danh_muc trả nhóm "CHƯA XẾP NHÓM")
+    """
+    print('\nCA 7 — loại thứ 18 KHÔNG LỌT: phải có NHAN + MO_TA + mặt trong NHOM_LOAI')
+    print('-' * 74)
+    thieu_nhan = [t for t, c in QT.DANH_MUC.items()
+                  if not str(getattr(c, 'NHAN', '')).strip()]
+    kiem(not thieu_nhan,
+         f'{len(QT.DANH_MUC)} loại đều có NHAN — thiếu: {thieu_nhan}')
+    thieu_mo_ta = [t for t, c in QT.DANH_MUC.items()
+                   if not str(getattr(c, 'MO_TA', '')).strip()]
+    kiem(not thieu_mo_ta, f'…và đều có MO_TA — thiếu: {thieu_mo_ta}')
+
+    da_xep = {x for _, ds in QT.NHOM_LOAI for x in ds}
+    ngoai = sorted(t for t in QT.DANH_MUC if t not in da_xep)
+    kiem(not ngoai, f'…và đều có mặt trong NHOM_LOAI — ngoài nhóm: {ngoai}')
+
+    thua = sorted(t for t in da_xep if t not in QT.DANH_MUC)
+    kiem(not thua,
+         f'NHOM_LOAI không nhắc tên loại đã bị xoá — thừa: {thua}')
+
+    # Nhãn phải NÓI RÕ CHIỀU: bật một trong bốn chữ chỉ hướng lên.
+    HUONG = ('CHỈ', 'KHÔNG', 'PHẢI', 'NÊN', 'GHIM', 'MỖI', 'Chia')
+    mo_ho = [t for t, c in QT.DANH_MUC.items()
+             if not any(h in c.NHAN for h in HUONG)]
+    kiem(not mo_ho,
+         f'Nhãn nào cũng bật một chữ chỉ hướng ({"/".join(HUONG)}) — mờ: '
+         f'{mo_ho}. Cạm bẫy của chi_xep_thu là chữ "CHỈ"; nhãn không nói rõ '
+         f'chiều thì thầy cô chọn nhầm loại y như ngày 20/8')
+
+    nhan = {}
+    for t, c in QT.DANH_MUC.items():
+        nhan.setdefault(' '.join(c.NHAN.split()), []).append(t)
+    trung = [ds for x, ds in nhan.items() if len(ds) > 1]
+    kiem(not trung, f'17 nhãn khác nhau đôi một — trùng: {trung}')
+
+    # CỬA ÉP: thiếu NHAN thì @dang_ky phải DỪNG ngay lúc nạp mô-đun.
+    try:
+        @QT.dang_ky('_loai_thu_thieu_nhan')
+        class ThuThieuNhan(QT.QuyTac):
+            MO_TA = 'x'
+            MAU_CAU = 'x {loc}'
+            TRUONG = (QT.T_LOC,)
+        chan = False
+    except SystemExit as e:
+        chan = 'NHAN' in str(e)
+    finally:
+        QT.DANH_MUC.pop('_loai_thu_thieu_nhan', None)
+    kiem(chan, 'Đăng ký loại THIẾU NHAN thì DỪNG ngay lúc nạp mô-đun')
+
+
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ KHAI BÁO TRUONG')
@@ -192,6 +253,7 @@ if __name__ == '__main__':
     ca_4_thieu_khoa_bat_buoc()
     ca_5_danh_muc_in_ra()
     ca_6_khong_hoi_quy()
+    ca_7_loai_thu_18_khong_lot()
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')

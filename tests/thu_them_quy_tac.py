@@ -225,11 +225,22 @@ def ca_5_doi_chieu_danh_muc(B):
     # nhét một loại giả vào DANH_MUC, nó phải hiện ra ngay
     class LoaiGia(QT.QuyTac):
         MO_TA = 'Loại bịa ra để thử, không dùng thật.'
+        NHAN = 'Nhãn bịa để thử'
+        MAU_CAU = '{loc} — loại bịa để thử.'
         TRUONG = (QT.T_LOC,)
     LoaiGia.TEN = '_loai_gia'
+    # NHÉT THẲNG vào DANH_MUC, cố ý đi vòng @dang_ky: mục này thử cái LƯỚI ĐỠ
+    # lúc chạy (nhóm "CHƯA XẾP NHÓM"), không thử cửa ép lúc nạp mô-đun. Hai
+    # thứ khác nhau, và dự án cần cả hai — cửa ép chặn người thêm loại thứ 18,
+    # lưới đỡ chặn mọi đường vòng còn lại.
     QT.DANH_MUC['_loai_gia'] = LoaiGia
     try:
         _, d2 = goi(B, '/api/loai-quy-tac')
+        if not isinstance(d2, dict) or 'nhom' not in d2:
+            # ĐỎ chứ không VỠ: bản đầu để KeyError bay lên và cả ca thử chết
+            # giữa chừng, mọi mục sau không bao giờ chạy.
+            kiem(False, f'/api/loai-quy-tac không trả danh mục — {str(d2)[:80]}')
+            d2 = {'nhom': []}
         co = {l['ten'] for n in d2['nhom'] for l in n['loai']}
         nhom_gia = [n['nhom'] for n in d2['nhom'] if '_loai_gia' in
                     [l['ten'] for l in n['loai']]]

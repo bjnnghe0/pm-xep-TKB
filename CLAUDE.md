@@ -991,7 +991,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   Cổng gác mọi đường đo trên bộ 211 mục: thêm đường ghi mới mà quên gác → 210 ·
   bỏ cổng ở `do_POST` → 192 · bỏ cổng ở `do_GET` → 194 ·
   **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.
-- `python3 tests/thu_truong.py`: **23/23 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
+- `python3 tests/thu_truong.py`: **30/30 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.
 - `python3 tests/thu_them_quy_tac.py`: **61/61 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
@@ -1108,6 +1108,11 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+[ ] Hai loại quy tắc CHƯA HỀ được dùng ở đâu: `cung_ngay` và
+    `phai_ke_nhau` — không có trong 17 quy tắc đang chạy, cũng không có
+    trong mục "_quy_tac_de_san_chua_bat". Người dùng chốt: GIỮ NGUYÊN trong
+    "nâng cao", đừng bỏ — chưa dùng không có nghĩa là không cần.
+    Xem lại khi mở rộng sang khối 11 và khối 10.
 [ ] BẬT AI NGOÀI CHO CHATBOX = gửi TÊN GIÁO VIÊN, TÊN LỚP, TÊN MÔN của
     trường ra một máy chủ ở nước ngoài. Đây là QUYẾT ĐỊNH CỦA NHÀ TRƯỜNG,
     không phải quyết định kỹ thuật. Phải hỏi ý nhà trường TRƯỚC KHI bật,
@@ -1268,6 +1273,40 @@ khớp `TRUONG` → `import quy_tac` DỪNG. Không có đường lùi "tự gh�
 mới** (vẫn 19). Nhánh rẽ đặt **trước** cả phép kiểm "đang xếp" lẫn `KHOA_THU`:
 câu đọc lại chỉ ghép chuỗi (đo được **20 lượt / 0,01 giây**), bắt nó xếp hàng
 sau một lượt xếp thử 8 giây thì ô nhập đứng hình đúng lúc người dùng đang gõ.
+
+### Việc 3 — ĐÃ LÀM (21/8): nhãn tiếng Việt cho 17 loại
+
+> **Phân biệt `chi_xep_thu` ↔ `khac_ngay` KHÔNG nằm ở chữ "CHỈ" hay "KHÔNG".**
+> Nó nằm ở chỗ **có nêu tên NGÀY hay không**:
+>
+> | Loại | Bạn nói gì |
+> |---|---|
+> | `chi_xep_thu` | Bạn nêu **RÕ ngày nào được phép** (`thu: [2,3]`) |
+> | `khac_ngay` | Bạn **KHÔNG nêu ngày nào cả**, chỉ nói hai nhóm phải tách ra |
+>
+> QT 16 ngày 20/8 nêu `thu: [3,4,5]` — nếu nhãn nói thẳng *"bạn nêu rõ ngày nào
+> được phép"* thì ngay lúc chọn đã thấy sai. Chẩn đoán đầu ("cạm bẫy là chữ
+> CHỈ") đúng một nửa: chữ CHỈ làm câu dễ đọc nhầm, nhưng thứ phân biệt được hai
+> loại là **có tham số ngày hay không**.
+
+`NHAN` khai ở mỗi lớp, `@dang_ky` **ép** y như `MAU_CAU`. Ô chọn hiện **nhãn
+tiếng Việt**, tên kỹ thuật xuống dòng ngay dưới (`#ten-ky-thuat`, 15px, phông
+đơn cách) — thầy cô còn đối chiếu `cauhinh.json` bằng Notepad.
+
+**Hai tầng chặn loại thứ 18, cần cả hai:**
+
+| Tầng | Chặn cái gì |
+|---|---|
+| `@dang_ky` + phép kiểm ngay sau `NHOM_LOAI` | Người **thêm loại mới** theo đường bình thường — `import quy_tac` DỪNG |
+| `nhom_danh_muc()` trả nhóm "CHƯA XẾP NHÓM" | Mọi **đường vòng** còn lại (nhét thẳng vào `DANH_MUC`) — lưới đỡ lúc chạy |
+
+`tests/thu_truong.py` CA 7 canh cả hai, và canh thêm **chất lượng nhãn**: mỗi
+nhãn phải bật một chữ chỉ hướng (CHỈ / KHÔNG / PHẢI / NÊN / GHIM / MỖI / Chia),
+và 17 nhãn khác nhau đôi một.
+
+> **`danh_muc_loai()` dùng `getattr` cho `NHAN`, không `.NHAN` trần.** Cửa ép là
+> `@dang_ky`; đây là tầng **hiển thị**. Để nó ném `AttributeError` là đổi một
+> lỗi khai báo thành một mã sự cố 500 vô nghĩa cho người dùng.
 
 ### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
 

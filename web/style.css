@@ -140,6 +140,10 @@ tr.tat { opacity: .5; }
    đây là câu người dùng PHẢI đọc, không phải chú thích phụ. */
 #doc-lai { font-size: 15px; line-height: 1.5; }
 #doc-lai-canh-bao { margin-top: 8px; font-weight: 600; }
+/* Tên kỹ thuật của loại quy tắc. Nhỏ hơn nhãn nhưng KHÔNG dưới 15px —
+   thầy cô vẫn phải đọc được để đối chiếu cauhinh.json bằng Notepad. */
+#ten-ky-thuat { margin: 6px 0 0; color: #5a6673; font-size: 15px;
+                font-family: ui-monospace, Consolas, monospace; }
 .thu-hop { margin-top: 12px; padding: 11px; border-radius: 6px; font-size: 13px; }
 
 /* Màn hình hẹp: ô vuông giãn đều, danh sách dài thấp lại cho đỡ chiếm chỗ. */

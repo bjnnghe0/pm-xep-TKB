@@ -68,6 +68,9 @@ def ca_1_moi_loai_deu_khai_du():
     try:
         @QT.dang_ky('loai_thu_khong_co_mau_cau')
         class ThuThieu(QT.QuyTac):
+            # CÓ NHAN, thiếu MAU_CAU: @dang_ky kiểm NHAN trước, nên thiếu cả
+            # hai thì câu lỗi nói về NHAN và mục này canh nhầm cửa.
+            NHAN = 'nhãn thử'
             TRUONG = []
         chan = False
     except SystemExit as e:
@@ -80,6 +83,7 @@ def ca_1_moi_loai_deu_khai_du():
     try:
         @QT.dang_ky('loai_thu_o_sai')
         class ThuOSai(QT.QuyTac):
+            NHAN = 'nhãn thử'
             TRUONG = [{'ten': 'thu', 'kieu': 'ds_thu', 'nhan': 'x',
                        'bat_buoc': True}]
             MAU_CAU = 'xếp vào {khong_co_truong_nay}'

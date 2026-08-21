@@ -213,6 +213,15 @@ def dang_ky(ten):
     """
     def deco(cls):
         cls.TEN = ten
+        nhan = getattr(cls, 'NHAN', '')
+        if not isinstance(nhan, str) or not nhan.strip():
+            raise SystemExit(
+                f'[LỖI] Loại quy tắc "{ten}" ({cls.__name__}) chưa khai NHAN.\n'
+                f'      Đó là nhãn TIẾNG VIỆT hiện trên ô chọn loại. Thiếu nó\n'
+                f'      thì thầy cô chỉ thấy tên kỹ thuật như "chi_xep_thu",\n'
+                f'      và chọn nhầm loại — đúng lỗi đã xảy ra ngày 20/8.\n'
+                f'      Nhãn phải nói RÕ CHIỀU: bật chữ CHỈ / KHÔNG / PHẢI /\n'
+                f'      NÊN lên, và nói luôn "các trường hợp còn lại thì sao".')
         mau = getattr(cls, 'MAU_CAU', '')
         if not isinstance(mau, str) or not mau.strip():
             raise SystemExit(
@@ -439,6 +448,7 @@ class QuyTac:
 
 @dang_ky('chi_xep_thu')
 class ChiXepThu(QuyTac):
+    NHAN = ('CHỈ được xếp vào những thứ đã chọn — mọi thứ khác đều cấm')
     MAU_CAU = ('{loc} CHỈ được xếp vào {thu} — mọi thứ khác đều CẤM.')
     MO_TA = 'Chỉ được xếp vào những thứ liệt kê.'
     VI_DU = {"loai": "chi_xep_thu",
@@ -460,6 +470,8 @@ class ChiXepThu(QuyTac):
 
 @dang_ky('khong_xep_thu')
 class KhongXepThu(QuyTac):
+    NHAN = ('KHÔNG được xếp vào những thứ đã chọn — các thứ còn lại '
+            'vẫn được')
     MAU_CAU = ('{loc} KHÔNG được xếp vào {thu} — các thứ còn lại thì '
         'được.')
     MO_TA = 'Cấm xếp vào những thứ liệt kê.'
@@ -482,6 +494,8 @@ class KhongXepThu(QuyTac):
 
 @dang_ky('chi_xep_tiet')
 class ChiXepTiet(QuyTac):
+    NHAN = ('CHỈ được xếp vào những tiết đã chọn — mọi tiết khác đều '
+            'cấm')
     MAU_CAU = ('{loc} CHỈ được xếp vào {tiet} — mọi tiết khác đều CẤM.')
     MO_TA = 'Chỉ được xếp vào những tiết liệt kê (cả cụm phải nằm gọn trong đó).'
     VI_DU = {"loai": "chi_xep_tiet",
@@ -504,6 +518,8 @@ class ChiXepTiet(QuyTac):
 
 @dang_ky('khong_xep_tiet')
 class KhongXepTiet(QuyTac):
+    NHAN = ('KHÔNG được xếp vào những tiết đã chọn — các tiết còn lại '
+            'vẫn được')
     MAU_CAU = ('{loc} KHÔNG được xếp vào {tiet} — các tiết còn lại thì '
         'được.')
     MO_TA = ('Cấm những tiết liệt kê. "tiet_trong_buoi": 1 = tiết đầu buổi. '
@@ -528,6 +544,8 @@ class KhongXepTiet(QuyTac):
 
 @dang_ky('khong_xep_o')
 class KhongXepO(QuyTac):
+    NHAN = ('KHÔNG được xếp vào những ô đã chọn — ô = một thứ + một '
+            'tiết cụ thể')
     MAU_CAU = ('{loc} KHÔNG được xếp vào các ô {o}.')
     MO_TA = ('Cấm từng ô cụ thể (thứ + tiết). Dùng khi giáo viên bận cố định '
              'một vài buổi. Ghi "o": [[thứ, tiết], [thứ, tiết], ...]')
@@ -557,6 +575,8 @@ class KhongXepO(QuyTac):
 
 @dang_ky('co_dinh')
 class CoDinh(QuyTac):
+    NHAN = ('GHIM CỨNG vào đúng một ô — thứ mấy, tiết mấy, không xê '
+            'dịch')
     MAU_CAU = ('{loc} PHẢI xếp đúng vào {thu}, {tiet}.')
     MO_TA = ('Ghim cứng vào đúng 1 ô (thứ + tiết). Nếu bộ lọc khớp nhiều cụm '
              'thì chỉ cụm đầu tiên của mỗi lớp bị ghim.')
@@ -595,6 +615,8 @@ class CoDinh(QuyTac):
 
 @dang_ky('khac_ngay')
 class KhacNgay(QuyTac):
+    NHAN = ('Hai nhóm KHÔNG được rơi vào cùng một ngày — mỗi nhóm vẫn '
+            'xếp thứ nào cũng được')
     MAU_CAU = ('«{a}» và «{b}» KHÔNG được rơi vào cùng một ngày[ (xét '
                'theo {pham_vi})] — mỗi bên vẫn xếp thứ nào cũng được.')
     MO_TA = ('Hai nhóm tiết không được rơi vào cùng một ngày. '
@@ -653,6 +675,8 @@ class KhacNgay(QuyTac):
 
 @dang_ky('cung_ngay')
 class CungNgay(QuyTac):
+    NHAN = ('Hai nhóm PHẢI rơi vào cùng một ngày — không bắt phải liền '
+            'tiết')
     MAU_CAU = ('«{a}» và «{b}» PHẢI rơi vào cùng một ngày.')
     MO_TA = ('Mọi tiết của nhóm a phải rơi vào ngày mà nhóm b cũng có tiết '
              '(vd: chuyên đề học đúng ngày có tiết chính).')
@@ -704,6 +728,8 @@ class CungNgay(QuyTac):
 
 @dang_ky('toi_da_tiet_moi_ngay')
 class ToiDaTietMoiNgay(QuyTac):
+    NHAN = ('MỖI NGÀY nhiều nhất bao nhiêu TIẾT — chặn dạy dồn trong '
+            'một ngày')
     MAU_CAU = ('{loc}: mỗi ngày nhiều nhất {so} tiết, đếm theo {theo}.')
     MO_TA = ('Giới hạn số tiết trong 1 ngày. "theo": "gv" | "lop" | "mon_lop" '
              '(số tiết của cùng 1 môn trong 1 lớp).')
@@ -748,6 +774,7 @@ class ToiDaTietMoiNgay(QuyTac):
 
 @dang_ky('toi_da_ngay_moi_tuan')
 class ToiDaNgayMoiTuan(QuyTac):
+    NHAN = ('MỖI TUẦN nhiều nhất bao nhiêu NGÀY phải đến trường')
     MAU_CAU = ('{loc}: mỗi tuần nhiều nhất {so} ngày, đếm theo {theo}.')
     MO_TA = ('Giới hạn số buổi phải lên lớp trong tuần. '
              '"theo": "gv" (mặc định) | "lop".')
@@ -790,6 +817,8 @@ class ToiDaNgayMoiTuan(QuyTac):
 
 @dang_ky('khong_ke_nhau')
 class KhongKeNhau(QuyTac):
+    NHAN = ('Hai nhóm KHÔNG được xếp sát nhau — cùng ngày thì vẫn '
+            'được, chỉ cấm liền tiết')
     MAU_CAU = ('«{a}» và «{b}» KHÔNG được xếp sát nhau.')
     MO_TA = 'Hai nhóm môn của cùng một lớp không được xếp sát nhau (liền tiết).'
     VI_DU = {"loai": "khong_ke_nhau",
@@ -832,6 +861,8 @@ class KhongKeNhau(QuyTac):
 
 @dang_ky('phai_ke_nhau')
 class PhaiKeNhau(QuyTac):
+    NHAN = ('Hai nhóm PHẢI xếp sát nhau — liền tiết, không có tiết nào '
+            'chen giữa')
     MAU_CAU = ('«{a}» và «{b}» PHẢI xếp sát nhau.')
     MO_TA = ('Mọi tiết của nhóm a phải nằm sát nhóm b, cùng lớp cùng buổi '
              '(vd: chuyên đề luôn nối tiếp tiết chính). Đây là quy tắc CỨNG — '
@@ -889,6 +920,8 @@ class PhaiKeNhau(QuyTac):
 
 @dang_ky('gom_tiet')
 class GomTiet(QuyTac):
+    NHAN = ('Chia số tiết trong tuần thành các buổi — ví dụ 3 tiết '
+            'chia thành 2 + 1')
     MAU_CAU = ('{loc} được cắt thành cụm {cum}.')
     MO_TA = ('Đổi cách chia cụm cho riêng một môn/lớp, đè lên "dinh_muc_mon". '
              '[2] = 2 tiết dính liền; [1,1] = tách 2 buổi; [2,1] = 1 buổi 2 '
@@ -907,6 +940,8 @@ class GomTiet(QuyTac):
 
 @dang_ky('uu_tien_o')
 class UuTienO(QuyTac):
+    NHAN = ('NÊN xếp vào những thứ / tiết đã chọn — cộng điểm cho mỗi '
+            'tiết xếp được')
     MAU_CAU = ('NÊN xếp {loc} vào[ {thu}][ {tiet}] — cộng {diem} điểm '
                'cho MỖI TIẾT xếp được như vậy.')
     MO_TA = ('Cộng điểm nếu xếp đúng thứ/tiết mong muốn (điểm âm = tránh). '
@@ -938,6 +973,8 @@ class UuTienO(QuyTac):
 
 @dang_ky('uu_tien_ke_nhau')
 class UuTienKeNhau(QuyTac):
+    NHAN = ('NÊN xếp hai nhóm sát nhau — cộng điểm cho mỗi cụm xếp '
+            'được')
     MAU_CAU = ('NÊN xếp «{a}» sát «{b}»[ (chỉ tính khi cùng nhóm môn: '
                '{cung_nhom_mon})] — cộng {diem} điểm cho mỗi cụm xếp '
                'được như vậy.')
@@ -998,6 +1035,7 @@ class UuTienKeNhau(QuyTac):
 
 @dang_ky('uu_tien_it_buoi')
 class UuTienItBuoi(QuyTac):
+    NHAN = ('NÊN dồn vào ít buổi — TRỪ điểm cho mỗi buổi phải lên lớp')
     MAU_CAU = ('NÊN dồn {loc} vào ÍT buổi — TRỪ {diem} điểm cho MỖI '
                'BUỔI phải lên lớp.')
     MO_TA = ('Trừ điểm theo tổng số buổi giáo viên phải lên lớp — càng dồn '
@@ -1014,6 +1052,8 @@ class UuTienItBuoi(QuyTac):
 
 @dang_ky('uu_tien_trai_deu')
 class UuTienTraiDeu(QuyTac):
+    NHAN = ('NÊN trải đều, hai buổi cùng môn cách nhau vài ngày — cộng '
+            'điểm mỗi cặp')
     MAU_CAU = ('NÊN để {loc} cách nhau ít nhất {cach} ngày — cộng '
                '{diem} điểm cho mỗi cặp cách đủ xa.')
     MO_TA = ('Cộng điểm khi hai buổi học của cùng một môn (trong cùng lớp) '
@@ -1055,6 +1095,23 @@ NHOM_LOAI = (
     ('TIÊU CHÍ MỀM (chỉ cộng/trừ điểm)',
      ['uu_tien_o', 'uu_tien_ke_nhau', 'uu_tien_it_buoi', 'uu_tien_trai_deu']),
 )
+
+
+# Mọi loại đã đăng ký PHẢI có mặt trong NHOM_LOAI. Kiểm NGAY tại đây, ở mức
+# mô-đun, chứ không đợi ca thử: nhom_danh_muc() vốn có nhóm "CHƯA XẾP NHÓM" đỡ
+# cho loại quên xếp, và chính cái đỡ đó là một LỖI IM LẶNG — loại thứ 18 lọt
+# vào một nhóm vô danh mà không ai biết. Người dùng đã chỉ đúng chỗ này.
+_chua_xep = sorted(t for t in DANH_MUC
+                   if t not in {x for _, ds in NHOM_LOAI for x in ds})
+if _chua_xep:
+    raise SystemExit(
+        f'[LỖI] Loại quy tắc chưa được xếp nhóm: {", ".join(_chua_xep)}\n'
+        f'      Thêm tên loại vào đúng một nhóm trong NHOM_LOAI của '
+        f'quy_tac.py.\n'
+        f'      Nhóm quyết định loại đó hiện ở đâu trên ô chọn của giao diện, '
+        f'và\n'
+        f'      quyết định luôn bộ từ khoá dùng để so với ghi chú người gõ.')
+del _chua_xep
 
 
 def nhom_danh_muc():

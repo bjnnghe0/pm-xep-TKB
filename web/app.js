@@ -279,7 +279,11 @@ async function napDanhMuc() {
   DM = dm; GT = gt;
   $('o-loai').innerHTML = DM.nhom.map((n) =>
     `<optgroup label="${ma(n.nhom)}">`
-    + n.loai.map((l) => `<option value="${ma(l.ten)}">${ma(l.ten)}</option>`).join('')
+    // Ô chọn hiện NHÃN TIẾNG VIỆT, không hiện tên kỹ thuật. Tên kỹ thuật
+    // xuống dòng #ten-ky-thuat ngay dưới — thầy cô còn đối chiếu cauhinh.json
+    // bằng Notepad, nên không được giấu hẳn nó đi.
+    + n.loai.map((l) =>
+        `<option value="${ma(l.ten)}">${ma(l.nhan || l.ten)}</option>`).join('')
     + '</optgroup>').join('');
   $('o-loai').onchange = () => { veTruong(); henDocLai(); };
   $('o-ghi-chu').oninput = henDocLai;
@@ -395,6 +399,7 @@ function veTruong() {
   const l = loaiDangChon();
   if (!l) return;
   $('mo-ta-loai').textContent = l.mo_ta;
+  $('ten-ky-thuat').textContent = 'tên trong cauhinh.json:  "loai": "' + l.ten + '"';
   if (!$('o-ghi-chu').value.trim()) $('o-ghi-chu').value = l.vi_du.ghi_chu || '';
   const nhomDa = {};
   $('o-truong').className = 'o-truong';
