@@ -1029,6 +1029,16 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+[ ] ĐỢT 3 — GIAO DIỆN TẠO QUY TẮC. Bốn việc, thiết kế ở mục riêng bên
+    dưới, CHƯA DUYỆT:
+      1. Câu ĐỌC LẠI sinh từ máy, hiện cạnh ghi_chu người dùng gõ
+      2. Xem trước PHẠM VI (bao nhiêu lớp / cụm / tiết; 0 lớp thì cảnh báo)
+      3. Tên loại bằng TIẾNG VIỆT thay cho chi_xep_thu / khac_ngay / ...
+      4. Nút "Tạo giống quy tắc này" trên mỗi dòng
+    Lý do: 20/8 thầy cô khai QT 14/15/16 với ghi_chu nói "không trùng ngày
+    với" mà loai lại là chi_xep_thu — NGHĨA NGƯỢC HẲN. Phần mềm nhận cả hai,
+    không kêu một tiếng, phải bấm Lưu 5 lần rồi chạy xếp mới lộ ra là cấu
+    hình VÔ NGHIỆM. Người dùng cuối không có ai gỡ giúp.
 [ ] CHƯA AI chứng minh chống được MẤT ĐIỆN THẬT. SIGKILL giữa lúc ghi chỉ
     chứng minh tệp đích không rách khi TIẾN TRÌNH chết — dữ liệu vẫn có thể
     còn nằm trong bộ nhớ đệm của hệ điều hành. Muốn chứng minh phải cắt điện
@@ -1054,6 +1064,76 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 > được, và thông báo lỗi sẽ không hề nhắc tới nó. Vì vậy Giai đoạn 2 **cố ý chưa
 > thêm cờ vào mã**: thêm một công tắc chỉ có thể sai chứ không bao giờ đúng là
 > tự đặt bẫy. Khi nào thật sự có proxy TLS thì làm cả ba dòng cùng lúc.
+
+---
+
+## Đợt 3 — giao diện tạo quy tắc (THIẾT KẾ, **CHƯA DUYỆT**)
+
+Chưa viết một dòng mã nào. Ghi ở đây để bản thiết kế không trôi mất.
+
+### Câu ĐỌC LẠI sinh từ đâu — và làm sao BẮT BUỘC mọi loại phải có
+
+Không viết tay 17 hàm sinh câu. Nguyên liệu đã có sẵn hết trong `TRUONG`:
+mỗi trường đã khai `nhan` tiếng Việt (`"Chỉ được xếp vào các thứ"`) và `kieu`
+(`ds_thu`, `ds_tiet_buoi`, `loc`…). Ba mảnh:
+
+| Mảnh | Ai viết | Viết mấy lần |
+|---|---|---|
+| Mô tả bộ lọc — *"Vật lý của 12B1, 12B2 (thầy T.V.Quỳnh)"* | dùng chung | **1 lần** cho cả 17 loại |
+| Định dạng giá trị theo `kieu` — `[2,3]` → *"Thứ 2, Thứ 3"* | dùng chung | **1 lần mỗi `kieu`** (13 kiểu) |
+| Vị ngữ — *"CHỈ được xếp vào {thu}"* | mỗi loại | một **CHUỖI MẪU**, không phải một hàm |
+
+`MAU_CAU` là **chuỗi**, không phải hàm — ít chỗ sai hơn hẳn, và
+`@dang_ky` kiểm được ngay lúc nạp mô-đun.
+
+**Bắt buộc bằng CẤU TRÚC, không bằng lời nhắc.** `@dang_ky` từ chối đăng ký
+lớp thiếu `MAU_CAU`, hoặc có ô `{ten}` không khớp trường nào trong `TRUONG`
+→ `import quy_tac` DỪNG. Thêm loại mới mà quên thì **cả chương trình không
+chạy**, không phải "ca thử đỏ ở đâu đó".
+
+> **KHÔNG có đường lùi "thiếu MAU_CAU thì tự ghép từ TRUONG".** Nghe thì tiện,
+> nhưng đường lùi biến việc quên thành việc **im lặng** — đúng hạng lỗi mà cả
+> Đợt 2 dựng ra để chống. Bản ghép tự động chỉ dùng làm **chữ mồi** cho người
+> viết loại mới chép ra rồi sửa.
+
+Ca thử canh **chất lượng**, không chỉ sự tồn tại — vì `MAU_CAU = 'x'` cũng qua
+được `@dang_ky`. Dựng câu từ chính `VI_DU` của mỗi loại (17/17 loại đã có sẵn
+`VI_DU`, không phải thêm dữ liệu thử), rồi đòi: câu không rỗng · không còn `{`
+sót · **17 câu KHÁC NHAU ĐÔI MỘT** · và có nhắc lại giá trị lấy từ `VI_DU`.
+Mục "khác nhau đôi một" mới là mục bắt được câu vô nghĩa.
+
+### So câu máy với ghi_chu người gõ — chỉ báo khi có BẰNG CHỨNG NGƯỢC
+
+**Không đo độ giống nhau.** Hai câu bao giờ chẳng khác nhau; báo theo độ giống
+là đẻ ra báo động giả, mà báo động giả thì thầy cô sẽ học cách bỏ qua — đúng
+bài học "đừng nói quá" của khung cảnh báo 2C.
+
+Thay vào đó: mỗi **NHÓM** loại có vài từ khoá tiếng Việt, và chỉ báo khi
+`ghi_chu` chứa từ khoá của một nhóm **KHÁC** nhóm đang chọn:
+
+| Nhóm | Từ khoá trong ghi_chu |
+|---|---|
+| chỉ-xếp-vào | "chỉ", "duy nhất" |
+| không-xếp-vào | "không xếp", "tránh", "cấm" |
+| khác-ngày | "khác ngày", "không cùng ngày", "không trùng ngày" |
+| cố-định | "cố định", "đúng vào" |
+
+Đúng cái đã xảy ra: ghi_chu *"không trùng ngày với"* + loại `chi_xep_thu`
+(nhóm chỉ-xếp-vào) → báo. Từ khoá gắn theo **nhóm** (`NHOM_LOAI`, đã có sẵn và
+đã tự lộ loại chưa xếp nhóm), nên loại mới thừa hưởng, không phải khai thêm.
+
+### Ba ràng buộc phải giữ
+
+1. **KHÔNG thay `ghi_chu` bằng câu sinh ra, kể cả khi người dùng bấm đồng ý.**
+   `cham_diem()` dùng `ghi_chu` của quy tắc **MỀM** làm khoá dict, và khoá đó
+   chảy thẳng vào ô Excel (gốc của A8). Câu sinh ra chỉ **hiện song song**.
+   Nếu Đợt sau muốn có nút "dùng câu này" thì phải kèm phép chống trùng khoá
+   và một ca thử riêng — Đợt 3 cố ý **không làm**.
+2. **Câu đọc lại sinh ở MÁY CHỦ**, không chép ngữ nghĩa sang JS. Cùng lý do
+   `TRUONG` phục vụ cả `--quy-tac` lẫn form web: chép sang JS là chắc chắn lệch.
+3. **Phạm vi ra 0 lớp thì CẢNH BÁO, không CHẶN.** Quy tắc không khớp gì là
+   "không cấm gì mà vẫn báo ĐẠT" — đúng bẫy `n_uyen == 0`, lần này ở phía người
+   dùng. Nhưng chặn hẳn thì có lúc chặn oan (học kỳ này lớp đó chưa có môn ấy).
 
 ---
 
