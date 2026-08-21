@@ -1240,6 +1240,30 @@ Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 > thêm cờ vào mã**: thêm một công tắc chỉ có thể sai chứ không bao giờ đúng là
 > tự đặt bẫy. Khi nào thật sự có proxy TLS thì làm cả ba dòng cùng lúc.
 
+### Đã đóng — ĐỪNG mở lại
+
+```
+[x] "Làm cho tailscale serve tự sống lại sau khởi động"
+    ĐÓNG 21/8/2026: KHÔNG PHẢI VIỆC. Đã đo — nó vốn đã tự sống lại.
+    Khởi động lại máy thật, không gõ lệnh nào, rồi vào từ điện thoại 4G
+    qua :8443: chạy suốt, không 502. Bốn dòng số ở mục "Đường vào từ
+    ngoài"; công thức đo lại ở CHAY_CUNG_MAY.md mục 7.
+    => KHÔNG dựng unit systemd cho tailscale serve. Thêm mã khi số đo nói
+       không cần là thêm một chỗ để hỏng.
+    Cái CÒN LẠI cần canh không phải "nó có tự lên không" mà là "cấu hình
+    serve có bị xoá mất không" — hai chuyện khác nhau. Xem CHAY_CUNG_MAY.md
+    mục 6, hai dòng "cách kiểm / cách dựng lại".
+```
+
+> **Ghi ở đây chứ không xoá trắng, và đây là lý do.** Một mục biến mất không dấu
+> vết thì lần sau có người lại nghĩ ra đúng việc đó, lại mất một buổi để kết
+> luận y hệt. Dòng `[x]` kèm ngày và lý do rẻ hơn nhiều so với việc đo lại.
+>
+> **Lưu ý về lịch sử:** mục này chưa từng có một dòng trong khối `[ ]` phía
+> trên — nó sống dưới dạng một câu chưa-có-số-đo ở `CHAY_CUNG_MAY.md` mục 6
+> (*"về nguyên tắc nó sống qua khởi động lại. Nhưng đó là nguyên tắc; bằng
+> chứng là mục 7"*). Câu đó nay đã thay bằng số đo.
+
 ---
 
 ## Đợt 3 — giao diện tạo quy tắc (THIẾT KẾ, **CHƯA DUYỆT**)
