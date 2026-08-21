@@ -64,6 +64,8 @@ const $ = (id) => document.getElementById(id);
 let daLog = 0;        // đã hiện bao nhiêu dòng nhật ký
 let dongHo = null;    // bộ đếm hỏi trạng thái
 let quyTac = [];      // danh sách quy tắc đang hiện ở màn hình 3
+let dauCauHinh = null; // 2C — dấu bản của cauhinh.json lúc TẢI danh sách về
+let dauKetQua = null;  // QĐ 4 — dấu bản của lượt xếp đang hiện trên màn hình
 
 // ---------------------------------------------------------------- chuyển màn
 function moMan(ten) {
@@ -120,6 +122,14 @@ async function hoi() {
     return;
   }
   if (!t) return;
+  dauKetQua = t.dau || null;
+  const c = $('chu-nguoi-xep');
+  if (t.nguoi) {
+    c.textContent = 'Kết quả này do ' + t.nguoi + ' xếp.';
+    c.classList.remove('an');
+  } else {
+    c.classList.add('an');
+  }
 
   if (t.log_moi && t.log_moi.length) {
     $('log').textContent += t.log_moi.join('\n') + '\n';
@@ -203,8 +213,13 @@ function veTKB(l) {
   $('bang-tkb').innerHTML = h;
 }
 
-$('nut-tai').onclick = () => { window.location = '/api/tai-ve'; };
-$('nut-tai-web').onclick = () => { window.location = '/api/tai-web'; };
+// Đính dấu bản của lượt xếp ĐANG HIỆN trên màn hình. Máy chủ so với dấu của
+// tệp đang nằm trên đĩa; lệch nghĩa là có người vừa xếp đè, và nó chặn kèm tên
+// người đó. Chưa xếp lần nào thì dauKetQua là null -> không đính gì, máy chủ
+// cho tải (tệp của lượt chạy trước).
+const kemDau = (d) => (dauKetQua ? d + '?dau=' + encodeURIComponent(dauKetQua) : d);
+$('nut-tai').onclick = () => { window.location = kemDau('/api/tai-ve'); };
+$('nut-tai-web').onclick = () => { window.location = kemDau('/api/tai-web'); };
 
 // ---------------------------------------------------------------- 3. quy tắc
 async function napQuyTac() {
@@ -215,6 +230,7 @@ async function napQuyTac() {
   // giữ lại các công tắc người dùng vừa gạt, đừng nạp đè lên
   const daGat = new Map(quyTac.map((r) => [r.i, r.bat]));
   quyTac = d.quy_tac.map((r) => ({ ...r, bat: daGat.has(r.i) ? daGat.get(r.i) : r.bat }));
+  dauCauHinh = d.dau;          // gửi lại y nguyên lúc bấm Lưu
   veQuyTac();
   if (!$('o-tuan').value) $('o-tuan').placeholder = d.tuan;
 }
@@ -571,7 +587,7 @@ let nghiPhamCuoi = [];          // quy tắc vừa được Lưu — nghi phạm
 // Nút gỡ nhanh nằm SẴN trong index.html chứ không dựng bằng innerHTML: mọi id
 // mà JS gọi tới đều phải có trong HTML — tests/thu_web.py canh đúng bất biến đó,
 // và nó vừa bắt được bản đầu của hàm này.
-function hienCanhBao(lop, html, nhanNut) {
+function hienCanhBao(lop, html, nhanNut, hienTaiLai) {
   const h = $('canh-bao-luu');
   h.className = 'thu-hop ' + lop;
   $('canh-bao-chu').innerHTML = html;
@@ -579,6 +595,7 @@ function hienCanhBao(lop, html, nhanNut) {
   g.textContent = nhanNut || '';
   g.disabled = false;
   g.classList.toggle('an', !nhanNut);
+  $('nut-tai-lai-ds').classList.toggle('an', !hienTaiLai);
   h.classList.remove('an');
 }
 
@@ -650,14 +667,32 @@ $('nut-luu').onclick = async () => {
              + 'Bản cũ sẽ được sao lưu thành cauhinh.bak.json.')) return;
   // CHỤP nghi phạm TRƯỚC khi lưu: sau khi lưu thì cờ "moi" biến mất hết.
   nghiPhamCuoi = quyTac.filter((r) => r.moi).map((r) => ({ ...r }));
-  const tl = await goiCu('/api/luu-quy-tac', { tat });
-  const kq = await tl.json();
-  $('chu-luu').textContent = tl.ok
+  let r;
+  try {
+    r = await goi('/api/luu-quy-tac', { tat, dau: dauCauHinh });
+  } catch (e) { return; }
+  const kq = r.d || {};
+  if (r.ma === 409) {
+    // 2C — có người vừa đổi tệp. KHÔNG ghi đè, và cho đúng một nút để đi tiếp.
+    $('chu-luu').textContent = '';
+    hienCanhBao('thu-loi', ma(kq.loi || 'Tệp đã đổi.'), '', true);
+    return;
+  }
+  $('chu-luu').textContent = r.ok
     ? `Đã ghi. ${kq.doi} quy tắc đổi trạng thái. Bản cũ: ${kq.sao_luu}`
     : 'Lỗi: ' + (kq.loi || '');
-  if (!tl.ok) { $('canh-bao-luu').classList.add('an'); return; }
+  if (!r.ok) { $('canh-bao-luu').classList.add('an'); return; }
+  dauCauHinh = kq.dau || dauCauHinh;   // lưu tiếp được, khỏi phải tải lại
   napQuyTac();
   kiemNhanhSauLuu();          // KHÔNG await: nút Lưu đã xong, khung tự hiện sau
+};
+
+$('nut-tai-lai-ds').onclick = async () => {
+  $('nut-tai-lai-ds').disabled = true;
+  await napQuyTac();                   // lấy danh sách và DẤU MỚI
+  $('canh-bao-luu').classList.add('an');
+  $('nut-tai-lai-ds').disabled = false;
+  $('chu-luu').textContent = 'Đã tải lại danh sách mới nhất. Xem lại rồi Lưu.';
 };
 
 // ---------------------------------------------------------- 4. lịch giáo viên

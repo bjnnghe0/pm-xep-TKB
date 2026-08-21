@@ -188,8 +188,42 @@ class Khach:
         return ma, td, than
 
     def yeu_cau(self, cach, duong, than=None, kieu='application/json',
-                them=None, cookie=True, doc_het=True):
-        """Yêu cầu bình thường, có thể chèn thêm tiêu đề tuỳ ý."""
+                them=None, cookie=True, doc_het=True, dau=None):
+        """Yêu cầu bình thường, có thể chèn thêm tiêu đề tuỳ ý.
+
+           TỰ TIÊM "dau" CHO /api/luu-quy-tac. Từ 2C, đường đó ĐÒI dấu bản của
+           cauhinh.json; thiếu là 400. Hàm này lấy dấu bằng một lượt
+           GET /api/quy-tac ngay trước khi ghi — tức mô phỏng đúng người dùng
+           vừa mở màn hình Quy tắc rồi bấm Lưu.
+
+           VÌ SAO TIÊM Ở ĐÂY chứ không sửa hai chục chỗ gọi: gần hết những chỗ
+           đó viết ra để thử thứ KHÁC (nguồn gốc, thân dị dạng, sao lưu xoay
+           vòng, fsync). Bắt chúng tự lo dấu bản là làm chúng thử nhầm thứ, và
+           chỉ cần một chỗ quên là mục ấy chuyển sang xanh-vì-400-nhầm-lý-do.
+           Cùng lẽ với MayChuTam tự đăng nhập.
+
+           Muốn thử CHÍNH cái xung đột thì truyền dau= tay:
+               dau='sai-be-bet'   -> gửi dấu sai
+               dau=False          -> KHÔNG gửi khoá "dau" nào cả
+        """
+        if (dau is not False and cach == 'POST'
+                and duong.split('?')[0] == '/api/luu-quy-tac'
+                and isinstance(than, dict) and 'dau' not in than):
+            if dau is None:
+                ma_d, d = self.js('/api/quy-tac', them=them, cookie=cookie)
+                # LẤY KHÔNG ĐƯỢC THÌ GỬI DẤU RỖNG, TUYỆT ĐỐI KHÔNG NÉM.
+                # Bản đầu ném RuntimeError ở đây, và hai bộ thử VỠ GIỮA CHỪNG
+                # thay vì báo đỏ — kiểu hỏng số 2, lần thứ ba. Chúng cố ý gọi
+                # /api/luu-quy-tac trong cảnh CHƯA đăng nhập (401) hoặc với
+                # Host lạ (400), nên lượt GET dò dấu ở trên cũng hỏng theo, và
+                # đó là chuyện ĐÚNG chứ không phải sự cố.
+                #
+                # Gửi dấu rỗng không đẻ ra xanh giả: ca thử nào mong 200 mà dấu
+                # rỗng thì nhận 409 và ĐỎ ngay. Chỉ những ca vốn mong 400/401
+                # mới đi tiếp — và chúng nhận đúng mã chúng chờ, vì cổng nguồn
+                # gốc lẫn cổng đăng nhập đều chạy TRƯỚC phép kiểm dấu.
+                dau = (d or {}).get('dau') or ''
+            than = dict(than, dau=dau)
         if isinstance(than, (dict, list)):
             than = json.dumps(than, ensure_ascii=False).encode()
         elif isinstance(than, str):

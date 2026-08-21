@@ -417,7 +417,20 @@ def _ghi_so(dd, so, bay_gio):
 
 
 def ghi_nhan_thu(dd, ten, bay_gio=None):
-    """Ghi nhận MỘT lần thử của `ten`. Trả số GIÂY còn bị khoá (0 = cho thử).
+    """Ghi nhận MỘT lần thử của `ten`. Trả (giây còn khoá, khoá_THẬT).
+
+       HAI KIỂU CHẶN, và người gọi PHẢI phân biệt:
+         khoá THẬT  (khoa_that=True)  — đã có lần sai XÁC NHẬN đủ ngưỡng.
+                    Chặn mọi thứ, kể cả mật khẩu đúng.
+         chốt chặn  (khoa_that=False) — bộ đếm LẦN THỬ vượt ngưỡng, nhưng chưa
+                    có lần sai nào được xác nhận. CHỈ chặn mật khẩu SAI.
+
+       Vì sao phải tách: bộ đếm này đếm LẦN THỬ chứ không đếm LẦN SAI (phải
+       vậy, nếu không thì một loạt bắn dồn lọt hết — xem dưới). Nhưng nếu
+       chốt chặn cũng chặn cả mật khẩu ĐÚNG thì 11 người đăng nhập ĐÚNG cùng
+       lúc sẽ có người bị khoá oan. ĐÃ ĐO: 12 khách đăng nhập song song bằng
+       mật khẩu đúng thì 2 người bị 429. Cho mật khẩu đúng đi qua chốt chặn
+       KHÔNG mất gì về an ninh — kẻ đoán trúng mật khẩu thì hắn thắng rồi.
 
        KIỂM và TĂNG trong CÙNG một lần giữ khoá. Tách ra hai lần giữ khoá là
        đúng lỗi A4 mà gianh_luot() đã giải: bắn 200 yêu cầu cùng lúc thì cả 200
@@ -427,8 +440,11 @@ def ghi_nhan_thu(dd, ten, bay_gio=None):
        Nhánh `truoc >= SO_LAN_SAI_TOI_DA` bên dưới là CHỐT CHẶN cho đúng tình
        huống ấy: mốc hết khoá bình thường do ghi_nhan_sai() đặt (sau khi biết
        mật khẩu sai), nhưng trong một loạt bắn dồn thì mọi yêu cầu còn đang chờ
-       scrypt, chưa ai kịp gọi ghi_nhan_sai(). Đặt ở đây nữa thì yêu cầu thứ 6
-       trở đi bị chặn ngay, không phải đợi.
+       scrypt, chưa ai kịp gọi ghi_nhan_sai(). Chốt chặn bịt đúng khe đó.
+
+       CHỐT CHẶN KHÔNG GHI `khoa_den`. Chỉ ghi_nhan_sai() mới được đặt mốc khoá
+       thật. Nếu chốt chặn cũng đặt mốc thì lần thử kế tiếp sẽ thấy "khoá thật"
+       và chặn cả mật khẩu đúng — tức lỗi khoá oan quay lại bằng cửa sau.
 
        KHÔNG tăng bộ đếm khi đang khoá: gõ thêm trong lúc bị khoá không được
        phép kéo dài thời gian khoá, nếu không thì người sốt ruột bấm lại vài lần
@@ -443,15 +459,18 @@ def ghi_nhan_thu(dd, ten, bay_gio=None):
             bg, den = {'sai': 0, 'lan_cuoi': t, 'khoa_den': 0.0}, 0.0
         elif not den and t - bg['lan_cuoi'] > GIAY_QUEN:
             bg['sai'] = 0                       # cửa sổ quên 30 phút (QĐ 6)
-        if not den:
+        if den:
+            con, that = max(0, int(den - t + 0.999)), True
+        else:
             truoc = bg['sai']
             bg['sai'] = truoc + 1
-            if truoc >= SO_LAN_SAI_TOI_DA:      # chốt chặn, xem docstring
-                den = t + GIAY_KHOA
+            # Chốt chặn: KHÔNG đặt khoa_den, và khoa_that=False.
+            con, that = ((GIAY_KHOA, False) if truoc >= SO_LAN_SAI_TOI_DA
+                         else (0, False))
         bg['lan_cuoi'], bg['khoa_den'] = t, den
         so[ten] = bg
         _ghi_so(dd, so, t)
-        return max(0, int(den - t + 0.999)) if den else 0
+        return con, that
 
 
 def ghi_nhan_sai(dd, ten, bay_gio=None):

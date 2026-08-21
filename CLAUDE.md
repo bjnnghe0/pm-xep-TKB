@@ -34,6 +34,7 @@ python3 tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần s�
 python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh là python3
 python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
 python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
+python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -82,6 +83,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
+| `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
 | `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản, và **`mo-khoa`** gỡ khoá tạm. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
@@ -424,12 +426,12 @@ sửa gì trong đó.
 | `GET /` · `GET /web/<tệp>` | Trang và tệp tĩnh — danh sách trắng `TINH`, đường dẫn lạ trả 404 |
 | `POST /api/xep` | Bắt đầu một lượt; đang chạy thì trả **409** kèm "Đang xếp, vui lòng đợi." |
 | `GET /api/trang-thai?tu=N` | Tiến độ + nhật ký **từ dòng N trở đi** (đừng gửi lại cả khung log mỗi lần hỏi) |
-| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file |
+| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file. `/api/quy-tac` phát **dấu bản**; `/api/luu-quy-tac` **ĐÒI** khoá `dau`, lệch thì **409** |
 | `GET /api/loai-quy-tac` | Danh mục 17 loại: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
 | `GET /api/gia-tri` | Lớp / GV / môn / nhóm môn / thứ / tiết — đọc từ `cauhinh.json` |
 | `POST /api/them-quy-tac` · `POST /api/xoa-quy-tac` | Chỉ đổi cấu hình **của phiên**, không ghi file |
 | `POST /api/thu-quy-tac` | Xếp thử rút gọn (30 lần thử / 8 giây) để xem còn xếp được không. Thêm `"nhanh": true` thì hạ xuống **1 lần thử / 1 giây** — dùng cho cảnh báo sớm sau khi Lưu |
-| `GET /api/tai-ve` · `GET /api/tai-web` | Tải `TKB_Khoi12.xlsx` / `tkb_web.html` |
+| `GET /api/tai-ve` · `GET /api/tai-web` | Tải `TKB_Khoi12.xlsx` / `tkb_web.html`. Nhận `?dau=` — lệch với lượt xếp đang có trên đĩa thì **409** kèm tên người vừa xếp đè |
 
 `PHIEN['them']` giữ các quy tắc người dùng thêm ở màn hình Quy tắc — **chỉ trong
 bộ nhớ**. `cau_hinh_phien()` ghép `cauhinh.json` + `PHIEN['them']` và là **nguồn
@@ -674,6 +676,54 @@ năm kiểu hỏng đều **im lặng**:
 > Còn một chỗ thứ sáu: `Documentation=file:///...NAM%20MEO/...` cũng hỏng, vì
 > systemd đọc `%` là ký hiệu thay thế của nó (`Failed to resolve unit
 > specifiers`). Muốn giữ URL thì phải `%%20`.
+
+### 2C — dấu bản chống mất bản sửa (QĐ 7 + QĐ 4)
+
+**Hai tầng, hai lỗ khác nhau, đừng gộp.**
+
+| | Lỗ | Ai canh |
+|---|---|---|
+| QĐ 7 | A mở màn hình Quy tắc · B sửa và Lưu · A Lưu theo danh sách CŨ → mất sạch bản của B | dấu bản của `cauhinh.json` |
+| QĐ 4 | B bấm Xếp đè hai tệp kết quả · A bấm Tải về và nhận tệp của B mà không biết | dấu bản của **kết quả xếp** |
+
+Dấu bản của QĐ 7 **không** bắt được lỗ QĐ 4 — lúc đó `cauhinh.json` không hề
+đổi. **DÁN TÊN để BIẾT, DẤU BẢN để CHẶN — cần cả hai.**
+
+> **Dấu bản của `cauhinh.json` là BĂM NỘI DUNG TỆP, không phải mã ngẫu nhiên.**
+> Thầy cô được quyền mở tệp bằng Notepad và sửa tay — đó là đường dùng CHÍNH,
+> ghi ngay ở đầu tài liệu này. Một mã ngẫu nhiên giữ trong bộ nhớ sẽ **không hề
+> biết** lần sửa tay đó, nên hai người vẫn đè mất bài của nhau y như cũ, mà lần
+> này còn kèm một cái dấu bản trông có vẻ an toàn. Băm nội dung thì bắt được
+> mọi kiểu đổi: qua giao diện, sửa tay, khôi phục từ bản sao lưu, khởi động lại.
+> Có mục ca thử sửa tệp bằng `json.dump` rồi đòi dấu phải đổi.
+
+> **Kiểm dấu nằm TRONG `KHOA_GHI` — lỗi A4 lần thứ hai.** Kiểm ở ngoài rồi mới
+> vào khoá thì hai người cùng bấm Lưu sẽ **cùng** thấy dấu khớp, rồi lần lượt
+> ghi đè nhau. Đo được: đẩy phép kiểm ra ngoài khoá thì **8 trong 12** yêu cầu
+> song song ghi được, thay vì đúng 1.
+
+> **409 chứ không 400.** Hai mã nói hai chuyện: 400 = *"bạn gửi sai"*,
+> 409 = *"bạn gửi đúng nhưng thế giới vừa đổi"*. Giao diện chỉ hiện nút
+> **"Tải lại danh sách"** cho đúng mã 409. Thiếu hẳn khoá `dau` thì là 400 —
+> đó là yêu cầu sai, không phải xung đột.
+
+**Ngoại lệ có chủ ý của QĐ 4:** máy chủ vừa khởi động lại thì `TT['dau']` là
+`None` mà tệp kết quả hôm qua vẫn nằm trên đĩa → **cho tải**. Từ chối lúc đó là
+từ chối oan; người dùng không làm gì sai, chỉ là máy vừa bật lại.
+
+**Ca thử tự tiêm `dau` ở tầng khách** (`Khach.yeu_cau`), không sửa hai chục chỗ
+gọi — gần hết những chỗ đó viết ra để thử thứ KHÁC (nguồn gốc, thân dị dạng,
+sao lưu, fsync), bắt chúng tự lo dấu bản là làm chúng thử nhầm thứ. Cùng lẽ với
+`MayChuTam` tự đăng nhập. Muốn thử chính cái xung đột thì truyền `dau=` tay,
+hoặc `dau=False` để **không gửi** khoá đó.
+
+> **2C bắt được một lỗi của 2B.** Ca thử bắn 12 người đăng nhập **đúng** cùng
+> lúc (chỉ để có 12 phiên) làm lộ ra: bộ đếm khoá tạm đếm **LẦN THỬ** chứ không
+> đếm **LẦN SAI**, nên người thứ (ngưỡng+1) đăng nhập **đúng** cùng lúc ăn 429.
+> Đã tách hai kiểu chặn: **khoá THẬT** (đã có lần sai xác nhận — chặn cả mật
+> khẩu đúng) và **chốt chặn** loạt bắn dồn (**chỉ** chặn mật khẩu sai). Cho mật
+> khẩu đúng đi qua chốt chặn không mất gì — kẻ đoán trúng thì đã thắng rồi.
+> Ghim lại ở `thu_chong_do.py` CA 11b.
 
 ### Cảnh báo sớm sau khi Lưu — CẢNH BÁO, không CHẶN
 
@@ -927,7 +977,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   chỗ lọc thì tụt còn 5/25.
 - `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.
-- `python3 tests/thu_web.py`: **65/65 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python3 tests/thu_web.py`: **66/66 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
 - `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
@@ -946,11 +996,15 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
   QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.
+- `python3 tests/thu_dau_ban.py`: **39/39 mục ĐẠT** (~90s), 6 ca. Lùi ra thì đỏ
+  đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
+  `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
+  bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
 - `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
   danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**
-- `python3 tests/thu_chong_do.py`: **55/55 mục ĐẠT** (~15s), 12 ca. Lùi từng bản vá
+- `python3 tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 12 ca. Lùi từng bản vá
   ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
   bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
   đăng nhập đúng không xoá bộ đếm → 48/51 · gõ thêm lại dời mốc khoá → 50/51 ·

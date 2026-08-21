@@ -493,6 +493,54 @@ def ca_11_khong_ghi_duoc_so(tm):
 
 
 # ==========================================================================
+def ca_11b_dang_nhap_dung_song_song(tm):
+    """Đăng nhập ĐÚNG, nhiều người CÙNG LÚC, KHÔNG được khoá oan ai.
+
+       Lỗi thật, đo được, do chính bộ đếm của 2B đẻ ra: bộ đếm đếm LẦN THỬ chứ
+       không đếm LẦN SAI (bắt buộc phải vậy, nếu không loạt bắn dồn lọt hết —
+       xem CA 8). Nhưng nếu chốt chặn cũng chặn cả mật khẩu ĐÚNG thì người thứ
+       (ngưỡng+1) đăng nhập đúng cùng lúc sẽ ăn 429.
+       Đo được lần đầu: 12 khách song song, mật khẩu đúng -> 2 người bị 429.
+
+       Ca thử này phát hiện ra từ một ca thử KHÁC (thu_dau_ban CA 4, vốn chỉ
+       cần 12 phiên để thử dấu bản). Ghim lại ở đây, đúng chỗ của nó.
+    """
+    print('\nCA 11b — nhiều người đăng nhập ĐÚNG cùng lúc: không ai bị khoá oan')
+    print('-' * 74)
+    dd, tmx = dung(tm, 'c11b')
+    SO = NGUONG + 4                      # chắc chắn vượt ngưỡng lần thử
+    with MayChuTam(dd, dang_nhap=False) as (k, (dia, cong)):
+        ma = [None] * SO
+        vao_cuoc = threading.Barrier(SO)
+
+        def vao(i):
+            kh = Khach(cong)
+            try:
+                vao_cuoc.wait(timeout=60)
+                ma[i] = kh.js('/api/dang-nhap',
+                              {'ten': TEN, 'mat_khau': MK})[0]
+            except Exception as e:       # đỏ, không vỡ
+                ma[i] = repr(e)[:40]
+
+        ls = [threading.Thread(target=vao, args=(i,), daemon=True)
+              for i in range(SO)]
+        [t.start() for t in ls]
+        [t.join(timeout=120) for t in ls]
+
+        so_200 = sum(1 for m in ma if m == 200)
+        kiem(so_200 == SO,
+             f'Cả {SO} người đăng nhập ĐÚNG cùng lúc đều vào được — {so_200}/'
+             f'{SO}, mã khác: {sorted({m for m in ma if m != 200})}')
+        kiem(TEN not in doc_so(tmx) or muc(tmx)['sai'] == 0,
+             f'Và sổ khoá sạch sau đó — {muc(tmx)}')
+        # Vẫn phải khoá được như thường: chốt chặn không bị vô hiệu hoá.
+        k2 = Khach(cong)
+        sai_may_lan(k2, NGUONG + 1)
+        kiem(k2.js('/api/dang-nhap', {'ten': TEN, 'mat_khau': SAI})[0] == 429,
+             'Mật khẩu SAI thì vẫn khoá đúng như cũ — chốt chặn còn nguyên')
+
+
+# ==========================================================================
 def ca_12_khong_dung_toi_duong_khac(tm):
     print('\nCA 12 — 2B chỉ gác /api/dang-nhap, không đụng tới ai khác')
     print('-' * 74)
@@ -531,6 +579,7 @@ if __name__ == '__main__':
         ca_9_so_ben_va_khong_chua_bi_mat(tm)
         ca_10_so_hong_thi_fail_open_va_keu_to(tm)
         ca_11_khong_ghi_duoc_so(tm)
+        ca_11b_dang_nhap_dung_song_song(tm)
         ca_12_khong_dung_toi_duong_khac(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]

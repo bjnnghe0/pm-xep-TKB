@@ -175,7 +175,10 @@ def ca_3_may_chu(tm):
         _, t2 = k.js('/api/trang-thai?tu=%d' % t['log_het'])
         kiem(t2['log_moi'] == [],
              'Hỏi tiếp từ vị trí cũ thì không trả lại dòng đã đọc')
-        ma, than = k.get_nhi_phan('/api/tai-ve')
+        # Từ QĐ 4, hai đường tải đòi ?dau= khớp với lượt xếp đang có trên
+        # đĩa. Lấy dấu từ chính /api/trang-thai, đúng như app.js làm.
+        kiem(bool(t.get('dau')), f'Xếp xong thì có dấu bản kết quả — {t.get("dau")}')
+        ma, than = k.get_nhi_phan('/api/tai-ve?dau=' + (t.get('dau') or ''))
         kiem(ma == 200 and than[:2] == b'PK' and len(than) > 10000,
              f'Tải được file .xlsx thật ({len(than)} byte, đúng chữ ký ZIP)')
 
@@ -212,9 +215,12 @@ def ca_4_trang_tinh():
     # [DI TRÚ 2A-1] app.js nay gọi API qua PHỄU goi()/goiCu() chứ không fetch()
     # rải rác — cả tệp chỉ còn ĐÚNG MỘT chữ fetch(, nằm trong phễu. Bắt theo tên
     # phễu, và giữ luôn mẫu fetch( cũ phòng khi có ai gọi thẳng.
-    duong = set(re.findall(r"goi\w*\('(/api/[^'?]+)", js)) \
-        | set(re.findall(r"fetch\('(/api/[^'?]+)", js)) \
-        | set(re.findall(r"location = '(/api/[^']+)'", js))
+    # Bắt MỌI chuỗi '/api/...' trong app.js, không liệt kê hình dạng lời gọi.
+    # Bản cũ liệt kê ba mẫu (goi(, fetch(, location = ') và đã vỡ ngay lần đầu
+    # có một hình dạng thứ tư: window.location = kemDau('/api/tai-ve'). Bắt
+    # theo chuỗi thì hình dạng nào cũng dính, và nếu bắt thừa thì đúng mục
+    # "thừa" ngay bên dưới sẽ nói ra.
+    duong = set(re.findall(r"'(/api/[^'?]+)", js))
     may = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
     co = set(re.findall(r"duong == '(/api/[^']+)'", may))
     kiem(duong and not (duong - co),

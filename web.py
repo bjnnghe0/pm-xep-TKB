@@ -19,6 +19,7 @@
 """
 import argparse
 import copy
+import hashlib
 import json
 import os
 import re
@@ -84,6 +85,33 @@ class ThanQuaLon(Exception):
        Phải là ngoại lệ RIÊNG, không mượn SystemExit: SystemExit đã bị ánh xạ
        cứng thành 400 ở cả do_GET lẫn do_POST, mượn nó là mất mã 413.
     """
+
+
+def dau_ban_cau_hinh(duong_dan=None):
+    """Dấu bản của cauhinh.json = BĂM NỘI DUNG TỆP (2C / QĐ 7).
+
+       VÌ SAO BĂM NỘI DUNG chứ không phải một mã ngẫu nhiên sinh mỗi lần ghi:
+       thầy cô được quyền mở cauhinh.json bằng Notepad và sửa tay — đó là
+       đường dùng CHÍNH, ghi ngay ở đầu tài liệu. Một mã ngẫu nhiên giữ trong
+       bộ nhớ sẽ KHÔNG hề biết lần sửa tay đó, nên hai người vẫn đè mất bài của
+       nhau y như cũ, mà lần này còn kèm một cái dấu bản trông có vẻ an toàn.
+       Băm nội dung thì bắt được mọi kiểu đổi: qua giao diện, sửa tay, khôi
+       phục từ bản sao lưu, hay máy chủ vừa khởi động lại.
+
+       Tệp không đọc được -> chuỗi rỗng. Không ném: đây là thứ đi kèm mọi câu
+       trả lời, hỏng nó không được phép làm hỏng cả trang.
+    """
+    try:
+        with open(duong_dan or DUONG_DAN_CAUHINH, 'rb') as f:
+            return hashlib.sha256(f.read()).hexdigest()[:16]
+    except OSError:
+        return ''
+
+
+class XungDotBanSua(Exception):
+    """Dấu bản lệch — 409, KHÔNG phải 400. Hai mã nói hai chuyện khác nhau:
+       400 = "bạn gửi sai", 409 = "bạn gửi đúng nhưng thế giới vừa đổi".
+       Giao diện chỉ hiện nút "Tải lại danh sách" cho đúng mã 409."""
 
 
 def thu_muc_cauhinh():
@@ -229,6 +257,11 @@ def _trang_thai_moi():
         'con_giay': 0, 'bat_dau': 0,
         'bang': [], 'diem_mem': {}, 'diem': None, 'so_loi': 0,
         'luoi': None, 'gv': None, 'file_xuat': None, 'file_web': None,
+        # QĐ 4 — DÁN TÊN để BIẾT, DẤU BẢN để CHẶN. Cần cả hai:
+        #   nguoi = ai vừa xếp (hiện trên màn hình, không chặn ai)
+        #   dau   = dấu của lượt xếp hiện có trên đĩa. None = máy chủ chưa xếp
+        #           lần nào kể từ khi bật, nhưng tệp hôm qua vẫn có thể còn.
+        'nguoi': None, 'dau': None,
     }
 
 
@@ -410,6 +443,19 @@ def xoa_sach_phien():
         PHIEN_THEM.clear()
 
 
+def ten_cua_phien(ma):
+    """Tên người đang giữ mã phiên này, hoặc None. Chỉ để DÁN TÊN (QĐ 4).
+
+       Đọc thẳng CAC_PHIEN chứ không gọi doc_phien(): _chay() chạy ở luồng
+       nền, có thể kéo dài 60 giây, và doc_phien() sẽ LÀM TƯƠI mốc "chạm" của
+       phiên. Một lượt xếp không được phép giữ cho phiên sống mãi — hạn nghỉ
+       8 giờ phải tính theo thao tác của NGƯỜI, không theo việc máy đang bận.
+    """
+    with KHOA_PHIEN:
+        p = CAC_PHIEN.get(ma)
+        return (p or {}).get('ten')
+
+
 def nhap_cua(ma):
     """Danh sách quy tắc nháp của riêng phiên này (không bao giờ trả None)."""
     with KHOA_PHIEN:
@@ -546,15 +592,22 @@ def dang_nhap(ma_cu, ten_tho, mat_khau):
     # Ghi nhận lần thử TRƯỚC khi băm, và kiểm+tăng trong cùng một lần giữ khoá.
     # Xem docstring của TK.ghi_nhan_thu(): tách ra sau khi băm thì một loạt bắn
     # dồn sẽ lọt hết, vì mọi yêu cầu đều đọc bộ đếm xong mới xếp hàng ở KHOA_BAM.
-    khoa = TK.ghi_nhan_thu(DUONG_DAN_SO_KHOA, ten) if that else 0
+    khoa, khoa_that = (TK.ghi_nhan_thu(DUONG_DAN_SO_KHOA, ten) if that
+                       else (0, False))
     with KHOA_BAM:
         d = TK.bam(mat_khau if isinstance(mat_khau, str) else '', bg['muoi'])
     dung = TK.so_khop(d, bg['bam']) and that
-    if khoa > 0:
-        return None, ten, khoa
+    if khoa > 0 and khoa_that:
+        return None, ten, khoa           # khoá THẬT: chặn cả mật khẩu đúng
     if not dung:
         if that:
             TK.ghi_nhan_sai(DUONG_DAN_SO_KHOA, ten)
+        if khoa > 0:
+            # CHỐT CHẶN loạt bắn dồn — chỉ áp cho mật khẩu SAI. Mật khẩu ĐÚNG
+            # đi thẳng xuống dưới: chặn nó không mua được gì về an ninh (kẻ
+            # đoán trúng thì đã thắng), mà lại khoá oan 11 người đăng nhập
+            # đúng cùng lúc. Đã đo bằng 12 khách song song.
+            return None, ten, khoa
         return None, None, 0
     TK.xoa_khoa(DUONG_DAN_SO_KHOA, ten)     # vào được là bộ đếm về 0
 
@@ -833,6 +886,7 @@ def _chep_ben(nguon, dich):
 
 def _chay(ma_phien, tuan, seed, so_lan, tat):
     try:
+        dat(nguoi=ten_cua_phien(ma_phien))
         cfg, _ = cau_hinh_phien(ma_phien)
         if tuan:
             cfg['thong_tin']['tuan'] = tuan
@@ -923,7 +977,10 @@ def _chay(ma_phien, tuan, seed, so_lan, tat):
         dat(bang=[{'kq': a, 'ten': b, 'ghi_chu': c} for a, b, c in bc],
             diem_mem=dict(ct), diem=diem_tot, so_loi=so_loi,
             luoi=luoi_tkb(bt, tot, cfg), gv=lich_gv(bt),
-            file_xuat=os.path.basename(fx), file_web=os.path.basename(fh))
+            file_xuat=os.path.basename(fx), file_web=os.path.basename(fh),
+            # Dấu mới CHỈ sinh khi đã ghi xong hai tệp kết quả. Sinh sớm hơn là
+            # phát một dấu cho một tệp chưa tồn tại.
+            dau=secrets.token_hex(8))
 
     except SystemExit as e:
         # Khai báo sai trong cauhinh.json -> chương trình gốc gọi sys.exit.
@@ -1017,6 +1074,7 @@ def doc_quy_tac(ma_phien):
                                 if k not in ('loai', 'ghi_chu', 'bat')}})
     return {'quy_tac': ds, 'so_file': so_file,
             'so_moi': len(nhap_cua(ma_phien)),
+            'dau': dau_ban_cau_hinh(),
             'tuan': cfg['thong_tin']['tuan'],
             'tim_kiem': cfg.get('tim_kiem', {})}
 
@@ -1184,7 +1242,7 @@ def _xoay_sao_luu(tm):
     return bak
 
 
-def luu_quy_tac(ma_phien, tat):
+def luu_quy_tac(ma_phien, tat, dau=None):
     """Ghi cờ bật/tắt vào cauhinh.json. Sao lưu trước, giữ nguyên thứ tự khoá.
 
        Ghi NGUYÊN TỬ. Trước đây thứ tự là:
@@ -1202,6 +1260,16 @@ def luu_quy_tac(ma_phien, tat):
        còn cảnh hai luồng cùng mở tệp ở chế độ 'w'.
     """
     with KHOA_GHI:
+        # 2C — CHỐNG MẤT BẢN SỬA. Kiểm dấu bản BÊN TRONG khoá ghi: kiểm ở ngoài
+        # rồi mới vào khoá là đúng lỗi A4 một lần nữa — hai người cùng bấm Lưu
+        # sẽ cùng thấy dấu khớp, rồi lần lượt ghi đè nhau.
+        bay_gio = dau_ban_cau_hinh()
+        if dau != bay_gio:
+            raise XungDotBanSua(
+                'Tệp cauhinh.json đã đổi từ lúc bạn tải danh sách này về.\n'
+                'Có thể người khác vừa bấm Lưu, hoặc tệp vừa được sửa tay.\n'
+                'Bấm "Tải lại danh sách" rồi làm lại — nếu ghi đè bây giờ thì '
+                'phần sửa của người kia mất sạch mà không ai biết.')
         cfg, so_file = cau_hinh_phien(ma_phien)     # dict giữ thứ tự khoá
         nhap = nhap_cua(ma_phien)
         so_nhap = len(nhap)          # CHỤP số lượng ngay lúc dựng cfg
@@ -1247,7 +1315,10 @@ def luu_quy_tac(ma_phien, tat):
         # mở hai tab thì tab kia có thể vừa thêm nháp trong lúc hàm này chạy, và
         # .clear() sẽ nuốt mất bản nháp đó trong im lặng.
         del nhap[:so_nhap]
-        return {'doi': n, 'sao_luu': os.path.basename(sao_luu)}
+        # Dấu MỚI trả về ngay, để người vừa lưu bấm Lưu tiếp được mà không phải
+        # tải lại danh sách.
+        return {'doi': n, 'sao_luu': os.path.basename(sao_luu),
+                'dau': dau_ban_cau_hinh()}
 
 
 # ==========================================================================
@@ -1722,7 +1793,36 @@ class May(BaseHTTPRequestHandler):
         t['log_het'] = len(log)
         return self._json(t)
 
+    def _chan_neu_lech_dau(self, duong):
+        """QĐ 4 — kết quả xếp cũng có dấu bản. True = ĐÃ trả lời xong (409).
+
+           Lỗ đang bịt: cô B bấm Xếp đè kết quả thầy A đang mở; A bấm Tải về và
+           nhận tệp của B mà không hề biết. Dấu bản của 2C canh cauhinh.json,
+           KHÔNG canh kết quả xếp — cùng một lỗi, khác tầng.
+
+           NGOẠI LỆ CÓ CHỦ Ý: máy chủ vừa khởi động lại thì TT['dau'] là None,
+           mà tệp kết quả hôm qua vẫn nằm trên đĩa. Lúc đó CHO TẢI. Từ chối là
+           từ chối oan — người dùng không làm gì sai, chỉ là máy vừa bật lại.
+        """
+        with KHOA:
+            dau_may = TT.get('dau')
+            nguoi = TT.get('nguoi')
+        if not dau_may:
+            return False                      # ngoại lệ: chưa xếp lần nào
+        dau_khach = urllib.parse.parse_qs(
+            urllib.parse.urlparse(self.path).query).get('dau', [''])[0]
+        if dau_khach == dau_may:
+            return False
+        self._bao_loi(
+            duong,
+            f'Kết quả đã bị thay bởi lượt xếp của '
+            f'{nguoi or "một người khác"}, xem lại trước khi tải.\n'
+            f'Bấm "Xem TKB" để tải lại màn hình, rồi tải lần nữa.', 409)
+        return True
+
     def _tai_ve(self):
+        if self._chan_neu_lech_dau('/api/tai-ve'):
+            return
         ten = X.doc_cau_hinh(DUONG_DAN_CAUHINH)['thong_tin']['file_xuat']
         # Dựng giá trị tiêu đề TRƯỚC khi mở tệp: khai sai thì dừng sạch bằng
         # một câu tiếng Việt, đừng để lọt tới lúc đã phát dòng trạng thái.
@@ -1740,6 +1840,8 @@ class May(BaseHTTPRequestHandler):
             ('Cache-Control', 'no-store')], than)
 
     def _tai_web(self):
+        if self._chan_neu_lech_dau('/api/tai-web'):
+            return
         dd = os.path.join(thu_muc_cauhinh(), 'tkb_web.html')
         if not os.path.exists(dd):
             return self._tra(404, 'text/plain',
@@ -1783,6 +1885,9 @@ class May(BaseHTTPRequestHandler):
             # Trả 413 TRƯỚC, rồi mới đọc bỏ chút ít — xem _doc_bo().
             self._json({'loi': str(e)}, 413)
             self._doc_bo()
+        except XungDotBanSua as e:
+            # 409, không phải 400 — xem docstring của XungDotBanSua.
+            self._bao_loi(duong, str(e), 409)
         except SystemExit as e:
             self._bao_loi(duong, str(e), 400)
         except (TimeoutError, ConnectionError):
@@ -1904,7 +2009,14 @@ class May(BaseHTTPRequestHandler):
                 '[LỖI] Yêu cầu lưu thiếu danh sách "tat".\n'
                 '      Không có danh sách này thì không biết quy tắc nào bị '
                 'tắt — ghi bừa xuống tệp là bật lại hết.')
-        return self._json(luu_quy_tac(self._phien(), _tap_chi_so(d['tat'])))
+        if 'dau' not in d:
+            raise SystemExit(
+                '[LỖI] Yêu cầu lưu thiếu "dau" (dấu bản của cauhinh.json).\n'
+                '      Dấu này lấy từ /api/quy-tac. Thiếu nó thì không cách gì '
+                'biết tệp có bị người khác đổi từ lúc bạn tải danh sách về '
+                'hay không, nên máy chủ từ chối ghi.')
+        return self._json(luu_quy_tac(self._phien(), _tap_chi_so(d['tat']),
+                                      d.get('dau')))
 
     def _chi_so(self):
         d = self._than_json(bat_buoc=True)
