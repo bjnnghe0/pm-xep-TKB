@@ -36,6 +36,7 @@ python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần s�
 python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
 python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
 python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
+python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -85,6 +86,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
+| `tests/thu_o_tong.py` | Sáu ô "TỔNG SỐ TIẾT/TUẦN" (dòng 43) phải đếm **từ dòng đầu vùng dữ liệu**. Dòng đầu suy từ `vi_tri_bang`, dòng phải phủ suy từ `khung_gio` — **không ghim số trần**. CA 3 vá một cột về dòng sau trên **bản chép** rồi đòi bộ dò ĐỎ đúng một cột | **Chạy khi sửa `mau_tkb.xlsx` hoặc `xuat_excel()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. **Tha SÀN KHÁC-RỖNG** (`> 0`, `> 1`, `>= 1` — chỉ toán tử thứ tự, chỉ số 0 và 1), vì CLAUDE.md bắt buộc phải khẳng định số đếm khác 0 trước khi dùng. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
@@ -332,7 +334,23 @@ tắc lỗi, điểm mềm <d>.` — chữ "cao nhất" chỉ đúng khi việc 
 
 `xuat_excel()` copy `mau_tkb.xlsx` → file kết quả rồi **ghi đè nội dung**, nên giữ
 nguyên 100% khung, font Times New Roman, viền, và công thức `=COUNTA(D8:D42)` ở
-dòng 43. Vị trí bảng lấy từ `thong_tin.vi_tri_bang`
+dòng 43.
+
+> **⚠ Vùng của sáu công thức dòng 43 phải bắt đầu từ dòng 8 — có ca thử canh.**
+> Ngày 21/8/2026 nhà trường đưa ra một tệp TKB tuần 1 làm tay khai
+> `D43=COUNTA(D10:D42)`, `E43=COUNTA(E11:E42)`, `F43=COUNTA(F10:F42)` trong khi
+> dữ liệu bắt đầu ở dòng **8** — ba lớp đầu in ra thiếu 2–3 tiết (21/20/21 thay
+> vì 23/23/23). Ô vẫn ra số, số vẫn trông hợp lý, **không một dấu hiệu nào báo**.
+>
+> **Đã đo: `mau_tkb.xlsx` của dự án KHÔNG dính lỗi đó** — cả sáu đều là
+> `<cột>8:<cột>42`, và `TKB_Khoi12.xlsx` xuất ra đếm đúng 24 mỗi lớp. Tệp hỏng
+> là tệp làm tay của trường, phần mềm không hề đụng tới. `tests/thu_o_tong.py`
+> là hàng rào giữ nguyên trạng đang đúng, không phải bản vá cho một lỗi đã có.
+>
+> `thu_an_ninh.py` CA A8 **không** đủ: nó hỏi "bảy công thức còn hay mất", nên
+> đổi `D8` thành `D10` thì nó vẫn xanh nguyên.
+
+Vị trí bảng lấy từ `thong_tin.vi_tri_bang`
 (`hang_bat_dau: 8`, `cot_bat_dau: 4`, `hang_tieu_de: 3`, `hang_tuan: 4`, `hang_gvcn: 7`).
 
 - Ô của lớp thứ *j*, ngày *d*, tiết *p*: `cell(8 + d*5 + p, 4 + j)` → vùng **D8:I32**.
@@ -1060,6 +1078,11 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
+- `python3 tests/thu_o_tong.py`: **36/36 mục ĐẠT** (~2s, đo 21/8/2026), 5 ca.
+  Vá `D43` về `COUNTA(D10:D42)` trên **bản chép** thì bộ dò ĐỎ **đúng một cột**,
+  năm cột kia vẫn sạch, và `mau_tkb.xlsx` thật không bị đụng. CA 4 chứng minh
+  `thu_an_ninh.py` CA A8 **không** thay được tệp này: A8 hỏi "bảy công thức còn
+  hay mất", mà bản hỏng thì vẫn còn đủ bảy.
 - `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
