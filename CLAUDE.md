@@ -1057,6 +1057,22 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
 
+> ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
+> ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
+>
+> Không phải một kiểu hỏng nữa trong bảng trên — đây là lý do **cả bảng trên
+> tồn tại**. Mục nào cũng in ra `[ĐẠT]` như nhau; mắt thường không phân biệt
+> được mục thật sự canh cái gì đó với mục chỉ trông như đang canh.
+>
+> Đã đo, 21/8: `thu_doc_lai.py` CA 2 khẳng định *"17 câu khác nhau đôi một"* và
+> tôi viết trong docstring rằng đó là mục **duy nhất** bắt được `MAU_CAU` đặt
+> bừa. Lùi thử — cho hai loại dùng **chung một** `MAU_CAU` — thì nó **vẫn
+> xanh**: mỗi loại dựng câu từ `VI_DU` riêng nên chuỗi ra vẫn khác nhau. Phải
+> so **chính chuỗi mẫu** mới bắt được.
+>
+> Vì vậy: **viết xong một mục canh thì phải lùi ra thử ngay**, đừng đợi tới lúc
+> có người sửa mã. Mục càng nghe có vẻ chắc chắn thì càng đáng thử.
+
 **Danh sách kiểm cho ca thử mới:**
 
 1. Có dựng máy chủ thật và đi qua HTTP không? Nếu không, vì sao?
