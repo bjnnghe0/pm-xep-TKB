@@ -99,6 +99,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp 150 ô với Excel | Chạy khi sửa `xuat_html.py` |
 | `DUA_LEN_MANG.md` | Hướng dẫn GitHub Pages cho người không rành kỹ thuật | Cập nhật khi đổi quy trình |
 | `docs/` | `index.html` (bản sao `tkb_web.html`) + `.nojekyll` rỗng — thư mục GitHub Pages phục vụ | Do script ghi, đừng sửa tay |
+| `xeptkb.service` · `CHAY_CUNG_MAY.md` | Dịch vụ systemd **phạm vi người dùng** (không cần sudo, đã có `Linger=yes`) + hướng dẫn cài/kiểm/gỡ. Mỗi dòng dễ sai đều kèm số đo | Cập nhật khi đổi cổng, đường dẫn, hay trình thông dịch |
 | `dua_len.sh` · `dua_len.bat` | Xếp → xuất HTML → chép sang `docs/` → commit → push | Dừng và báo rõ nếu chưa nối kho từ xa |
 | `chay.bat` | Bấm đúp để chạy trên Windows | — |
 | `HUONG_DAN.md`, `QUY_TAC.md` | Tài liệu cho người dùng cuối, tiếng Việt | Cập nhật khi thêm loại quy tắc mới |
@@ -644,9 +645,35 @@ UUID=8018451718450D9A /media/adminnam/NAM\040MEO ntfs3 rw,nosuid,nodev,relatime,
 
 > **BẪY DẤU CÁCH đã bắt đúng người viết ra nó.** `grep "NAM MEO" /etc/fstab`
 > cho **0 dòng**, vì fstab ghi dấu cách thành `\040`. Kết luận "ổ do udisks tự
-> gắn" sinh ra từ đúng cú grep hụt đó. Ba cách viết cho ba nơi, đừng trộn:
-> `fstab` → `\040` · `systemd` (`RequiresMountsFor`, tên unit) → `\x20` ·
-> dòng lệnh → `"NAM MEO"` trong ngoặc kép.
+> gắn" sinh ra từ đúng cú grep hụt đó.
+>
+> **BÀI HỌC RỘNG HƠN CẢ DẤU CÁCH: một lệnh không ra kết quả KHÔNG có nghĩa là
+> thứ đó không tồn tại — có thể lệnh sai.** Từ một phép tìm âm tính, cả một
+> tiền đề ("ổ do udisks gắn → dịch vụ hệ thống không thấy ổ lúc khởi động")
+> được dựng lên và sống qua nhiều lượt trao đổi. Xác nhận bằng một phép đo
+> KHÁC KIỂU (`systemctl show`, `findmnt`, `stat`), đừng suy từ một cú grep.
+
+### Dấu cách trong "NAM MEO" — NĂM ngữ cảnh, năm cách viết
+
+Đã **đo từng cái**, không suy từ tài liệu. Viết nhầm cách là hỏng, và bốn trong
+năm kiểu hỏng đều **im lặng**:
+
+| Nơi | Viết đúng | Viết sai thì sao |
+|---|---|---|
+| `/etc/fstab` | `NAM\040MEO` | — |
+| Tên **unit** systemd | `media-adminnam-NAM\x20MEO.mount` | — |
+| `RequiresMountsFor=` (danh sách) | `"/media/adminnam/NAM MEO"` **có ngoặc** | `\x20` → đọc ra `NAMx20MEO`, chờ đường dẫn không tồn tại = **không chờ gì**. Dấu cách trần → cắt còn `/media/adminnam/NAM` |
+| `WorkingDirectory=` (một giá trị) | `/media/adminnam/NAM MEO/...` **dấu cách trần** | Bọc ngoặc → `Unit configuration has fatal error` |
+| Dòng lệnh shell | `"NAM MEO"` | — |
+
+> **Hai khoá systemd cạnh nhau, hai luật NGƯỢC nhau.** `RequiresMountsFor` là
+> danh sách ngăn bằng dấu cách nên **phải** bọc ngoặc; `WorkingDirectory` là
+> một giá trị nên bọc ngoặc là **hỏng hẳn**. Không có cách viết nào đúng cho cả
+> hai — đừng đi tìm.
+>
+> Còn một chỗ thứ sáu: `Documentation=file:///...NAM%20MEO/...` cũng hỏng, vì
+> systemd đọc `%` là ký hiệu thay thế của nó (`Failed to resolve unit
+> specifiers`). Muốn giữ URL thì phải `%%20`.
 
 ### Cảnh báo sớm sau khi Lưu — CẢNH BÁO, không CHẶN
 

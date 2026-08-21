@@ -1,0 +1,88 @@
+[Unit]
+Description=Xep thoi khoa bieu - giao dien web (Khoa Khoa hoc Co ban)
+# Hướng dẫn cài / kiểm / gỡ: CHAY_CUNG_MAY.md trong cùng thư mục dự án.
+# KHÔNG dùng Documentation=file://.../NAM%20MEO/...: systemd đọc "%" là ký hiệu
+# thay thế của nó, nên %20 thành lỗi "Failed to resolve unit specifiers". Muốn
+# giữ URL thì phải viết %%20 — không đáng, một dòng chú thích là đủ.
+
+# ---------------------------------------------------------------------------
+# Ổ dữ liệu là NTFS gắn theo /etc/fstab. Thiếu dòng này thì dịch vụ khởi động
+# TRƯỚC khi ổ gắn xong: web.py không thấy cauhinh.json, chết, rồi bị Restart
+# quay vòng — và không ai hiểu vì sao chỉ hỏng lúc mới bật máy.
+#
+# ⚠ DẤU CÁCH: PHẢI bọc ngoặc kép. ĐÃ ĐO trên chính máy này, không suy:
+#     RequiresMountsFor=/media/adminnam/NAM\x20MEO
+#         -> systemd đọc ra /media/adminnam/NAMx20MEO (nuốt dấu \), tức chờ một
+#            đường dẫn KHÔNG TỒN TẠI, tức KHÔNG chờ gì cả. SAI IM LẶNG.
+#     RequiresMountsFor=/media/adminnam/NAM MEO
+#         -> cắt ở dấu cách, còn /media/adminnam/NAM, kèm cảnh báo trong journal
+#            "RequiresMountsFor= path is not absolute, ignoring: MEO". SAI.
+#     RequiresMountsFor="/media/adminnam/NAM MEO"
+#         -> ĐÚNG. Đây là danh sách NGĂN BẰNG DẤU CÁCH nên phải bọc ngoặc.
+#
+# (Bản cũ của tệp này mắc đúng lỗi thứ hai suốt từ 19/8. Nó vẫn chạy được, và
+#  đó mới là chỗ khó chịu: systemd tự thêm mount của WorkingDirectory vào
+#  RequiresMountsFor, nên phụ thuộc kia có mặt do MAY, không do khai đúng.)
+# ---------------------------------------------------------------------------
+RequiresMountsFor="/media/adminnam/NAM MEO"
+
+Wants=network-online.target
+After=network-online.target
+
+# ---------------------------------------------------------------------------
+# BẪY FAIL-CLOSED. web.py CỐ Ý từ chối khởi động khi thiếu/hỏng tai_khoan.json,
+# và khi thư mục dự án không ghi được (ổ NTFS bẩn vì Windows "khởi động nhanh").
+#
+# ĐÃ ĐO cả hai bên, bằng cách xoá tai_khoan.json rồi khởi động lại:
+#   mặc định (5 lần / 10 giây) + RestartSec=5
+#       -> 5 giây một lần thì trong mọi cửa sổ 10 giây chỉ có 2-3 lần khởi động,
+#          KHÔNG BAO GIỜ chạm trần. Đo được 7 lần thử trong 35 giây, vẫn
+#          "activating". QUAY VÒNG VÔ TẬN, log đầy ổ, không ai biết.
+#   3 lần / 300 giây
+#       -> vào "failed" sau 15 giây và NẰM YÊN ở đó. systemctl status nhìn thấy,
+#          journal có nguyên văn câu lỗi tiếng Việt của web.py.
+#
+# ⚠ Hai khoá này thuộc [Unit], KHÔNG phải [Service]. Đặt nhầm chỗ thì systemd
+#   bỏ qua và bẫy quay vòng quay lại nguyên vẹn.
+# ---------------------------------------------------------------------------
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+
+# ⚠ DẤU CÁCH, NGƯỢC HẲN VỚI RequiresMountsFor: ở đây là MỘT giá trị chứ không
+#   phải danh sách, nên để dấu cách TRẦN. Đã đo: bọc ngoặc kép thì systemd báo
+#   "Unit configuration has fatal error, unit will not be started".
+WorkingDirectory=/media/adminnam/NAM MEO/projects/PM xep tkb
+
+# ---------------------------------------------------------------------------
+# ⚠ PHẢI là python của venv, KHÔNG phải /usr/bin/python3. Đã đo trên máy này:
+#   /usr/bin/python3 KHÔNG có openpyxl. Máy chủ vẫn khởi động ngon, đăng nhập
+#   ngon, sửa quy tắc ngon — rồi xếp xong 50 giây mới báo "[LỖI] Thiếu thư viện
+#   openpyxl" ở bước xuất Excel, vì openpyxl được nạp MUỘN trong xuat_excel().
+#   Đúng loại lỗi lộ ra muộn nhất và khó đoán nhất.
+#   Dựng lại venv khi cần:
+#     python3 -m venv ~/.venvs/xeptkb && ~/.venvs/xeptkb/bin/pip install openpyxl
+#
+#   -u = không đệm đầu ra, để journal có dòng NGAY chứ không đợi đầy bộ đệm.
+# ---------------------------------------------------------------------------
+ExecStart=/home/adminnam/.venvs/xeptkb/bin/python3 -u web.py --port 20266
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xeptkb
+
+# Siết nhẹ, chỉ những thứ đã thử là không cản việc ghi cauhinh.json trên NTFS.
+# CỐ Ý KHÔNG dùng ProtectSystem=strict: nó gắn TOÀN BỘ cây tệp thành chỉ đọc,
+# và thư mục dự án nằm ngoài /home nên phải khai ReadWritePaths cho đúng — một
+# dòng khai sai ở đó cho ra đúng cái lỗi "chạy được nhưng bấm Lưu là hỏng" mà
+# kiem_ghi_duoc() vừa được viết ra để bắt.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

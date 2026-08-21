@@ -74,12 +74,15 @@ def dat_dong_ho_canh(giay=120):
 #   (?<![\w/.$~=-])  loại ĐƯỜNG DẪN và BIẾN SHELL: ~/.venvs/.../bin/python,
 #                    /usr/lib/python, $PYTHON, PYTHON=python
 #   (?!3)            loại python3 — thứ đã đúng rồi
-#   (?=[ \t]+[-\w"']) đòi phải có ĐỐI SỐ theo sau, nên loại ```python3 (thẻ ngôn
-#                    ngữ trong .md), python.org, "hàm Python", và dòng kết thúc
-#                    ngay sau chữ python
+#   [ \t]+(?=...)    đòi thứ theo sau phải TRÔNG NHƯ ĐỐI SỐ dòng lệnh: một cờ
+#                    (-c, -m), một tệp .py, hoặc một đường dẫn (/ hay ~). Nên
+#                    loại được thẻ ngôn ngữ của khối mã Markdown, python.org,
+#                    và — quan trọng nhất — VĂN XUÔI TIẾNG VIỆT kiểu
+#                    "python của venv": bản đầu chỉ đòi [-\w"'] nên chữ "của"
+#                    cũng khớp, và ca thử ĐỎ OAN vì một dòng chú thích đúng.
 # Phân biệt HOA/THƯỜNG: "Python" viết hoa là tên ngôn ngữ trong văn xuôi, không
 # phải lệnh gõ vào máy.
-MAU = re.compile(r'(?<![\w/.$~=-])python(?!3)(?=[ \t]+[-\w"\'])')
+MAU = re.compile(r'(?<![\w/.$~=-])python(?!3)[ \t]+(?=-\S|\S*\.py\b|[/~])')
 
 # Danh sách loại trừ — mỗi mục kèm LÝ DO, và CA 1 in ra để nhìn thấy được.
 BO_QUA_THU_MUC = {
@@ -168,6 +171,9 @@ def ca_0_bo_do_biet_bat_va_biet_bo_qua():
         ('command -v "$PYTHON" || PYTHON=' + P, 'nhánh dự phòng của dua_len.sh'),
         ('không trả dấu vết lỗi Python ra ngoài', 'tên ngôn ngữ trong văn xuôi'),
         ('gõ `' + P + '`, không có chữ số 3', 'nhắc TÊN lệnh, không phải gõ lệnh'),
+        ('PHẢI là ' + P + ' của venv, không phải /usr/bin/python3',
+         'VĂN XUÔI tiếng Việt — sau chữ python là một TỪ, không phải đối số'),
+        ('dùng ' + P + ' nào cũng chạy được', 'văn xuôi, theo sau là từ tiếng Việt'),
     ]
     bat_nham = [n for c, n in can_bo_qua if MAU.search(c)]
     kiem(not bat_nham,
