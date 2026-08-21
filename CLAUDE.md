@@ -1072,7 +1072,10 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   → 52/55 (và khi đó **mọi** lần đăng nhập, kể cả mật khẩu ĐÚNG, đều trả 500).
   **Không lần nào Traceback** — bản đầu có vỡ ở `doc_so()` khi thiếu tệp, đã sửa
   thành hàm toàn phần.
-- `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (~10s). Lùi `quy_tac.py:125` về
+- `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (**~0,7s** — đo lại 21/8/2026,
+  ba lượt cho 0,69 / 0,68 / 0,69 giây; con số `~10s` cũ đã sai. Chạy được bằng **cả**
+  `python3` hệ thống lẫn venv, vì `openpyxl` chỉ nạp muộn trong `xuat_excel()`).
+  Lùi `quy_tac.py:125` về
   `python` trần thì tụt còn 16/19; lùi thêm `web.py:1191` + `tai_khoan.py:123` thì 14/19.
   Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.
 - `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
@@ -1173,6 +1176,22 @@ Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 ## Việc treo
 
 ```
+[!] CHẶN — THU HẸP ACL TRƯỚC KHI MỜI BẤT KỲ AI VÀO TAILNET.
+    Số đo 21/8/2026:
+      · ACL đã biên dịch (tailscale debug netmap, PacketFilter mục 0) cho
+        phép MỌI nguồn trong 100.64.0.0/10 tới MỌI cổng 0-65535
+      · tailnet hiện có thiết bị của BỐN tài khoản khác nhau
+      · :20267 Directus — chạy bằng ROOT, bind 0.0.0.0 + [::] — trả lời
+        trên IP tailnet 100.74.144.121
+      · :11434 Ollama — bind wildcard — cũng trả lời trên IP đó
+      · :20266 TKB — CHỈ loopback, bắn vào IP tailnet KHÔNG nối được
+    Điều kiện cũ "chờ xong cổng đăng nhập" KHÔNG ĐỦ: cổng đăng nhập chỉ
+    gác :20266. Mời một người vào tailnet là mở cho họ cả :20267 chạy
+    bằng root, mà cửa đó không có mật khẩu nào của dự án này canh.
+    => Mời người = mở Directus. Hai chuyện này đi liền, đừng tách.
+    NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
+    từ xa, và không có đường nào chữa từ xa.
+
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
