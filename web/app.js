@@ -235,27 +235,79 @@ async function napQuyTac() {
   if (!$('o-tuan').value) $('o-tuan').placeholder = d.tuan;
 }
 
+// Nhóm của một loại quy tắc, tra từ DM (/api/loai-quy-tac). DM có thể chưa
+// về — napQuyTac() và napDanhMuc() chạy song song — nên phải chịu được null:
+// lúc đó dồn hết vào một nhóm, rồi napDanhMuc() vẽ lại.
+function nhomCuaLoai(ten) {
+  if (!DM) return null;
+  for (const n of DM.nhom) {
+    if (n.loai.some((l) => l.ten === ten)) return n.nhom;
+  }
+  return 'CHƯA XẾP NHÓM';
+}
+
+function nhanCuaLoai(ten) {
+  if (!DM) return '';
+  for (const n of DM.nhom) {
+    const l = n.loai.find((x) => x.ten === ten);
+    if (l) return l.nhan || '';
+  }
+  return '';
+}
+
 function veQuyTac() {
-  $('bang-quy-tac').innerHTML =
-    '<tr><th style="width:90px">Dùng</th><th>Nội dung</th>'
-    + '<th style="width:180px">Loại</th></tr>'
-    + quyTac.map((r, k) =>
-      `<tr class="${r.bat ? '' : 'tat'}">`
-      + `<td><label class="cong-tac"><input type="checkbox" data-k="${k}" `
-      + `${r.bat ? 'checked' : ''}> ${r.bat ? 'Bật' : 'Tắt'}</label></td>`
-      + `<td>${ma(r.ghi_chu)}${r.mem ? ' <span class="mem">tiêu chí mềm</span>' : ''}`
-      + `${r.moi ? ' <span class="moi">chưa lưu</span>' : ''}</td>`
-      + `<td class="loai">${ma(r.loai)}`
-      + ` <button class="nut-nhan-ban" data-nhan-ban="${k}">Tạo giống</button>`
-      + (r.moi ? ` <button class="nut-xoa" data-xoa="${r.i}">Xoá</button>` : '')
-      + '</td></tr>').join('');
-  $('bang-quy-tac').querySelectorAll('input[type=checkbox]').forEach((o) => {
+  const hop = $('ds-quy-tac');
+  if (!quyTac.length) {
+    hop.innerHTML = '<p class="trong-rong">Chưa có quy tắc nào.</p>';
+    return;
+  }
+  // Gom theo nhóm, GIỮ THỨ TỰ của DM để hai màn hình cùng một trật tự. Loại
+  // nào DM chưa biết thì rơi vào nhóm cuối chứ không biến mất — thẻ biến mất
+  // là đúng kiểu lỗi im lặng cả dự án này viết ra để chống.
+  const thuTu = DM ? DM.nhom.map((n) => n.nhom) : [];
+  const gom = new Map(thuTu.map((t) => [t, []]));
+  quyTac.forEach((r, k) => {
+    const n = nhomCuaLoai(r.loai) || 'Tất cả quy tắc';
+    if (!gom.has(n)) gom.set(n, []);
+    gom.get(n).push({ r, k });
+  });
+  hop.innerHTML = [...gom.entries()].filter(([, ds]) => ds.length)
+    .map(([ten, ds]) =>
+      `<section class="nhom-qt"><h3 class="nhom-ten">${ma(ten)}`
+      + `<span class="nhom-dem">${ds.length}</span></h3>`
+      + '<div class="the-ds">' + ds.map(({ r, k }) => theQuyTac(r, k)).join('')
+      + '</div></section>').join('');
+  noiSuKienThe(hop);
+}
+
+function theQuyTac(r, k) {
+  const nhan = nhanCuaLoai(r.loai);
+  return `<article class="the-qt${r.bat ? '' : ' tat'}" data-the="${k}">`
+    + '<div class="the-dau">'
+    + `<span class="the-so">#${r.i + 1}</span>`
+    + `${r.mem ? '<span class="chip chip-mem">Ưu tiên</span>'
+               : '<span class="chip chip-cung">Bắt buộc</span>'}`
+    + `${r.moi ? '<span class="chip chip-moi">chưa lưu</span>' : ''}`
+    + '</div>'
+    + `<p class="the-chu">${ma(r.ghi_chu)}</p>`
+    + `<p class="the-loai">${ma(nhan || r.loai)}`
+    + `<code>${ma(r.loai)}</code></p>`
+    + '<div class="the-nut">'
+    + `<label class="cong-tac"><input type="checkbox" data-k="${k}" `
+    + `${r.bat ? 'checked' : ''}> ${r.bat ? 'Bật' : 'Tắt'}</label>`
+    + `<button class="nut-nhan-ban" data-nhan-ban="${k}">Tạo giống</button>`
+    + (r.moi ? `<button class="nut-xoa" data-xoa="${r.i}">Xoá</button>` : '')
+    + '</div></article>';
+}
+
+function noiSuKienThe(hop) {
+  hop.querySelectorAll('input[type=checkbox]').forEach((o) => {
     o.onchange = () => { quyTac[+o.dataset.k].bat = o.checked; veQuyTac(); };
   });
-  $('bang-quy-tac').querySelectorAll('[data-nhan-ban]').forEach((o) => {
+  hop.querySelectorAll('[data-nhan-ban]').forEach((o) => {
     o.onclick = () => nhanBan(quyTac[+o.dataset.nhanBan]);
   });
-  $('bang-quy-tac').querySelectorAll('[data-xoa]').forEach((o) => {
+  hop.querySelectorAll('[data-xoa]').forEach((o) => {
     o.onclick = async () => {
       const tl = await goiCu('/api/xoa-quy-tac', { i: +o.dataset.xoa });
       const kq = await tl.json();
@@ -324,6 +376,7 @@ async function napDanhMuc() {
     + n.loai.map((l) =>
         `<option value="${ma(l.ten)}">${ma(l.nhan || l.ten)}</option>`).join('')
     + '</optgroup>').join('');
+  if (quyTac.length) veQuyTac();   // giờ mới biết nhóm + nhãn
   $('o-loai').onchange = () => { veTruong(); henDocLai(); };
   $('o-ghi-chu').oninput = henDocLai;
   // Bắt Ở KHUNG CHA, không gắn vào từng ô: veTruong() vẽ lại toàn bộ ô nhập

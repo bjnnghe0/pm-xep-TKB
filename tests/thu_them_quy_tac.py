@@ -284,6 +284,32 @@ def ca_6_kich_thuoc_css():
             xau.append((sel, 'min-height', mh.group(1)))
     kiem(not xau, f'Không selector nào hạ cỡ xuống dưới ngưỡng — {xau}')
 
+    # ---- THẺ QUY TẮC (Đợt 3 phần 1): chữ thầy cô ĐỌC phải >= 15px ----
+    # Khai TỪNG TÊN chứ không quét cả tệp: lưới TKB và khung nhật ký cố ý dùng
+    # cỡ nhỏ hơn để nhét vừa bảng, đó là đánh đổi khác. Danh sách này là những
+    # dòng chữ trên màn hình Quy tắc — thứ thầy cô đọc để hiểu quy tắc làm gì.
+    THE = ('.the-chu', '.the-loai', '.the-so', '.nhom-ten', '.nhom-dem',
+           '.trong-rong')
+    thieu, nho = [], []
+    for ten in THE:
+        m = re.search(re.escape(ten) + r'\s*\{([^{}]*)\}', css)
+        if not m:
+            thieu.append(ten)
+            continue
+        fs = re.search(r'font-size:\s*([\d.]+)px', m.group(1))
+        if not fs:
+            thieu.append(ten + ' (không khai font-size)')
+        elif float(fs.group(1)) < 15:
+            nho.append((ten, fs.group(1)))
+    kiem(not thieu, f'Mọi lớp chữ của thẻ quy tắc đều có khai cỡ — thiếu {thieu}')
+    kiem(not nho, f'và không lớp nào dưới 15px — {nho}')
+
+    # Lớp cũ của BẢNG quy tắc phải biến mất hẳn cùng lúc với bảng. Để lại một
+    # khai báo mồ côi là để dành cái bẫy: người sau gõ class="mem" tưởng còn ăn.
+    moc = [t for t in ('.mem', '.moi', '.loai')
+           if re.search(r'(^|\n)' + re.escape(t) + r'\s*\{', css)]
+    kiem(not moc, f'Không còn lớp CSS mồ côi của bảng cũ — {moc}')
+
     chung = [t for s_, t in khoi
              if s_.replace(' ', '') == 'input,select,textarea,button']
     kiem(len(chung) == 1, 'Có đúng một khai báo chung cho mọi ô nhập')
