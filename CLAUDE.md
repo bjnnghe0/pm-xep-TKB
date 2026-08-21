@@ -1187,7 +1187,21 @@ Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
     khoá oan chỉ ảnh hưởng một người thay vì cả khoa, và QĐ 4 ("dán tên người
     xếp") mới có nghĩa — hiện mọi lượt xếp đều mang tên "khoahoccoban", nên
     câu "Kết quả đã bị thay bởi lượt xếp của <tên>" không nói được gì.
-```
+[ ] Sửa được thân quy tắc đã nằm trong cauhinh.json. Cần nghĩ lại dấu bản 2C
+    trước: hiện băm CẢ TỆP nên hai người sửa HAI QUY TẮC KHÁC NHAU vẫn chặn
+    oan cả hai. Hướng: dấu bản theo từng quy tắc, hoặc gộp thay vì chặn.
+    Đợt riêng, không chen vào Đợt 3.
+    (Người dùng đã chốt 21/8: CHẤP NHẬN giới hạn, ĐỪNG làm bây giờ. Nút Sửa
+     chỉ hiện trên quy tắc nháp là đúng — nút hứa việc nó không làm được thì
+     tệ hơn không có nút.)
+[ ] BA CHỮ TRONG NHÃN chờ người dùng quyết sau khi xem màn hình thật —
+    "ô", "nhóm", "cụm" có phải chữ của PHẦN MỀM chứ không phải chữ thầy cô
+    quen dùng không:
+      · "ô"    trong khong_xep_o, co_dinh — hay thầy cô nói "tiết 3 thứ Hai"?
+      · "nhóm" trong bốn nhãn quan hệ — thầy cô nghĩ theo MÔN và LỚP
+      · "cụm"  trong gom_tiet, uu_tien_ke_nhau — cùng câu hỏi
+    Ghi ở đây để câu hỏi không trôi mất qua một lần tóm tắt hội thoại.
+    CHƯA trả lời, chờ người dùng đi qua 11 mục xem-bằng-mắt rồi quyết.
 
 > **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
 > thêm `--host`" thì máy chủ vĩnh viễn chạy `http://127.0.0.1`, mà trên `http://`
