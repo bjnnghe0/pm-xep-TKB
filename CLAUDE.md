@@ -1122,6 +1122,35 @@ Thay vào đó: mỗi **NHÓM** loại có vài từ khoá tiếng Việt, và c
 (nhóm chỉ-xếp-vào) → báo. Từ khoá gắn theo **nhóm** (`NHOM_LOAI`, đã có sẵn và
 đã tự lộ loại chưa xếp nhóm), nên loại mới thừa hưởng, không phải khai thêm.
 
+### Bốn điều kiện người dùng đặt thêm (21/8) — đã duyệt
+
+**1. Từ khoá là GỢI Ý, không phải PHÁN QUYẾT.** Bảng từ khoá bắt được QT 16 vì
+ghi_chu tình cờ có chữ *"không trùng ngày"*. Thầy cô viết *"Sử với Toán đừng
+dính nhau"* thì **không từ khoá nào khớp**. Nên câu đọc lại phải hiện **LUÔN
+LUÔN**; từ khoá chỉ quyết định có **tô cảnh báo** hay không.
+Ca thử: ghi_chu không chứa từ khoá nào → câu đọc lại **vẫn hiện**.
+
+**2. "CHƯA XẾP NHÓM" phải ĐỎ, không được im.** Tôi từng nói loại mới "thừa
+hưởng nhóm CHƯA XẾP NHÓM nên không phải khai thêm" — đó chính là **dạng lỗi im
+lặng** mà cả tài liệu này viết ra để chống. Ca thử ghim: mọi loại trong
+`DANH_MUC` phải có mặt trong `NHOM_LOAI`, và phải có `NHAN` lẫn `MO_TA`. Thiếu
+bất kỳ cái nào → **ĐỎ**. Loại thứ 18 không được lọt.
+
+**3. Nhãn tiếng Việt phải nói RÕ CHIỀU.** Cạm bẫy của `chi_xep_thu` là chữ
+**"CHỈ"**. Nhãn phải bật chữ đó lên. Hai nhãn của cặp dễ lẫn nhất:
+
+| Loại | Nhãn tiếng Việt |
+|---|---|
+| `chi_xep_thu` | **CHỈ được xếp vào những thứ đã chọn** — mọi thứ khác đều cấm |
+| `khac_ngay` | Hai nhóm **KHÔNG được rơi vào cùng một ngày** — mỗi nhóm vẫn xếp thứ nào cũng được |
+
+Vế sau dấu gạch của mỗi nhãn nói đúng cái mà **nhãn kia không làm**. Đó mới là
+chỗ khiến hai loại không lẫn được nữa; chỉ đọc vế đầu thì vẫn lẫn.
+
+**4. Giữ ngưỡng chạm**: chữ ≥ 15px, nút và ô chọn cao ≥ 40px. Thầy cô dùng điện
+thoại. `tests/thu_them_quy_tac.py` CA 6 đã canh sẵn, nhãn dài hơn thì phải xem
+lại bố cục bằng mắt vì CA 6 **không** bắt được chữ tràn khung.
+
 ### Ba ràng buộc phải giữ
 
 1. **KHÔNG thay `ghi_chu` bằng câu sinh ra, kể cả khi người dùng bấm đồng ý.**
