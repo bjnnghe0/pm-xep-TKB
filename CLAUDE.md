@@ -86,7 +86,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
-| `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
+| `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. **Tha SÀN KHÁC-RỖNG** (`> 0`, `> 1`, `>= 1` — chỉ toán tử thứ tự, chỉ số 0 và 1), vì CLAUDE.md bắt buộc phải khẳng định số đếm khác 0 trước khi dùng. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
 | `tao_mat_khau.py` · `tao_tai_khoan.bat` | Đặt/đổi/tắt/bật/xoá/liệt kê tài khoản, và **`mo-khoa`** gỡ khoá tạm. **Có commit** | Không có `--mat-khau`: mọi thứ gõ trên dòng lệnh đều vào lịch sử shell và `ps aux` |
 | `tai_khoan.json` | Bản băm mật khẩu. **Đã gitignore** | Thiếu thì máy chủ TỪ CHỐI khởi động |
@@ -428,7 +428,7 @@ sửa gì trong đó.
 | `GET /` · `GET /web/<tệp>` | Trang và tệp tĩnh — danh sách trắng `TINH`, đường dẫn lạ trả 404 |
 | `POST /api/xep` | Bắt đầu một lượt; đang chạy thì trả **409** kèm "Đang xếp, vui lòng đợi." |
 | `GET /api/trang-thai?tu=N` | Tiến độ + nhật ký **từ dòng N trở đi** (đừng gửi lại cả khung log mỗi lần hỏi) |
-| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file. `/api/quy-tac` phát **dấu bản**; `/api/luu-quy-tac` **ĐÒI** khoá `dau`, lệch thì **409** |
+| `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file. `/api/quy-tac` phát **dấu bản** và **phạm vi từng quy tắc**; `/api/luu-quy-tac` **ĐÒI** khoá `dau`, lệch thì **409** |
 | `GET /api/loai-quy-tac` | Danh mục 17 loại: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
 | `GET /api/gia-tri` | Lớp / GV / môn / nhóm môn / thứ / tiết — đọc từ `cauhinh.json` |
 | `POST /api/them-quy-tac` · `POST /api/xoa-quy-tac` | Chỉ đổi cấu hình **của phiên**, không ghi file |
@@ -1358,6 +1358,18 @@ những tên khai trong bộ lọc mà **không có trong dữ liệu nhà trư�
 | Có tên lạ | Chỉ **đích danh** từng tên sai, theo từng khoá |
 | Loại hai vế mà một vế rỗng | Nêu **tên vế** rỗng (A hay B) |
 | Không tên nào lạ mà vẫn khớp 0 cụm | Nhắc ba nguyên nhân hay gặp |
+
+`/api/quy-tac` **chở sẵn phạm vi của từng quy tắc** (`lop` · `mon` · `gv` ·
+`so_cum` · `so_tiet`) để màn hình Quy tắc lọc được theo GV / môn / lớp. Đo trên
+`cauhinh.json` thật: cả lượt — đọc tệp + dựng `BaiToan` + 17 lần tính phạm vi —
+hết **2,67 ms** (3,7 ms cả vòng HTTP). Tính ở máy chủ vì *"quy tắc này chạm vào
+ai"* **là ngữ nghĩa của bộ lọc**; để JS tự bóc `noi_dung.loc` là dựng bản cài
+thứ hai, đúng kiểu lệch đã trả giá ở `khop_loc()` / `_cum_cua()`.
+`thu_them_quy_tac.py` CA 9 canh đúng điều đó — nó ĐỎ nếu JS nhắc tới
+`noi_dung.loc`.
+
+Cấu hình hỏng thì `pham_vi` là `None` và **thẻ vẫn hiện**: thầy cô vào màn hình
+Quy tắc chính là để sửa chỗ hỏng đó.
 
 > **Khớp 0 cụm là CẢNH BÁO, không CHẶN.** Có học kỳ lớp đó chưa học môn ấy —
 > quy tắc khớp 0 cụm là đúng ý người khai. Chặn hẳn là chặn oan, đúng cái bẫy

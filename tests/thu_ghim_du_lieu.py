@@ -150,8 +150,24 @@ def soi(dd, khoa, gia_tri):
         for i, a in enumerate(ve):
             for b in ve[i + 1:]:
                 for x, y in ((a, b), (b, a)):
-                    # D1 — vế x chạm khoá dữ liệu, vế y là số viết cứng
-                    if (isinstance(y, ast.Constant)
+                    # D1 — vế x chạm khoá dữ liệu, vế y là số viết cứng.
+                    #
+                    # TRỪ SÀN KHÁC-RỖNG: phép so THỨ TỰ với 0 hoặc 1
+                    # (> 0, >= 1, > 1, <= 1...) không ghim con số nào của nhà
+                    # trường — nó khẳng định "có ít nhất một" / "có nhiều hơn
+                    # một". CLAUDE.md BẮT BUỘC phải viết câu đó trước khi dùng
+                    # một số đếm từ dữ liệu (bẫy n_uyen == 0), nên bắt luôn cả
+                    # nó là bắt oan đúng cái mẫu mình đòi hỏi.
+                    #
+                    # Ranh giới hẹp và giải thích được: chỉ 0 và 1, và chỉ với
+                    # toán tử thứ tự. "== 1" vẫn bị bắt (ghim đúng một), "> 5"
+                    # vẫn bị bắt (5 rất có thể là số lớp trừ một).
+                    san = (isinstance(nut.ops[0], (ast.Lt, ast.LtE, ast.Gt,
+                                                   ast.GtE))
+                           and isinstance(y, ast.Constant)
+                           and y.value in (0, 1)
+                           and not isinstance(y.value, bool))
+                    if (not san and isinstance(y, ast.Constant)
                             and isinstance(y.value, int)
                             and not isinstance(y.value, bool)):
                         cham = [k for k in khoa
@@ -212,6 +228,12 @@ def ca_1_hai_chieu(gt):
         (f"assert len(cfg['dinh_muc_mon']) == 15", 'D1 — số môn viết cứng'),
         (f"kiem(len(cfg['khung_gio']['cac_thu']) != 5, 'x')",
          'D1 — số thứ trong tuần'),
+        # Sàn khác-rỗng chỉ tha 0 và 1, và chỉ với toán tử THỨ TỰ. Ba dòng này
+        # canh đúng ba mép của ranh giới đó — thiếu chúng thì cửa "sàn" mở
+        # rộng ra thành cửa chính lúc nào không hay.
+        (f"kiem(len(d['quy_tac']) == 1, 'x')", 'D1 — "== 1" vẫn phải bắt'),
+        (f"kiem(len(d['lop']) > 5, 'x')", 'D1 — "> 5" vẫn phải bắt'),
+        (f"kiem(len(d['lop']) != 1, 'x')", 'D1 — "!= 1" vẫn phải bắt'),
     ]
     sot = []
     for ma, nhan in can_bat:
@@ -228,6 +250,10 @@ def ca_1_hai_chieu(gt):
         ("kiem(so_tat(dd) == tat_ban_dau, 'x')", 'so với biến, không với hằng'),
         ("kiem(ma == 200, 'x')", 'mã HTTP — không phải dữ liệu nhà trường'),
         ("kiem(len(hong) == 0, 'x')", 'đếm mục lỗi của chính bộ thử'),
+        # SÀN KHÁC-RỖNG — điều kiện tiên quyết mà CLAUDE.md bắt buộc phải có
+        ("kiem(len(d['lop']) > 0, 'x')", 'sàn: có ít nhất một lớp'),
+        ("kiem(len(d['quy_tac']) > 1, 'x')", 'sàn: có hơn một quy tắc'),
+        ("kiem(len(gv) >= 1, 'x')", 'sàn: danh sách gv không rỗng'),
         ("kiem(bg['ten_dang_nhap'] == 'nguoihai', 'x')",
          'tên tài khoản thử, không có trong cauhinh.json'),
         (f"r = {{'loc': {{'lop': '{L}'}}}}", 'DỰNG dữ liệu, không phải so bằng'),

@@ -34,6 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tien_ich_web import Khach, MayChuTam   # noqa: E402
 import tai_khoan as TK                      # noqa: E402
 
+B_DD = [None]                # đường dẫn cauhinh.json của ca thử
+
 import xep_tkb as X          # noqa: E402
 import quy_tac as QT         # noqa: E402
 import web                   # noqa: E402
@@ -533,6 +535,84 @@ def ca_8_nhan_ban(B, dd):
          f'{mh.group(1) + "px" if mh else "KHÔNG KHAI"}')
 
 
+def ca_9_loc_quy_tac(B):
+    """Đợt 3 phần 2 — tìm và lọc.
+
+       Mục quan trọng nhất KHÔNG phải "lọc có chạy không" mà là "PHẠM VI tính
+       ở đâu": nếu JS tự đọc noi_dung.loc để suy ra quy tắc chạm vào ai thì đó
+       là bản cài THỨ HAI của bộ lọc, và nó sẽ lệch — đúng bài học
+       khop_loc() / _cum_cua() mà cả CLAUDE.md dựng ra để chống.
+    """
+    print('\nCA 9 — lọc quy tắc theo GV / môn / lớp / nhóm')
+    print('-' * 74)
+    ma, d = B.js('/api/quy-tac')
+    qt = d.get('quy_tac') if isinstance(d, dict) else None
+    if not qt:
+        kiem(False, f'Không đọc được danh sách — mã {ma}, {str(d)[:70]}')
+        return
+
+    # (a) máy chủ phải chở PHẠM VI, không bắt JS tự suy
+    co = [r for r in qt if isinstance(r.get('pham_vi'), dict)]
+    kiem(len(co) == len(qt),
+         f'Mọi quy tắc đều được máy chủ tính sẵn phạm vi — {len(co)}/{len(qt)}')
+    if co:
+        kiem(all(set(r['pham_vi']) >= {'lop', 'mon', 'gv', 'so_cum'}
+                 for r in co),
+             f'và phạm vi đủ khoá để lọc — {sorted(co[0]["pham_vi"])}')
+
+    # (b) phạm vi máy chủ chở về phải KHỚP với pham_vi_quy_tac() gọi thẳng.
+    #     Dựng kỳ vọng TỪ dữ liệu, không ghim tên nào.
+    cfg = X.doc_cau_hinh(B_DD[0])
+    bt = X.BaiToan(cfg)
+    lech = []
+    for r_file, r_api in zip(cfg['quy_tac'], qt):
+        that = QT.pham_vi_quy_tac(r_file, bt)
+        api = r_api.get('pham_vi') or {}
+        if [that['lop'], that['mon'], that['gv']] != \
+           [api.get('lop'), api.get('mon'), api.get('gv')]:
+            lech.append(r_api.get('i'))
+    kiem(not lech, f'Phạm vi qua HTTP khớp pham_vi_quy_tac() gọi thẳng — '
+                   f'lệch ở {lech}')
+
+    # (c) điều kiện tiên quyết: phải CÓ cái để lọc, không thì mọi mục dưới
+    #     đều xanh mà không kiểm gì (bẫy n_uyen == 0).
+    gv = sorted({x for r in qt for x in (r.get('pham_vi') or {}).get('gv', [])})
+    lop = sorted({x for r in qt for x in (r.get('pham_vi') or {}).get('lop', [])})
+    kiem(len(gv) > 1 and len(lop) > 1,
+         f'Dữ liệu đủ đa dạng để phép lọc có nghĩa — {len(gv)} GV, {len(lop)} lớp')
+    if not (gv and lop):
+        return
+
+    # (d) lọc phải THẬT SỰ chia đôi tập, không phải giữ nguyên tất cả
+    n1 = sum(1 for r in qt if gv[0] in (r.get('pham_vi') or {}).get('gv', []))
+    kiem(0 < n1 < len(qt),
+         f'Lọc theo GV {gv[0]!r} chia được tập — {n1}/{len(qt)} quy tắc')
+    n2 = sum(1 for r in qt if lop[0] in (r.get('pham_vi') or {}).get('lop', []))
+    kiem(0 < n2 <= len(qt),
+         f'Lọc theo lớp {lop[0]!r} — {n2}/{len(qt)} quy tắc')
+
+    # (e) giao diện: mọi id JS gọi tới phải NẰM SẴN trong HTML
+    html = io.open(os.path.join(GOC_TM, 'web', 'index.html'),
+                   encoding='utf-8').read()
+    js = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
+    js_sach = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+    js_sach = re.sub(r'^\s*//.*$', '', js_sach, flags=re.M)  # LỘT CHÚ THÍCH
+    thieu = [i for i in ('tim-qt', 'loc-nhom', 'loc-gv', 'loc-mon', 'loc-lop',
+                         'nut-bo-loc', 'dem-quy-tac')
+             if f'id="{i}"' not in html]
+    kiem(not thieu, f'Mọi ô lọc nằm SẴN trong index.html — thiếu {thieu}')
+
+    # (f) BẪY CHÍNH: JS không được tự bóc noi_dung.loc để suy ra phạm vi
+    xau = [m for m in ('noi_dung.loc', "noi_dung['loc']", 'noi_dung.a',
+                       'noi_dung.b') if m in js_sach]
+    kiem(not xau,
+         f'JS KHÔNG tự suy phạm vi từ noi_dung — dùng pham_vi máy chủ chở về. '
+         f'Thấy: {xau}')
+    kiem('r.pham_vi' in js_sach,
+         'và có dùng khoá pham_vi của máy chủ')
+
+
+# ==========================================================================
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ THÊM / XOÁ / LƯU QUY TẮC')
@@ -546,6 +626,8 @@ if __name__ == '__main__':
             ca_4_luu(B, tm, dd)
             ca_5_doi_chieu_danh_muc(B)
             ca_8_nhan_ban(B, dd)
+            B_DD[0] = dd
+            ca_9_loc_quy_tac(B)
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()

@@ -223,3 +223,13 @@ button.nho.an { display: none; }
 }
 .the-nut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .trong-rong { color: #5a6673; font-size: 15px; margin: 12px 0; }
+
+/* --- Đợt 3 phần 2 — thanh TÌM và LỌC -------------------------------------
+   Xếp thành dòng chảy (flex wrap): trên điện thoại mỗi ô một dòng, trên màn
+   hình rộng nằm cùng hàng. Không dùng grid cột cố định — cột cố định làm ô
+   "Tìm" hẹp lại đúng lúc nó cần rộng nhất.                                */
+.loc-qt { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+.loc-qt label { display: flex; flex-direction: column; gap: 3px; font-size: 15px; }
+.loc-o-tim { flex: 1 1 260px; }
+.loc-o-tim input { width: 100%; }
+.dem-qt { flex-basis: 100%; margin: 2px 0 0; font-size: 15px; color: #4a5666; }

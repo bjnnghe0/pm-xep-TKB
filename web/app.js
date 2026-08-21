@@ -255,10 +255,64 @@ function nhanCuaLoai(ten) {
   return '';
 }
 
+// ---------------------------------------------------------------------------
+// Đợt 3 phần 2 — TÌM và LỌC
+//
+// "Quy tắc này chạm vào ai" tính ở MÁY CHỦ (khoá pham_vi của /api/quy-tac,
+// dùng lại pham_vi_quy_tac của việc 2). Ở đây chỉ so danh sách tên — KHÔNG
+// đọc lại noi_dung.loc để tự suy ra, vì đó là dựng bản cài thứ hai của bộ
+// lọc, đúng kiểu lệch đã trả giá ở khop_loc() / _cum_cua().
+// ---------------------------------------------------------------------------
+function docBoLoc() {
+  return { tim: ($('tim-qt').value || '').trim().toLowerCase(),
+           nhom: $('loc-nhom').value, gv: $('loc-gv').value,
+           mon: $('loc-mon').value, lop: $('loc-lop').value };
+}
+
+function coLoc(b) { return !!(b.tim || b.nhom || b.gv || b.mon || b.lop); }
+
+function loLot(r, b) {
+  const pv = r.pham_vi;
+  // Quy tắc chưa tính được phạm vi (cấu hình đang hỏng) thì LUÔN hiện khi lọc
+  // theo GV/môn/lớp. Giấu nó đi là giấu đúng cái thầy cô đang cần tìm để sửa.
+  if (b.gv && pv && !pv.gv.includes(b.gv)) return false;
+  if (b.mon && pv && !pv.mon.includes(b.mon)) return false;
+  if (b.lop && pv && !pv.lop.includes(b.lop)) return false;
+  if (b.nhom && (nhomCuaLoai(r.loai) || '') !== b.nhom) return false;
+  if (b.tim) {
+    const kho = [r.ghi_chu, r.loai, nhanCuaLoai(r.loai),
+                 pv ? pv.lop.join(' ') : '', pv ? pv.mon.join(' ') : '',
+                 pv ? pv.gv.join(' ') : ''].join(' ').toLowerCase();
+    if (!kho.includes(b.tim)) return false;
+  }
+  return true;
+}
+
+function veLocQuyTac() {
+  const chon = (o, ds, nhan) => {
+    const cu = o.value;
+    o.innerHTML = `<option value="">${nhan}</option>`
+      + ds.map((x) => `<option value="${ma(x)}">${ma(x)}</option>`).join('');
+    if (ds.includes(cu)) o.value = cu;      // giữ lựa chọn khi vẽ lại
+  };
+  chon($('loc-nhom'), DM ? DM.nhom.map((n) => n.nhom) : [], '— mọi nhóm —');
+  // Danh sách rút TỪ CHÍNH các quy tắc đang có, không phải toàn bộ 28 giáo
+  // viên: chọn một cái tên rồi ra 0 thẻ là câu trả lời vô ích.
+  const gop = (khoa) => [...new Set(quyTac.flatMap(
+    (r) => (r.pham_vi ? r.pham_vi[khoa] : [])))].sort();
+  chon($('loc-gv'), gop('gv'), '— mọi giáo viên —');
+  chon($('loc-mon'), gop('mon'), '— mọi môn —');
+  chon($('loc-lop'), gop('lop'), '— mọi lớp —');
+}
+
 function veQuyTac() {
   const hop = $('ds-quy-tac');
+  veLocQuyTac();
+  const b = docBoLoc();
+  $('nut-bo-loc').classList.toggle('an', !coLoc(b));
   if (!quyTac.length) {
     hop.innerHTML = '<p class="trong-rong">Chưa có quy tắc nào.</p>';
+    $('dem-quy-tac').textContent = '';
     return;
   }
   // Gom theo nhóm, GIỮ THỨ TỰ của DM để hai màn hình cùng một trật tự. Loại
@@ -266,11 +320,22 @@ function veQuyTac() {
   // là đúng kiểu lỗi im lặng cả dự án này viết ra để chống.
   const thuTu = DM ? DM.nhom.map((n) => n.nhom) : [];
   const gom = new Map(thuTu.map((t) => [t, []]));
+  let hien = 0;
   quyTac.forEach((r, k) => {
+    if (!loLot(r, b)) return;
+    hien += 1;
     const n = nhomCuaLoai(r.loai) || 'Tất cả quy tắc';
     if (!gom.has(n)) gom.set(n, []);
     gom.get(n).push({ r, k });
   });
+  $('dem-quy-tac').textContent = coLoc(b)
+    ? `Hiện ${hien} / ${quyTac.length} quy tắc.`
+    : `${quyTac.length} quy tắc.`;
+  if (!hien) {
+    hop.innerHTML = '<p class="trong-rong">Không quy tắc nào khớp bộ lọc. '
+      + 'Bấm "Bỏ lọc" để xem lại tất cả.</p>';
+    return;
+  }
   hop.innerHTML = [...gom.entries()].filter(([, ds]) => ds.length)
     .map(([ten, ds]) =>
       `<section class="nhom-qt"><h3 class="nhom-ten">${ma(ten)}`
@@ -317,6 +382,17 @@ function noiSuKienThe(hop) {
     };
   });
 }
+
+['tim-qt', 'loc-nhom', 'loc-gv', 'loc-mon', 'loc-lop'].forEach((id) => {
+  const o = $(id);
+  o[o.tagName === 'INPUT' ? 'oninput' : 'onchange'] = () => veQuyTac();
+});
+$('nut-bo-loc').onclick = () => {
+  ['tim-qt', 'loc-nhom', 'loc-gv', 'loc-mon', 'loc-lop']
+    .forEach((id) => { $(id).value = ''; });
+  veQuyTac();
+  $('tim-qt').focus();
+};
 
 // ---------------------------------------------------------------------------
 // Đợt 3 việc 4 — "Tạo giống quy tắc này"

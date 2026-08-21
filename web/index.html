@@ -114,6 +114,21 @@
       <button id="nut-tai-lai-ds" class="an">Tải lại danh sách</button>
     </div>
   </div>
+  <!-- Đợt 3 phần 2 — TÌM và LỌC. Mọi id JS gọi tới đều nằm SẴN ở đây, không
+       dựng bằng innerHTML: thu_web.py canh đúng bất biến đó. -->
+  <div class="hop loc-qt">
+    <label class="loc-o-tim">Tìm trong quy tắc
+      <input id="tim-qt" type="text"
+             placeholder="gõ vài chữ trong câu nội dung, hoặc tên môn / lớp">
+    </label>
+    <label>Nhóm loại <select id="loc-nhom"></select></label>
+    <label>Giáo viên <select id="loc-gv"></select></label>
+    <label>Môn <select id="loc-mon"></select></label>
+    <label>Lớp <select id="loc-lop"></select></label>
+    <button id="nut-bo-loc" class="an">Bỏ lọc</button>
+    <p id="dem-quy-tac" class="dem-qt"></p>
+  </div>
+
   <!-- Đợt 3 phần 1 — THẺ thay cho bảng dài. Mỗi quy tắc một thẻ, gom theo
        nhóm loại (NHOM_LOAI của quy_tac.py). Bảng 17 dòng chữ nhỏ không đọc
        nổi trên điện thoại, mà thầy cô dùng điện thoại. -->

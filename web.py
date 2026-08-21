@@ -1063,13 +1063,37 @@ def cau_hinh_phien(ma_phien):
 
 def doc_quy_tac(ma_phien):
     cfg, so_file = cau_hinh_phien(ma_phien)
+    # PHẠM VI của từng quy tắc tính ở MÁY CHỦ, dùng lại đúng pham_vi_quy_tac()
+    # của Đợt 3 việc 2. Màn hình Quy tắc lọc theo GV / môn / lớp, và "quy tắc
+    # này chạm vào ai" là ngữ nghĩa của bộ lọc — chép sang JS là dựng bản cài
+    # thứ hai, đúng kiểu lệch đã trả giá ở khop_loc() / _cum_cua().
+    # Đo trên cauhinh.json thật: cả lượt (đọc tệp + dựng BaiToan + 17 phạm vi)
+    # hết 2,67 ms.
+    #
+    # Cấu hình hỏng thì KHÔNG được kéo theo cả danh sách: thầy cô vào màn hình
+    # Quy tắc chính là để sửa chỗ hỏng đó. Hỏng thì pham_vi = None, thẻ vẫn
+    # hiện, chỉ mất phần lọc.
+    try:
+        bt = X.BaiToan(copy.deepcopy(cfg))
+    except BaseException:
+        bt = None
     ds = []
     for i, r in enumerate(cfg['quy_tac']):
+        pv = None
+        if bt is not None:
+            try:
+                p = QT.pham_vi_quy_tac(r, bt)
+                if not p.get('loi'):
+                    pv = {k: p[k] for k in ('so_cum', 'so_tiet', 'lop', 'mon',
+                                            'gv')}
+            except BaseException:
+                pv = None
         ds.append({'i': i, 'loai': r.get('loai', '?'),
                    'ghi_chu': r.get('ghi_chu', ''),
                    'bat': bool(r.get('bat', True)),
                    'mem': str(r.get('loai', '')).startswith('uu_tien'),
                    'moi': i >= so_file,          # chưa lưu xuống file
+                   'pham_vi': pv,
                    'noi_dung': {k: v for k, v in r.items()
                                 if k not in ('loai', 'ghi_chu', 'bat')}})
     return {'quy_tac': ds, 'so_file': so_file,
