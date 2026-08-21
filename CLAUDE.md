@@ -657,6 +657,36 @@ trình con**. Hai chỗ đã phải sửa vì kỷ luật:
 Đổi cổng thì phải thêm tên máy mới vào **cả hai** danh sách của
 `cauhinh_may_chu.json`; hiện có `admin.tail7dc28e.ts.net:8443` ở cả hai.
 
+#### Cả hai đầu TỰ SỐNG LẠI sau khi bật máy — ĐÃ ĐO 21/8/2026
+
+Khởi động lại máy thật. Sau khi máy bật, **không gõ lệnh nào trước khi thử**:
+
+```
+uptime -s        -> 2026-08-21 18:35:23
+Active since     -> 2026-08-21 18:35:34   (sau 11 giây)
+Main PID         -> 1271
+Loaded           -> enabled; preset: enabled
+```
+
+Rồi từ điện thoại, **tắt Wi-Fi, chạy 4G**:
+`https://admin.tail7dc28e.ts.net:8443/` → đăng nhập → **Xếp** → **Lưu**.
+Chạy suốt, **không 502**.
+
+| # | Kết luận | Số đo nào nói điều đó |
+|---|---|---|
+| **5d** | `xeptkb.service` khởi sinh **lúc máy đang dựng**, trước khi có ai đăng nhập màn hình | `Main PID 1271`, và `Active since` chỉ sau `uptime -s` **11 giây** |
+| **5e** | `tailscale serve --https=8443` **TỰ SỐNG LẠI** sau khởi động | Điện thoại 4G vào được `:8443` mà **chưa ai gõ lệnh `tailscale serve` nào** sau khi máy lên |
+
+**5e trước giờ chưa ai đo — giờ đã đo. Đợt 2 ĐÓNG.** Chi tiết và công thức lặp
+lại được ở `CHAY_CUNG_MAY.md` mục 7.
+
+> **Ghi SỐ ĐO, đừng ghi KẾT LUẬN SUÔNG.** Câu "dịch vụ tự chạy được" mà không
+> kèm bốn dòng số trên thì sáu tháng nữa không ai nhớ nó dựa trên gì, và sẽ
+> phải khởi động lại máy để đo lại từ đầu.
+
+> **KHÔNG dựng thêm unit systemd cho `tailscale serve`.** Số đo nói nó tự sống
+> lại; thêm mã khi số đo nói không cần là thêm một chỗ để hỏng.
+
 ### Ổ dữ liệu đã có sẵn trong `/etc/fstab` — đừng thêm lần nữa
 
 Đo được, không suy: `systemctl show 'media-adminnam-NAM\x20MEO.mount'` cho
@@ -1627,7 +1657,12 @@ của trường.
 
 ---
 
-## Đợt 2 — chín quyết định đã duyệt (20/8/2026)
+## Đợt 2 — chín quyết định đã duyệt (20/8/2026), **ĐÓNG 21/8/2026**
+
+> **Đóng vì có SỐ ĐO, không phải vì thấy đủ.** Hai mục cuối — `5d` dịch vụ tự
+> lên cùng máy, `5e` `tailscale serve` tự sống lại — đã đo trên máy thật ngày
+> 21/8/2026. Bốn dòng số ở mục "Đường vào từ ngoài" bên trên; công thức lặp lại
+> được ở `CHAY_CUNG_MAY.md` mục 7.
 
 | # | Quyết định |
 |---|---|

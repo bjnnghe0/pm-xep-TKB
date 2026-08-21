@@ -170,7 +170,14 @@ tailscale serve status:
 
 Khai báo `serve`/`funnel` nằm trong trạng thái của `tailscaled` chứ không phải
 trong một lệnh phải gõ lại, nên **về nguyên tắc nó sống qua khởi động lại**.
-Nhưng đó là nguyên tắc; bằng chứng là mục 7.
+
+> **✅ ĐÃ ĐO, KHÔNG CÒN LÀ NGUYÊN TẮC — 21/8/2026.** Khởi động lại máy thật, rồi
+> **không gõ một lệnh nào** trước khi thử. `tailscale serve --https=8443` **tự
+> sống lại**: từ điện thoại tắt Wi-Fi, chạy 4G, vào
+> `https://admin.tail7dc28e.ts.net:8443/` → đăng nhập → Xếp → Lưu, chạy suốt,
+> **không 502**. Số đo đầy đủ ở mục 7. Vì vậy **không cần** dựng thêm unit
+> systemd nào cho `tailscale serve` — thêm mã khi số đo nói không cần là thêm
+> một chỗ để hỏng.
 
 ```bash
 # sau khi bật máy lại
@@ -195,7 +202,47 @@ tailscale funnel --bg --set-path /nbv 8080
 
 ---
 
-## 7. Bằng chứng cuối — KHỞI ĐỘNG LẠI MÁY THẬT
+## 7. Bằng chứng cuối — ĐÃ KHỞI ĐỘNG LẠI MÁY THẬT, 21/8/2026
+
+> **✅ ĐẠT. Bốn dòng số dưới đây là toàn bộ bằng chứng — đừng thay chúng bằng
+> câu "dịch vụ tự chạy được".** Một câu kết luận không kèm số đo thì sáu tháng
+> nữa không ai nhớ nó dựa trên gì, và sẽ phải đo lại từ đầu.
+
+Khởi động lại máy thật. Sau khi máy bật, **không gõ lệnh nào trước khi thử**:
+
+```
+uptime -s        -> 2026-08-21 18:35:23
+Active since     -> 2026-08-21 18:35:34   (sau 11 giây)
+Main PID         -> 1271
+Loaded           -> enabled; preset: enabled
+```
+
+Bốn dòng đó lấy ra bằng đúng bốn lệnh này, chạy lại lúc nào cũng được:
+
+```bash
+uptime -s                                                      # -> 2026-08-21 18:35:23
+systemctl --user show xeptkb.service -p ActiveEnterTimestamp   # -> ... 18:35:34 +07
+systemctl --user show xeptkb.service -p MainPID                # -> 1271
+systemctl --user show xeptkb.service -p UnitFileState -p UnitFilePreset
+#                                                              # -> enabled / enabled
+```
+
+Rồi từ điện thoại, **tắt Wi-Fi, dùng 4G**:
+`https://admin.tail7dc28e.ts.net:8443/` → đăng nhập → **Xếp** → **Lưu**.
+Chạy suốt. **Không 502.**
+
+**Hai kết luận, cả hai đều có số đo đứng sau:**
+
+| # | Kết luận | Số đo nào nói điều đó |
+|---|---|---|
+| **5d** | Dịch vụ systemd khởi sinh **lúc máy đang dựng**, trước khi có ai đăng nhập màn hình | `Active since` chỉ sau `uptime -s` **11 giây** — đó là số đo quyết định. `Main PID 1271` đi cùng chiều: một PID nhỏ như vậy hợp với tiến trình sinh ra trong đợt dựng máy (chỉ dấu, không phải bằng chứng riêng lẻ) |
+| **5e** | `tailscale serve --https=8443` **tự sống lại** sau khởi động | Điện thoại 4G vào được `:8443` mà **chưa ai gõ lệnh `tailscale serve` nào** sau khi máy lên. Không 502 nghĩa là proxy còn trỏ đúng `127.0.0.1:20266` |
+
+**Mục 5e trước giờ chưa ai đo.** Giờ đã đo. **Đợt 2 đóng.**
+
+---
+
+### Đo lại thế nào — công thức lặp lại được
 
 Không gõ lệnh nào sau khi máy lên. Từ điện thoại **dùng 4G, tắt Wi-Fi** (để chắc
 chắn không đi vòng qua mạng nhà):
