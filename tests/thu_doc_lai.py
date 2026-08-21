@@ -259,6 +259,108 @@ def ca_6_khong_giai_gi_ca(tm):
 
 
 # ==========================================================================
+def ca_7_xem_truoc_pham_vi(tm):
+    """Đợt 3 việc 2 — quy tắc chạm vào bao nhiêu lớp / cụm / tiết.
+
+       KHỚP 0 CỤM là trạng thái nguy hiểm nhất của cả màn hình quy tắc: quy tắc
+       vẫn lưu được, vẫn hiện trong danh sách, và hậu kiểm vẫn báo ĐẠT — vì
+       không có gì để kiểm. Đúng bẫy n_uyen == 0, lần này ở phía người dùng.
+    """
+    print('\nCA 7 — xem trước phạm vi, và cảnh báo khi khớp 0 cụm')
+    print('-' * 74)
+    import xep_tkb as X
+    bt = X.BaiToan(X.doc_cau_hinh(os.path.join(GOC_TM, 'cauhinh.json')))
+    lop1 = sorted(bt.lop)[0]
+    mon1 = sorted({c.mon for c in bt.cac_cum if not c.la_trong})[0]
+
+    # --- bình thường: có khớp, không cảnh báo ---
+    pv = QT.pham_vi_quy_tac(
+        {'loai': 'chi_xep_thu', 'ghi_chu': 'x',
+         'loc': {'mon': mon1}, 'thu': [2]}, bt)
+    kiem(pv['so_cum'] > 0 and pv['so_tiet'] >= pv['so_cum'],
+         f'Bộ lọc bình thường: {pv["so_cum"]} cụm / {pv["so_tiet"]} tiết / '
+         f'{len(pv["lop"])} lớp')
+    kiem(QT.canh_bao_pham_vi(pv) is None, 'và KHÔNG cảnh báo gì')
+
+    # --- gõ sai tên: phải chỉ ĐÍCH DANH tên sai ---
+    pv2 = QT.pham_vi_quy_tac(
+        {'loai': 'chi_xep_thu', 'ghi_chu': 'x',
+         'loc': {'mon': mon1 + '-GÕ-SAI'}, 'thu': [2]}, bt)
+    kiem(pv2['so_cum'] == 0, f'Gõ sai tên môn -> khớp 0 cụm — {pv2["so_cum"]}')
+    cb = QT.canh_bao_pham_vi(pv2)
+    kiem(cb and (mon1 + '-GÕ-SAI') in cb,
+         f'Cảnh báo chỉ ĐÍCH DANH tên gõ sai — {str(cb)[:70]!r}')
+    kiem('vẫn báo ĐẠT' in (cb or ''),
+         'và nói rõ hậu quả: không cấm gì mà vẫn báo ĐẠT')
+
+    # --- bộ lọc hợp lệ nhưng không khớp gì (không sai tên) ---
+    pv3 = QT.pham_vi_quy_tac(
+        {'loai': 'chi_xep_thu', 'ghi_chu': 'x',
+         'loc': {'mon': mon1, 'lop': lop1, 'la_chuyen_de': True}, 'thu': [2]},
+        bt)
+    if pv3['so_cum'] == 0:
+        cb3 = QT.canh_bao_pham_vi(pv3)
+        kiem(cb3 and 'KHÔNG khớp tiết nào' in cb3,
+             f'Tên đúng nhưng không khớp gì -> vẫn cảnh báo — {str(cb3)[:60]!r}')
+    else:
+        kiem(True, f'(bộ lọc này khớp {pv3["so_cum"]} cụm, không dựng được '
+                   f'cảnh cần thử — bỏ qua)')
+
+    # --- loại HAI VẾ: đếm riêng từng vế ---
+    pv4 = QT.pham_vi_quy_tac(
+        {'loai': 'khac_ngay', 'ghi_chu': 'x',
+         'a': {'mon': mon1}, 'b': {'gv': 'KHONG-CO-AI-TEN-NAY'}}, bt)
+    # Kiểm HÌNH DẠNG trước khi bóc: bản hỏng cần bắt ở đây là bản GỘP CHUNG hai
+    # vế, tức 've' rỗng. pv4['ve'][1] trên bản đó ném IndexError -> ca thử VỠ
+    # thay vì ĐỎ, và mọi mục sau nó không bao giờ chạy.
+    ve = pv4.get('ve') if isinstance(pv4, dict) else None
+    hd = (isinstance(ve, list) and len(ve) == 2
+          and all(isinstance(v, dict) and 'ten' in v and 'so_cum' in v
+                  for v in ve))
+    kiem(hd and ve[0]['ten'] == 'A' and ve[1]['ten'] == 'B',
+         f'Loại hai vế đếm RIÊNG từng vế — {ve if not hd else [(v["ten"], v["so_cum"]) for v in ve]}')
+    kiem(hd and ve[1]['so_cum'] == 0,
+         f'Vế B rỗng được đếm ra 0, không bị gộp chung cho khuất — '
+         f'{ve[1]["so_cum"] if hd else "KHÔNG CÓ VẾ NÀO"}')
+    kiem(QT.canh_bao_pham_vi(pv4) is not None,
+         'và có cảnh báo — quy tắc so hai nhóm mà một nhóm rỗng thì vô nghĩa')
+
+    # --- KHÔNG BAO GIỜ NÉM, kể cả khi gõ dở ---
+    for nhan, r in (('rỗng hoàn toàn', {}),
+                    ('loại lạ', {'loai': 'khong-co-loai-nay'}),
+                    ('thiếu khoá bắt buộc', {'loai': 'chi_xep_thu'}),
+                    ('bộ lọc sai kiểu', {'loai': 'chi_xep_thu',
+                                         'loc': {'lop': 123}, 'thu': [2]})):
+        try:
+            QT.pham_vi_quy_tac(r, bt)
+            ok = True
+        except BaseException as e:
+            ok = f'NÉM {type(e).__name__}'
+        kiem(ok is True, f'Gõ dở ({nhan}): không ném — {ok}')
+
+    # --- qua HTTP THẬT, đi chung một lượt với câu đọc lại ---
+    dd = cau_hinh_tam(os.path.join(tm, 'd7'))
+    with MayChuTam(dd) as (k, _):
+        ma, d = k.js('/api/thu-quy-tac', {'doc_lai': True, 'quy_tac': {
+            'loai': 'chi_xep_thu', 'ghi_chu': 'x',
+            'loc': {'mon': mon1 + '-GÕ-SAI'}, 'thu': [2]}})
+        # Cùng lý do: bản hỏng cần bắt là bản KHÔNG trả khoá 'pham_vi'.
+        p = d.get('pham_vi') if isinstance(d, dict) else None
+        kiem(ma == 200 and isinstance(d, dict) and d.get('cau')
+             and isinstance(p, dict),
+             f'MỘT lượt gọi trả CẢ câu đọc lại LẪN phạm vi — '
+             f'mã {ma}, các khoá {sorted(d) if isinstance(d, dict) else d}')
+        kiem(isinstance(p, dict) and p.get('so_cum') == 0
+             and d.get('canh_bao_pham_vi'),
+             f'và cảnh báo khớp 0 cụm tới được giao diện — '
+             f'{str((d or {}).get("canh_bao_pham_vi"))[:60]!r}')
+
+    html = io.open(os.path.join(GOC_TM, 'web', 'index.html'),
+                   encoding='utf-8').read()
+    kiem('id="doc-lai-pham-vi"' in html, 'Giao diện có chỗ hiện phạm vi')
+
+
+# ==========================================================================
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ ĐỢT 3 VIỆC 1 — CÂU ĐỌC LẠI')
@@ -270,8 +372,10 @@ if __name__ == '__main__':
     with tempfile.TemporaryDirectory() as tm:
         os.makedirs(os.path.join(tm, 'd5'), exist_ok=True)
         os.makedirs(os.path.join(tm, 'd6'), exist_ok=True)
+        os.makedirs(os.path.join(tm, 'd7'), exist_ok=True)
         ca_5_khong_tu_khoa_van_hien_cau(tm)
         ca_6_khong_giai_gi_ca(tm)
+        ca_7_xem_truoc_pham_vi(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')

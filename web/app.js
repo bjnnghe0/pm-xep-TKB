@@ -495,12 +495,29 @@ async function docLai() {
   } catch (e) { return; }
   if (!d) return;
   const cb = $('doc-lai-canh-bao');
+  const pv = $('doc-lai-pham-vi');
   if (d.cau) {
-    khung.className = 'thu-hop ' + (d.canh_bao ? 'thu-canh-bao' : 'thu-ok');
+    const loi = d.canh_bao || d.canh_bao_pham_vi;
+    khung.className = 'thu-hop ' + (loi ? 'thu-canh-bao' : 'thu-ok');
     $('doc-lai-cau').innerHTML =
       '<b>Máy hiểu câu này là:</b><br>' + ma(d.cau);
-    cb.textContent = d.canh_bao || '';
-    cb.classList.toggle('an', !d.canh_bao);
+    // Xem trước phạm vi (việc 2). Nói SỐ trước, rồi mới liệt kê tên — người
+    // đọc cần biết "có khớp gì không" trước khi cần biết "khớp những gì".
+    const p = d.pham_vi;
+    if (p && !p.loi) {
+      const ve = (p.ve || []).length
+        ? p.ve.map((v) => `nhóm ${ma(v.ten)}: ${v.so_cum} cụm`).join(' · ')
+        : '';
+      pv.innerHTML = '<b>Chạm vào:</b> ' + p.so_cum + ' cụm · ' + p.so_tiet
+        + ' tiết · ' + (p.lop.length ? p.lop.length + ' lớp (' + ma(p.lop.join(', ')) + ')'
+                                     : '<b>KHÔNG lớp nào</b>')
+        + (ve ? '<br>' + ve : '');
+      pv.classList.remove('an');
+    } else {
+      pv.classList.add('an');
+    }
+    cb.textContent = loi || '';
+    cb.classList.toggle('an', !loi);
     khung.classList.remove('an');
   } else {
     khung.classList.add('an');

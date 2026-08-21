@@ -1415,3 +1415,116 @@ def so_ghi_chu(r):
     return ('Ghi chú của bạn nghe như một quy tắc kiểu khác. '
             'Hãy đọc kỹ câu máy hiểu ở trên — nếu hai câu nói hai chuyện '
             'khác nhau thì loại quy tắc đang chọn là sai.')
+
+
+# ==========================================================================
+# XEM TRƯỚC PHẠM VI — Đợt 3 việc 2
+# --------------------------------------------------------------------------
+#  Quy tắc này chạm vào bao nhiêu lớp, bao nhiêu cụm, bao nhiêu tiết?
+#
+#  Khớp 0 cụm là trạng thái NGUY HIỂM NHẤT của cả màn hình quy tắc: quy tắc
+#  vẫn lưu được, vẫn hiện trong danh sách, và hậu kiểm vẫn báo ĐẠT — vì không
+#  có gì để kiểm. "Không cấm gì cả mà vẫn báo ĐẠT". Đúng bẫy n_uyen == 0 mà
+#  tests/thu_ghim_du_lieu.py bắt được ở phía ca thử; đây là cùng cái bẫy đó ở
+#  phía người dùng.
+#
+#  CẢNH BÁO chứ không CHẶN: có lúc quy tắc khớp 0 cụm là đúng ý (học kỳ này
+#  lớp đó chưa có môn ấy). Chặn hẳn là chặn oan.
+#
+#  HÀM RỜI nhận DICT — Đợt 4 (chatbox) dùng lại y nguyên làm "bộ kiểm tra".
+# ==========================================================================
+
+def _ten_that(bt):
+    """Ba tập tên CÓ THẬT, đọc từ chính bài toán đã dựng."""
+    cum = [c for c in bt.cac_cum if not c.la_trong]
+    return {'lop': set(bt.lop),
+            'mon': {c.mon for c in cum},
+            'nhom_mon': {c.nhom for c in cum},
+            'gv': {c.gv for c in cum}}
+
+
+def _ten_la_trong_loc(dk, that):
+    """Tên khai trong một bộ lọc mà KHÔNG có thật. Đệ quy xuống cả "tru"."""
+    ra = {}
+    if not isinstance(dk, dict):
+        return ra
+    for khoa in ('lop', 'mon', 'nhom_mon', 'gv'):
+        la = [x for x in _mot_hoac_nhieu(dk.get(khoa))
+              if isinstance(x, str) and x not in that[khoa]]
+        if la:
+            ra.setdefault(khoa, []).extend(la)
+    for k, v in _ten_la_trong_loc(dk.get('tru'), that).items():
+        ra.setdefault(k, []).extend(v)
+    return ra
+
+
+def pham_vi_quy_tac(r, bt):
+    """Quy tắc chạm vào những gì. Trả dict, KHÔNG BAO GIỜ ném.
+
+       Không ném vì đây là thứ hiện lên trong lúc người dùng đang gõ dở: một
+       bộ lọc chưa gõ xong không phải là sự cố.
+    """
+    ra = {'so_cum': 0, 'so_tiet': 0, 'lop': [], 'mon': [], 'gv': [],
+          'ten_la': {}, 've': [], 'loi': None}
+    cls = DANH_MUC.get(r.get('loai')) if isinstance(r, dict) else None
+    if cls is None:
+        ra['loi'] = 'Chưa chọn loại quy tắc.'
+        return ra
+    that = _ten_that(bt)
+    # Tên lạ kiểm TRƯỚC khi dựng quy tắc: dựng có thể ném vì lý do khác, mà
+    # "gõ sai tên lớp" mới là nguyên nhân hay gặp nhất của cảnh khớp 0 cụm.
+    for khoa in ('loc', 'a', 'b'):
+        for k, v in _ten_la_trong_loc(r.get(khoa), that).items():
+            ra['ten_la'].setdefault(k, [])
+            ra['ten_la'][k].extend(x for x in v if x not in ra['ten_la'][k])
+    try:
+        q = cls(dict(r), bt)
+    except SystemExit as e:
+        ra['loi'] = str(e).split('\n')[0]
+        return ra
+    except Exception:
+        ra['loi'] = 'Chưa đủ thông tin để xem trước.'
+        return ra
+
+    def dem(cac):
+        cac = [c for c in cac if not c.la_trong]
+        return {'so_cum': len(cac), 'so_tiet': sum(c.size for c in cac),
+                'lop': sorted({c.lop for c in cac}),
+                'mon': sorted({c.mon for c in cac}),
+                'gv': sorted({c.gv for c in cac})}
+
+    if any(t['ten'] in ('a', 'b') for t in cls.TRUONG):
+        # Loại hai vế: đếm RIÊNG từng vế. Gộp lại thành một con số là giấu mất
+        # đúng cái người dùng cần thấy — vế nào đang rỗng.
+        for ben in ('a', 'b'):
+            d = dem([c for c in bt.cac_cum if q.khop(c, r.get(ben) or {})])
+            d['ten'] = ben.upper()
+            ra['ve'].append(d)
+        ra.update(so_cum=sum(v['so_cum'] for v in ra['ve']),
+                  so_tiet=sum(v['so_tiet'] for v in ra['ve']),
+                  lop=sorted({x for v in ra['ve'] for x in v['lop']}),
+                  mon=sorted({x for v in ra['ve'] for x in v['mon']}),
+                  gv=sorted({x for v in ra['ve'] for x in v['gv']}))
+    else:
+        ra.update(dem(q.cac_cum()))
+    return ra
+
+
+def canh_bao_pham_vi(pv):
+    """Câu cảnh báo cho một kết quả xem trước, hoặc None."""
+    if not isinstance(pv, dict) or pv.get('loi'):
+        return None
+    la = pv.get('ten_la') or {}
+    if la:
+        cho = '; '.join(f'{k}: {", ".join(v)}' for k, v in sorted(la.items()))
+        return (f'Những tên này KHÔNG có trong dữ liệu nhà trường — {cho}. '
+                f'Gõ sai tên thì quy tắc không cấm gì cả mà vẫn báo ĐẠT.')
+    rong = [v['ten'] for v in pv.get('ve', []) if v['so_cum'] == 0]
+    if rong:
+        return (f'Nhóm {", ".join(rong)} không khớp tiết nào. Quy tắc so hai '
+                f'nhóm mà một nhóm rỗng thì KHÔNG cấm gì cả, và vẫn báo ĐẠT.')
+    if pv.get('so_cum') == 0:
+        return ('Quy tắc này KHÔNG khớp tiết nào cả. Có thể gõ sai tên lớp, '
+                'tên môn hoặc tên giáo viên. Quy tắc không khớp gì thì không '
+                'cấm gì, mà hậu kiểm vẫn báo ĐẠT — nên sẽ không ai phát hiện.')
+    return None

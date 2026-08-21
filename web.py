@@ -1146,7 +1146,7 @@ def xoa_quy_tac(ma_phien, i):
     return doc_quy_tac(ma_phien)
 
 
-def doc_lai_quy_tac(r):
+def doc_lai_quy_tac(r, ma_phien=None):
     """Câu ĐỌC LẠI + cảnh báo ghi chú, cho một quy tắc đang gõ dở.
 
        Đợt 3 việc 1. RẺ: chỉ ghép chuỗi, không dựng BaiToan, không giải, không
@@ -1163,8 +1163,23 @@ def doc_lai_quy_tac(r):
     if r['loai'] not in QT.DANH_MUC:
         return {'cau': '', 'canh_bao': None,
                 'loi': f'Không có loại quy tắc "{r["loai"]}".'}
+    # XEM TRƯỚC PHẠM VI (việc 2) đi CHUNG một lượt gọi với câu đọc lại: hai
+    # thứ luôn hiện cùng nhau trên màn hình, tách ra là hai lượt mạng cho một
+    # lần gõ phím.
+    pv, cb_pv = None, None
+    if ma_phien is not None:
+        try:
+            cfg, _ = cau_hinh_phien(ma_phien)
+            pv = QT.pham_vi_quy_tac(r, X.BaiToan(cfg))
+            cb_pv = QT.canh_bao_pham_vi(pv)
+        except BaseException:
+            # Cấu hình đang hỏng thì phần XEM TRƯỚC im lặng bỏ qua, nhưng CÂU
+            # ĐỌC LẠI vẫn phải hiện — nó chỉ ghép chuỗi, không cần dữ liệu.
+            pv, cb_pv = None, None
     return {'cau': QT.cau_doc_lai(r),
             'canh_bao': QT.so_ghi_chu(r),
+            'pham_vi': pv,
+            'canh_bao_pham_vi': cb_pv,
             'loi': None}
 
 
@@ -2013,7 +2028,8 @@ class May(BaseHTTPRequestHandler):
         # ô nhập đứng hình đúng lúc người dùng đang gõ.
         d0 = self._than_json()
         if d0.get('doc_lai'):
-            return self._json(doc_lai_quy_tac(d0.get('quy_tac')))
+            return self._json(doc_lai_quy_tac(d0.get('quy_tac'),
+                                              self._phien()))
         with KHOA:
             ban = TT['dang_chay']
         if ban:

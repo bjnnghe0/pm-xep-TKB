@@ -35,7 +35,7 @@ python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh 
 python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
 python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
 python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
-python3 tests/thu_doc_lai.py            # Đợt 3 việc 1: câu đọc lại
+python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -84,7 +84,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
-| `tests/thu_doc_lai.py` | Đợt 3 việc 1: câu đọc lại. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện** | **Chạy khi thêm loại quy tắc hoặc sửa `MAU_CAU`** |
+| `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
@@ -1066,7 +1066,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1076,6 +1076,7 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 4 | Khớp chuỗi trong mã nguồn | Chuỗi đó cũng nằm trong **dòng chú thích** ngay trên — ca thử kiểm lời chú thích chứ không kiểm mã |
 | 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
+| 8 | **Bóc khoá của câu trả lời HỎNG ngay trong dòng khẳng định** — lại là kiểu 2 | Ca thử CA 7 (`thu_doc_lai.py`) viết `pv4['ve'][1]['so_cum']` và `d['pham_vi']['so_cum']`. Chạy trên mã đúng thì xanh; lùi bản vá ra thì **`IndexError` / `KeyError`** — vỡ, không đỏ. Bài học mở rộng: luật cũ chỉ nói về *dữ liệu vào* hỏng, nhưng bản hỏng còn có thể trả **THIẾU KHOÁ** ở câu trả lời. Nên câu đúng là: **mọi phép bóc trong dòng khẳng định phải chịu được hình dạng mà BẢN HỎNG trả về**, cả vào lẫn ra. Cách chữa: `isinstance` + `.get()` trước, rồi mới so — và in luôn hình dạng thật ra thông báo (`các khoá ['canh_bao', 'cau', 'loi']`) để biết ngay đã thiếu gì |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
 
 > ### KIỂU HỎNG SỐ 2 ĐÃ DÍNH BỐN LẦN — đếm lại cho khỏi quên
@@ -1345,6 +1346,38 @@ và 17 nhãn khác nhau đôi một.
 > `@dang_ky`; đây là tầng **hiển thị**. Để nó ném `AttributeError` là đổi một
 > lỗi khai báo thành một mã sự cố 500 vô nghĩa cho người dùng.
 
+### Xem trước phạm vi (việc 2) — quy tắc này chạm vào những gì
+
+`pham_vi_quy_tac(r, bt)` trong `quy_tac.py` nhận **một dict quy tắc trần** và
+trả về số cụm / số tiết / danh sách lớp · môn · GV bị chạm, cộng `ten_la` =
+những tên khai trong bộ lọc mà **không có trong dữ liệu nhà trường**.
+`canh_bao_pham_vi(pv)` biến kết quả đó thành một câu tiếng Việt, hoặc `None`.
+
+| Cảnh | Câu cảnh báo nói gì |
+|---|---|
+| Có tên lạ | Chỉ **đích danh** từng tên sai, theo từng khoá |
+| Loại hai vế mà một vế rỗng | Nêu **tên vế** rỗng (A hay B) |
+| Không tên nào lạ mà vẫn khớp 0 cụm | Nhắc ba nguyên nhân hay gặp |
+
+> **Khớp 0 cụm là CẢNH BÁO, không CHẶN.** Có học kỳ lớp đó chưa học môn ấy —
+> quy tắc khớp 0 cụm là đúng ý người khai. Chặn hẳn là chặn oan, đúng cái bẫy
+> đã bác một lần ở `/api/tai-ve` khi máy chủ vừa khởi động lại.
+
+> **Vì sao mục này đáng một hàm riêng: đây là bẫy `n_uyen == 0` ở phía NGƯỜI
+> DÙNG.** Quy tắc gõ sai tên vẫn lưu được, vẫn hiện trong danh sách, và hậu
+> kiểm vẫn báo **ĐẠT** — vì không có gì để kiểm. Người khai tưởng đã cấm; thực
+> ra không cấm gì. `tests/thu_ghim_du_lieu.py` bắt đúng lớp lỗi này ở phía ca
+> thử; `pham_vi_quy_tac()` bắt nó ở phía màn hình.
+
+**Đi CHUNG một lượt gọi với câu đọc lại**, nhánh `{"doc_lai": true}` của
+`POST /api/thu-quy-tac` — hai thứ luôn hiện cùng nhau, tách ra là hai lượt mạng
+cho một lần gõ phím. Không thêm đường mới; vẫn **19 đường**.
+
+**Không bao giờ ném.** Đây là thứ chạy trong lúc người dùng đang gõ **dở**:
+loại chưa chọn, khoá bắt buộc chưa điền, bộ lọc sai kiểu — không cái nào là sự
+cố. Sai thì trả khoá `loi` và phần xem trước tự ẩn, còn **câu đọc lại vẫn
+hiện** (nó chỉ ghép chuỗi, không cần dữ liệu).
+
 ### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
 
 Đợt 4 (chatbox) chia làm **ba lớp độc lập**, và **hai trong ba lớp đó chính là
@@ -1359,8 +1392,9 @@ và 17 nhãn khác nhau đôi một.
 > **Vì vậy Đợt 3 PHẢI viết hai thứ đó thành HÀM RỜI nhận MỘT DICT QUY TẮC**,
 > không gắn vào form, không đọc gì từ `request`:
 > ```
-> cau_doc_lai(r, bt)   -> str          (việc 1)
-> kiem_ban_nhap(r, bt) -> [vấn đề]     (việc 2)
+> cau_doc_lai(r)         -> str        (việc 1)
+> pham_vi_quy_tac(r, bt) -> dict       (việc 2)
+> canh_bao_pham_vi(pv)   -> str|None   (việc 2)
 > ```
 > Gắn vào form thì Đợt 4 buộc phải chép bản thứ hai — đúng kiểu lệch đã trả giá
 > ở `khop_loc()` / `_cum_cua()`. Đây là ràng buộc kiến trúc, không phải gợi ý.
@@ -1448,7 +1482,7 @@ Luật viết tay hay API đều qua đúng một cửa `kiem_ban_nhap()`. Bảy
 | 3 | Miền `thu` / `tiet` / `o` | có (`_kiem_thu`, `_kiem_tiet`, `_kiem_o`) |
 | 4 | Có cụm nào bị chặn hết mọi ô | có (`_kiem_tra_so_bo`) |
 | 5 | Còn xếp được không (1 lần thử / 1 giây) | có (cảnh báo sớm 2C) |
-| 6 | **Tên GV / lớp / môn có THẬT không** | **mới** |
+| 6 | **Tên GV / lớp / môn có THẬT không** | **đã có** (`pham_vi_quy_tac`, Đợt 3 việc 2) |
 | 7 | **Trùng với quy tắc đã có không** | **mới** |
 
 Phép 6 quan trọng hơn vẻ ngoài: nó bắt đúng cái bẫy `n_uyen == 0` ở phía người
