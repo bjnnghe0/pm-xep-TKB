@@ -246,10 +246,14 @@ function veQuyTac() {
       + `<td>${ma(r.ghi_chu)}${r.mem ? ' <span class="mem">tiêu chí mềm</span>' : ''}`
       + `${r.moi ? ' <span class="moi">chưa lưu</span>' : ''}</td>`
       + `<td class="loai">${ma(r.loai)}`
+      + ` <button class="nut-nhan-ban" data-nhan-ban="${k}">Tạo giống</button>`
       + (r.moi ? ` <button class="nut-xoa" data-xoa="${r.i}">Xoá</button>` : '')
       + '</td></tr>').join('');
   $('bang-quy-tac').querySelectorAll('input[type=checkbox]').forEach((o) => {
     o.onchange = () => { quyTac[+o.dataset.k].bat = o.checked; veQuyTac(); };
+  });
+  $('bang-quy-tac').querySelectorAll('[data-nhan-ban]').forEach((o) => {
+    o.onclick = () => nhanBan(quyTac[+o.dataset.nhanBan]);
   });
   $('bang-quy-tac').querySelectorAll('[data-xoa]').forEach((o) => {
     o.onclick = async () => {
@@ -260,6 +264,41 @@ function veQuyTac() {
       veQuyTac();
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Đợt 3 việc 4 — "Tạo giống quy tắc này"
+//
+// CHỈ ĐIỀN FORM, KHÔNG THÊM THẲNG. Thầy cô phải sửa ít nhất câu "Nội dung"
+// trước khi bấm Thêm — và máy chủ CHẶN nếu câu đó trùng, vì đã đo được: hai
+// quy tắc MỀM cùng ghi_chu thì cham_diem() lấy ghi_chu làm khoá dict, cái sau
+// ĐÈ cái trước, bảng "Kiểm tra quy tắc" trên Excel MẤT một dòng mà tổng điểm
+// vẫn cộng đủ. Sai trong im lặng.
+//
+// Vì vậy hậu tố " — bản sao" là điểm KHỞI ĐẦU để sửa, không phải câu dùng luôn.
+// ---------------------------------------------------------------------------
+function nhanBan(r) {
+  if (!r) return;
+  baoLoi('');
+  $('ket-qua-thu').classList.add('an');
+  const co = [...$('o-loai').options].some((o) => o.value === r.loai);
+  if (!co) {
+    baoLoi('Không nhân bản được: loại "' + r.loai + '" không còn trong danh '
+         + 'mục. Có thể cauhinh.json khai một loại mà bản phần mềm này chưa có.');
+    return;
+  }
+  $('o-loai').value = r.loai;
+  $('o-ghi-chu').value = (r.ghi_chu || '') + ' — bản sao';
+  veTruong(r.noi_dung || {});
+  henDocLai();
+  $('chu-luu').textContent = 'Đã chép quy tắc xuống form bên dưới. Hãy SỬA câu '
+    + '"Nội dung" cho khác đi rồi bấm "Thêm vào danh sách".';
+  $('o-ghi-chu').scrollIntoView({ block: 'center' });
+  $('o-ghi-chu').focus();
+  // Con trỏ về CUỐI câu, ngay chỗ hậu tố — chỗ cần sửa. select() bôi đen cả
+  // câu thì gõ một phím là mất sạch phần vừa chép.
+  $('o-ghi-chu').setSelectionRange($('o-ghi-chu').value.length,
+                                   $('o-ghi-chu').value.length);
 }
 
 // ---- form thêm quy tắc: dựng ô nhập từ TRUONG, không chép tay danh sách khoá ----
@@ -395,16 +434,21 @@ function veLoc(khoa, gt, cho_tru) {
   return h.join('');
 }
 
-function veTruong() {
+// nguon = nơi lấy giá trị điền sẵn. Bỏ trống thì lấy VI_DU của loại (đường
+// bình thường); nút "Tạo giống quy tắc này" truyền vào noi_dung của quy tắc
+// đang nhân bản. MỘT hàm vẽ, không phải hai — hai bản vẽ là hai bản sẽ lệch.
+function veTruong(nguon) {
   const l = loaiDangChon();
   if (!l) return;
+  const vi = nguon || l.vi_du;
   $('mo-ta-loai').textContent = l.mo_ta;
   $('ten-ky-thuat').textContent = 'tên trong cauhinh.json:  "loai": "' + l.ten + '"';
-  if (!$('o-ghi-chu').value.trim()) $('o-ghi-chu').value = l.vi_du.ghi_chu || '';
+  if (!nguon && !$('o-ghi-chu').value.trim())
+    $('o-ghi-chu').value = l.vi_du.ghi_chu || '';
   const nhomDa = {};
   $('o-truong').className = 'o-truong';
   $('o-truong').innerHTML = l.truong.map((tr) => {
-    const gt = l.vi_du[tr.ten];
+    const gt = vi[tr.ten];
     const co = gt !== undefined;
     let than = '';
     if (tr.kieu === 'loc') than = veLoc(tr.ten, gt, true);

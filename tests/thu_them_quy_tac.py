@@ -118,8 +118,12 @@ def ca_1_them_hop_le(B, dd):
     kiem(r['moi'] is True and r['ghi_chu'] == HOP_LE['ghi_chu']
          and r['loai'] == 'khong_xep_thu',
          'Quy tắc mới có nhãn "chưa lưu" và đúng nội dung')
-    kiem(r['noi_dung'].get('thu') == [6] and r['noi_dung'].get('loc'),
-         f'Giữ nguyên nội dung đã gửi — {r["noi_dung"]}')
+    # .get() chứ không r['noi_dung'] trần: bản hỏng cần bắt ở đây là bản
+    # KHÔNG chở 'noi_dung' về nữa, và trên bản đó phép bóc trần ném KeyError —
+    # ca thử VỠ ngay ở CA 1, mọi ca sau không bao giờ chạy.
+    nd = r.get('noi_dung')
+    kiem(isinstance(nd, dict) and nd.get('thu') == [6] and nd.get('loc'),
+         f'Giữ nguyên nội dung đã gửi — {nd if nd is not None else "KHÔNG CÓ khoá noi_dung"}')
     kiem(md5(dd) == truoc_md5, 'md5 cauhinh.json KHÔNG đổi')
 
     # Trước đây mục này gọi thẳng web.cau_hinh_phien() — vừa là gọi tắt qua
@@ -419,6 +423,90 @@ def ca_7_kiem_nhanh_sau_luu(tm):
     kiem(not thieu, f'Khung cảnh báo có đủ ba mảnh trong HTML — thiếu {thieu}')
 
 
+def ca_8_nhan_ban(B, dd):
+    """Đợt 3 việc 4 — "Tạo giống quy tắc này".
+
+       Nút này CHỈ điền form, không thêm thẳng. Nên phần máy chủ cần canh là
+       cửa chặn TRÙNG CÂU, và phần giao diện là: có nút, và veTruong() điền
+       được từ nguồn khác VI_DU.
+    """
+    print('\nCA 8 — nhân bản quy tắc, và cửa chặn trùng câu "Nội dung"')
+    print('-' * 74)
+    ma, d = B.js('/api/quy-tac')
+    if not (isinstance(d, dict) and d.get('quy_tac')):
+        kiem(False, f'Không đọc được danh sách quy tắc — mã {ma}, {str(d)[:70]}')
+        return
+    truoc = len(d['quy_tac'])
+    r0 = d['quy_tac'][0]
+
+    # (a) /api/quy-tac phải CHỞ ĐỦ thân quy tắc, không chỉ ghi_chu — nếu không
+    #     thì không có gì để nhân bản.
+    kiem(isinstance(r0.get('noi_dung'), dict) and r0['noi_dung'],
+         f'Danh sách chở đủ thân quy tắc để nhân bản — '
+         f'{sorted(r0.get("noi_dung") or {})}')
+
+    # (b) nhân bản Y NGUYÊN phải bị CHẶN
+    ban = dict(r0.get('noi_dung') or {},
+               loai=r0.get('loai'), ghi_chu=r0.get('ghi_chu'))
+    ma, kq = B.js('/api/them-quy-tac', {'quy_tac': ban})
+    loi = str((kq or {}).get('loi', ''))
+    kiem(ma == 400, f'Nhân bản Y NGUYÊN bị từ chối — mã {ma}')
+    kiem('Nội dung' in loi and r0['ghi_chu'] in loi,
+         f'Câu từ chối nhắc lại ĐÚNG câu bị trùng — {loi[:70]!r}')
+    kiem('im lặng' in loi or 'MẤT một dòng' in loi,
+         'và nói rõ hậu quả: bảng Excel mất một dòng, sai trong im lặng')
+    kiem('Hãy sửa' in loi or 'sửa câu' in loi,
+         'và nói rõ cách chữa')
+
+    ma, d2 = B.js('/api/quy-tac')
+    kiem(len(d2['quy_tac']) == truoc,
+         f'Lần bị từ chối KHÔNG để lại gì trong phiên — '
+         f'{len(d2["quy_tac"])} (trước {truoc})')
+
+    # (c) sửa câu đi thì nhận
+    ban2 = dict(ban, ghi_chu=r0['ghi_chu'] + ' — bản sao')
+    ma, kq = B.js('/api/them-quy-tac', {'quy_tac': ban2})
+    kiem(ma == 200 and len((kq or {}).get('quy_tac', [])) == truoc + 1,
+         f'Sửa câu "Nội dung" rồi thì nhận — mã {ma}, '
+         f'{len((kq or {}).get("quy_tac", []))} quy tắc')
+
+    # (d) và bản sao GIỐNG HỆT bản gốc ở mọi khoá khác
+    if ma == 200:
+        moi_ = kq['quy_tac'][-1]
+        kiem(moi_.get('loai') == r0.get('loai')
+             and moi_.get('noi_dung') == r0.get('noi_dung'),
+             'Bản sao giữ NGUYÊN loại và toàn bộ thân quy tắc')
+        B.js('/api/xoa-quy-tac', {'i': moi_['i']})
+
+    # (e) khoảng trắng thừa KHÔNG lách được cửa chặn
+    ma, kq = B.js('/api/them-quy-tac',
+                  {'quy_tac': dict(ban, ghi_chu='  ' + r0['ghi_chu'] + '  ')})
+    kiem(ma == 400, f'Thêm khoảng trắng hai đầu không lách được — mã {ma}')
+
+    # (f) cauhinh.json vẫn không suy suyển
+    kiem(len(json.load(io.open(dd, encoding='utf-8'))['quy_tac']) == truoc,
+         'cauhinh.json trên đĩa không đổi suốt cả ca thử')
+
+    # (g) giao diện: có nút, và veTruong() nhận nguồn giá trị khác VI_DU
+    js = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
+    js = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+    js = re.sub(r'^\s*//.*$', '', js, flags=re.M)      # LỘT CHÚ THÍCH TRƯỚC
+    kiem('data-nhan-ban' in js and 'function nhanBan' in js,
+         'app.js có nút "Tạo giống" và hàm nhanBan()')
+    kiem(re.search(r'function veTruong\(\s*\w+\s*\)', js),
+         'veTruong() nhận nguồn giá trị — MỘT hàm vẽ, không phải hai')
+    kiem(len(re.findall(r'function veTruong\(', js)) == 1,
+         'và chỉ có ĐÚNG MỘT hàm vẽ ô nhập')
+    css = io.open(os.path.join(GOC_TM, 'web', 'style.css'),
+                  encoding='utf-8').read()
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    m = re.search(r'\.nut-nhan-ban\s*\{([^{}]*)\}', css)
+    mh = re.search(r'min-height:\s*([\d.]+)px', m.group(1)) if m else None
+    kiem(mh and float(mh.group(1)) >= 40,
+         f'Nút "Tạo giống" đủ to để bấm — '
+         f'{mh.group(1) + "px" if mh else "KHÔNG KHAI"}')
+
+
 if __name__ == '__main__':
     print('=' * 74)
     print(' THỬ THÊM / XOÁ / LƯU QUY TẮC')
@@ -431,6 +519,7 @@ if __name__ == '__main__':
             ca_3_xoa(B, dd)
             ca_4_luu(B, tm, dd)
             ca_5_doi_chieu_danh_muc(B)
+            ca_8_nhan_ban(B, dd)
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()

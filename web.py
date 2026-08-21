@@ -1125,6 +1125,28 @@ def them_quy_tac(ma_phien, r):
                          'và trên sheet "Kiểm tra quy tắc", nên không được '
                          'để trống.')
     cfg, _ = cau_hinh_phien(ma_phien)
+    # TRÙNG "ghi_chu" — phép kiểm số 7. Nút "Tạo giống quy tắc này" (Đợt 3 việc
+    # 4) làm chuyện này thành một cú bấm, nên phải chặn ở đây chứ không trông
+    # vào việc người dùng nhớ sửa.
+    #
+    # ĐÃ ĐO, không suy: nhân bản y nguyên một quy tắc MỀM rồi chấm điểm thì
+    # cham_diem() ghi ct[q.ghi_chu] = x — hai quy tắc cùng khoá, cái sau ĐÈ
+    # cái trước. Bốn quy tắc mềm ra ba dòng trong bảng "Kiểm tra quy tắc" trên
+    # Excel, trong khi tổng điểm vẫn cộng đủ cả hai. Mất một dòng, không một
+    # chữ báo. Quy tắc CỨNG thì hau_kiem() gom vào LIST nên không mất dòng,
+    # nhưng hai dòng chữ y hệt nhau trong bảng đối chiếu cũng là thứ không ai
+    # đọc nổi — chặn cả hai cho một luật.
+    moi_gc = str(r.get('ghi_chu', '')).strip()
+    for j, cu_ in enumerate(cfg['quy_tac']):
+        if str(cu_.get('ghi_chu', '')).strip() == moi_gc:
+            raise SystemExit(
+                '[LỖI] Đã có quy tắc số %d dùng đúng câu "Nội dung" này:\n'
+                '      %s\n'
+                '      Hai quy tắc trùng câu này thì bảng "Kiểm tra quy tắc" '
+                'trên Excel MẤT một dòng (tiêu chí mềm dùng chính câu đó làm '
+                'khoá), mà tổng điểm vẫn cộng đủ — sai trong im lặng.\n'
+                '      Hãy sửa câu "Nội dung" cho khác đi, ví dụ thêm tên lớp '
+                'hoặc tên thầy cô mà quy tắc mới này áp cho.' % (j + 1, moi_gc))
     cfg['quy_tac'].append(copy.deepcopy(r))
     X.BaiToan(cfg)                     # ném SystemExit nếu khai sai
     nhap_cua(ma_phien).append(copy.deepcopy(r))
