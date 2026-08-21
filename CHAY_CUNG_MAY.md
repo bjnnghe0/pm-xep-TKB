@@ -200,6 +200,48 @@ tailscale funnel --bg --set-path /nbv 8080
 > thì nó gắn `/` vào cổng **443** — cổng đang bật Funnel — và trang quản trị
 > TKB lại phơi ra Internet. Đó đúng là cấu hình vừa gỡ đi.
 
+### 6b. Điều kiện nào làm MẤT cấu hình serve — hai dòng phải nhớ
+
+**Chỉ ghi giấy. Không có script canh chừng, và cố ý không có.**
+
+```bash
+tailscale serve status                                  # CÁCH KIỂM — chỉ đọc, an toàn
+tailscale serve --bg --https=8443 --set-path / 20266    # CÁCH DỰNG LẠI — lệnh ĐẶT
+```
+
+Dòng dựng lại chỉ dựng lại **cổng 8443 của TKB**. Nó **không** dựng lại trang
+công khai `/nbv` ở cổng 443 — cái đó là lệnh `tailscale funnel` riêng, ngay bên
+trên.
+
+**Bốn điều kiện, và mức bằng chứng của từng cái. Ba trong bốn là CHƯA BIẾT:**
+
+| Điều kiện | Mức | Đã biết gì |
+|---|---|---|
+| Khởi động lại máy | **ĐÃ ĐO — KHÔNG mất** | Xem mục 7 |
+| `tailscale logout` | **CHƯA BIẾT — nghi nhất** | Khoá cất serve gắn **theo profile** (`_serve/<ID hồ sơ>`, đọc từ nhị phân). `logout` là thứ đụng vào hồ sơ. Chưa ai chạy thử trên máy này |
+| `tailscale down` | **CHƯA BIẾT** | Trợ giúp của bản đang cài chỉ nói `Disconnect from Tailscale`, không một chữ serve/funnel. Nhưng dù cấu hình còn nguyên thì `down` vẫn đưa máy offline — **"cấu hình còn" khác "thầy cô vào được"** |
+| Đổi tài khoản / hồ sơ | **CHƯA BIẾT** | Máy đang có đúng **1 hồ sơ**. Muốn đo phải tạo hồ sơ thứ hai, tức phải `tailscale login` |
+| Nâng cấp gói | **Đo được phần TỆP, chưa đo được HỆ QUẢ** | `postinst` **khởi động lại daemon ở MỌI lần nâng cấp**. Không script nào xoá trạng thái (chỉ nhánh `purge` mới `rm -rf`). Nhưng chưa ai đo binary MỚI đọc trạng thái CŨ có giữ serve không |
+
+> **⚠ Máy này TỰ NÂNG CẤP tailscale lúc nửa đêm — đã xảy ra ít nhất một lần.**
+> `tailscale debug prefs` cho `"AutoUpdate": {"Check": true, "Apply": true}`.
+> `/var/log/apt/history.log` có dòng `2026-08-08 01:30:33 apt-get install --yes
+> --allow-downgrades tailscale=1.102.2`, **không có `Requested-By:`** (khác lần
+> cài tay 9/7 thì có) — tức không ai bấm. Nghĩa là đường vào có thể tắt vài giây
+> lúc 1h30 sáng mà không ai hay. Đó là lý do dòng **CÁCH KIỂM** đáng nhớ hơn
+> dòng dựng lại.
+
+> **⚠ Gõ sai tên lệnh con = chạy một lệnh ĐẶT.** `tailscale serve <đích>` là một
+> dạng gọi hợp lệ **không có tên lệnh con**, nên `tailscale serve statuss` không
+> báo "lệnh không tồn tại" mà có thể đi thẳng vào nhánh đặt cấu hình. Gõ tay thì
+> nhìn kỹ.
+>
+> **`tailscale funnel reset` KHÔNG vô hại** — nó tắt trang công khai `/nbv`.
+
+> **Cách rẻ nhất để khỏi phải đoán:** trước mỗi lần làm việc có thể chạm serve
+> (nâng cấp, đổi tài khoản, thử nghiệm), chạy `tailscale serve status --json` và
+> giữ lại kết quả. Mất thì có sẵn bản để dựng lại.
+
 ---
 
 ## 7. Bằng chứng cuối — ĐÃ KHỞI ĐỘNG LẠI MÁY THẬT, 21/8/2026
