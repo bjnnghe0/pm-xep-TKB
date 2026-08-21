@@ -1140,6 +1140,28 @@ def xoa_quy_tac(ma_phien, i):
     return doc_quy_tac(ma_phien)
 
 
+def doc_lai_quy_tac(r):
+    """Câu ĐỌC LẠI + cảnh báo ghi chú, cho một quy tắc đang gõ dở.
+
+       Đợt 3 việc 1. RẺ: chỉ ghép chuỗi, không dựng BaiToan, không giải, không
+       đụng tệp nào — nên gọi được sau mỗi lần gõ.
+
+       CÂU ĐỌC LẠI HIỆN LUÔN LUÔN, kể cả khi không có cảnh báo nào. Từ khoá chỉ
+       quyết định có tô cảnh báo hay không: thầy cô viết "Sử với Toán đừng dính
+       nhau" thì không từ khoá nào khớp, và đúng lúc đó câu đọc lại lại càng
+       cần thiết.
+    """
+    if not isinstance(r, dict) or not r.get('loai'):
+        return {'cau': '', 'canh_bao': None,
+                'loi': 'Chưa chọn loại quy tắc.'}
+    if r['loai'] not in QT.DANH_MUC:
+        return {'cau': '', 'canh_bao': None,
+                'loi': f'Không có loại quy tắc "{r["loai"]}".'}
+    return {'cau': QT.cau_doc_lai(r),
+            'canh_bao': QT.so_ghi_chu(r),
+            'loi': None}
+
+
 def thu_quy_tac(ma_phien, r, tat, nhanh=False):
     """Xếp thử rút gọn để xem thêm quy tắc này còn xếp được không.
        Chạy thẳng trong luồng HTTP vì đã chặn cứng 30 lần thử / 8 giây —
@@ -1979,11 +2001,18 @@ class May(BaseHTTPRequestHandler):
         return self._json({'ok': True})
 
     def _thu(self):
+        # NHÁNH RẼ SỚM cho câu đọc lại — TRƯỚC cả phép kiểm "đang xếp" lẫn
+        # KHOA_THU. Câu đọc lại chỉ ghép chuỗi, không giải gì; bắt nó xếp hàng
+        # sau một lượt xếp thử 8 giây (hoặc sau một lượt xếp thật 50 giây) thì
+        # ô nhập đứng hình đúng lúc người dùng đang gõ.
+        d0 = self._than_json()
+        if d0.get('doc_lai'):
+            return self._json(doc_lai_quy_tac(d0.get('quy_tac')))
         with KHOA:
             ban = TT['dang_chay']
         if ban:
             return self._json({'loi': 'Đang xếp, vui lòng đợi.'}, 409)
-        d = self._than_json()
+        d = d0
         # Dùng CHUNG _tap_chi_so() với bốn đường kia. Trước đây đường này tự
         # viết [int(x) for x in ...], nên {"tat":["a"]} cho 500 kèm mã sự cố,
         # trong khi đúng dữ liệu đó ở /api/luu-quy-tac lại cho 400 kèm câu

@@ -281,8 +281,14 @@ async function napDanhMuc() {
     `<optgroup label="${ma(n.nhom)}">`
     + n.loai.map((l) => `<option value="${ma(l.ten)}">${ma(l.ten)}</option>`).join('')
     + '</optgroup>').join('');
-  $('o-loai').onchange = veTruong;
+  $('o-loai').onchange = () => { veTruong(); henDocLai(); };
+  $('o-ghi-chu').oninput = henDocLai;
+  // Bắt Ở KHUNG CHA, không gắn vào từng ô: veTruong() vẽ lại toàn bộ ô nhập
+  // mỗi lần đổi loại, nên gắn vào từng ô là gắn xong lại mất.
+  $('o-truong').addEventListener('input', henDocLai);
+  $('o-truong').addEventListener('change', henDocLai);
   veTruong();
+  henDocLai();
 }
 
 function loaiDangChon() {
@@ -461,6 +467,41 @@ function veDsO(khoa, gt) {
 }
 
 /* Gom giá trị trên form thành đúng khối JSON của một quy tắc. */
+// -------------------------------------------------- Đợt 3 việc 1: đọc lại
+// Câu do MÁY CHỦ sinh, không sinh ở đây: ngữ nghĩa của 17 loại nằm trong
+// quy_tac.py, chép sang JS là chắc chắn lệch — cùng lý do TRUONG phục vụ cả
+// "--quy-tac" lẫn form web từ một chỗ.
+let hoDocLai = null;
+
+function henDocLai() {
+  // Hoãn 300ms: gõ từng phím mà bắn từng lượt thì vừa phí vừa nhấp nháy.
+  clearTimeout(hoDocLai);
+  hoDocLai = setTimeout(docLai, 300);
+}
+
+async function docLai() {
+  const khung = $('doc-lai');
+  let r;
+  try { r = docForm(); } catch (e) { khung.classList.add('an'); return; }
+  if (!r || !r.loai) { khung.classList.add('an'); return; }
+  let d;
+  try {
+    d = (await goi('/api/thu-quy-tac', { doc_lai: true, quy_tac: r })).d;
+  } catch (e) { return; }
+  if (!d) return;
+  const cb = $('doc-lai-canh-bao');
+  if (d.cau) {
+    khung.className = 'thu-hop ' + (d.canh_bao ? 'thu-canh-bao' : 'thu-ok');
+    $('doc-lai-cau').innerHTML =
+      '<b>Máy hiểu câu này là:</b><br>' + ma(d.cau);
+    cb.textContent = d.canh_bao || '';
+    cb.classList.toggle('an', !d.canh_bao);
+    khung.classList.remove('an');
+  } else {
+    khung.classList.add('an');
+  }
+}
+
 function docForm() {
   const l = loaiDangChon();
   const r = { loai: l.ten, ghi_chu: $('o-ghi-chu').value.trim() };

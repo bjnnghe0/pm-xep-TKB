@@ -30,6 +30,7 @@
 ==========================================================================
 """
 
+import re
 from collections import defaultdict
 
 DANH_MUC = {}
@@ -183,9 +184,57 @@ def kiem_bo_loc(dk, ghi_chu, ten='loc'):
         kiem_bo_loc(tru, ghi_chu, ten + '.tru')
 
 
+def _mot_hoac_nhieu(gt):
+    """Một giá trị lẻ hay một danh sách -> luôn trả DANH SÁCH. Rỗng -> [].
+
+       Bản mức MODULE của QuyTac._ds(): phần đọc lại làm việc trên DICT quy tắc
+       thuần, chưa có đối tượng QuyTac nào — chatbox của Đợt 4 cũng vậy.
+    """
+    if gt is None or gt == '':
+        return []
+    return list(gt) if isinstance(gt, (list, tuple)) else [gt]
+
+
+def _o_trong_mau(mau):
+    """Danh sách tên ô {…} trong một chuỗi mẫu."""
+    return re.findall(r'\{(\w+)\}', mau or '')
+
+
 def dang_ky(ten):
+    """Đăng ký một loại quy tắc — và TỪ CHỐI nếu khai thiếu.
+
+       ÉP BẰNG CẤU TRÚC, KHÔNG BẰNG LỜI NHẮC. Thiếu MAU_CAU, hoặc có ô {ten}
+       không khớp trường nào trong TRUONG, thì "import quy_tac" DỪNG — nghĩa là
+       xep_tkb.py, web.py và cả 17 bộ thử cùng chết. Người thêm loại thứ 18
+       biết ngay, chứ không phải "ca thử đỏ ở đâu đó".
+
+       Cùng cách TRUONG đang tự bảo vệ mình: không khai thì mọi khoá riêng của
+       loại đó bị coi là khoá lạ và chương trình dừng.
+    """
     def deco(cls):
         cls.TEN = ten
+        mau = getattr(cls, 'MAU_CAU', '')
+        if not isinstance(mau, str) or not mau.strip():
+            raise SystemExit(
+                f'[LỖI] Loại quy tắc "{ten}" ({cls.__name__}) chưa khai '
+                f'MAU_CAU.\n'
+                f'      Đó là chuỗi mẫu sinh CÂU ĐỌC LẠI cho người dùng đối\n'
+                f'      chiếu với ghi chú họ tự gõ. Thiếu nó thì loại này im\n'
+                f'      lặng không có câu nào, và người dùng không cách gì\n'
+                f'      biết máy hiểu khác ý mình.\n'
+                f'      Ô {{ten}} phải trùng tên trường (hoặc tên nhóm) trong '
+                f'TRUONG.\n'
+                f'      Xem các loại khác trong tệp này để chép mẫu.')
+        hop_le = {t['ten'] for t in cls.TRUONG} | {
+            t['nhom'] for t in cls.TRUONG if t.get('nhom')}
+        la = [o for o in _o_trong_mau(mau) if o not in hop_le]
+        if la:
+            raise SystemExit(
+                f'[LỖI] MAU_CAU của loại "{ten}" có ô không khớp TRUONG: '
+                f'{", ".join(la)}\n'
+                f'      Ô dùng được: {", ".join(sorted(hop_le))}\n'
+                f'      Ô sai thì câu đọc lại sẽ thiếu chỗ đó mà không ai '
+                f'biết.')
         DANH_MUC[ten] = cls
         return cls
     return deco
@@ -390,6 +439,7 @@ class QuyTac:
 
 @dang_ky('chi_xep_thu')
 class ChiXepThu(QuyTac):
+    MAU_CAU = ('{loc} CHỈ được xếp vào {thu} — mọi thứ khác đều CẤM.')
     MO_TA = 'Chỉ được xếp vào những thứ liệt kê.'
     VI_DU = {"loai": "chi_xep_thu",
              "ghi_chu": "Vật lý 12B1, 12B2 chỉ Thứ 2 hoặc Thứ 3",
@@ -410,6 +460,8 @@ class ChiXepThu(QuyTac):
 
 @dang_ky('khong_xep_thu')
 class KhongXepThu(QuyTac):
+    MAU_CAU = ('{loc} KHÔNG được xếp vào {thu} — các thứ còn lại thì '
+        'được.')
     MO_TA = 'Cấm xếp vào những thứ liệt kê.'
     VI_DU = {"loai": "khong_xep_thu",
              "ghi_chu": "Văn cô Duy không xếp Thứ 2",
@@ -430,6 +482,7 @@ class KhongXepThu(QuyTac):
 
 @dang_ky('chi_xep_tiet')
 class ChiXepTiet(QuyTac):
+    MAU_CAU = ('{loc} CHỈ được xếp vào {tiet} — mọi tiết khác đều CẤM.')
     MO_TA = 'Chỉ được xếp vào những tiết liệt kê (cả cụm phải nằm gọn trong đó).'
     VI_DU = {"loai": "chi_xep_tiet",
              "ghi_chu": "GDKT-PL luôn ở 2 tiết cuối buổi",
@@ -451,6 +504,8 @@ class ChiXepTiet(QuyTac):
 
 @dang_ky('khong_xep_tiet')
 class KhongXepTiet(QuyTac):
+    MAU_CAU = ('{loc} KHÔNG được xếp vào {tiet} — các tiết còn lại thì '
+        'được.')
     MO_TA = ('Cấm những tiết liệt kê. "tiet_trong_buoi": 1 = tiết đầu buổi. '
              '"tiet": ghi số hiệu tiết thật (6, 7, 8...).')
     VI_DU = {"loai": "khong_xep_tiet",
@@ -473,6 +528,7 @@ class KhongXepTiet(QuyTac):
 
 @dang_ky('khong_xep_o')
 class KhongXepO(QuyTac):
+    MAU_CAU = ('{loc} KHÔNG được xếp vào các ô {o}.')
     MO_TA = ('Cấm từng ô cụ thể (thứ + tiết). Dùng khi giáo viên bận cố định '
              'một vài buổi. Ghi "o": [[thứ, tiết], [thứ, tiết], ...]')
     VI_DU = {"loai": "khong_xep_o",
@@ -501,6 +557,7 @@ class KhongXepO(QuyTac):
 
 @dang_ky('co_dinh')
 class CoDinh(QuyTac):
+    MAU_CAU = ('{loc} PHẢI xếp đúng vào {thu}, {tiet}.')
     MO_TA = ('Ghim cứng vào đúng 1 ô (thứ + tiết). Nếu bộ lọc khớp nhiều cụm '
              'thì chỉ cụm đầu tiên của mỗi lớp bị ghim.')
     VI_DU = {"loai": "co_dinh",
@@ -538,6 +595,8 @@ class CoDinh(QuyTac):
 
 @dang_ky('khac_ngay')
 class KhacNgay(QuyTac):
+    MAU_CAU = ('«{a}» và «{b}» KHÔNG được rơi vào cùng một ngày[ (xét '
+               'theo {pham_vi})] — mỗi bên vẫn xếp thứ nào cũng được.')
     MO_TA = ('Hai nhóm tiết không được rơi vào cùng một ngày. '
              '"pham_vi": "toan_truong" (mặc định) hoặc "moi_lop" (chỉ xét '
              'trong phạm vi từng lớp).')
@@ -594,6 +653,7 @@ class KhacNgay(QuyTac):
 
 @dang_ky('cung_ngay')
 class CungNgay(QuyTac):
+    MAU_CAU = ('«{a}» và «{b}» PHẢI rơi vào cùng một ngày.')
     MO_TA = ('Mọi tiết của nhóm a phải rơi vào ngày mà nhóm b cũng có tiết '
              '(vd: chuyên đề học đúng ngày có tiết chính).')
     VI_DU = {"loai": "cung_ngay",
@@ -644,6 +704,7 @@ class CungNgay(QuyTac):
 
 @dang_ky('toi_da_tiet_moi_ngay')
 class ToiDaTietMoiNgay(QuyTac):
+    MAU_CAU = ('{loc}: mỗi ngày nhiều nhất {so} tiết, đếm theo {theo}.')
     MO_TA = ('Giới hạn số tiết trong 1 ngày. "theo": "gv" | "lop" | "mon_lop" '
              '(số tiết của cùng 1 môn trong 1 lớp).')
     VI_DU = {"loai": "toi_da_tiet_moi_ngay",
@@ -687,6 +748,7 @@ class ToiDaTietMoiNgay(QuyTac):
 
 @dang_ky('toi_da_ngay_moi_tuan')
 class ToiDaNgayMoiTuan(QuyTac):
+    MAU_CAU = ('{loc}: mỗi tuần nhiều nhất {so} ngày, đếm theo {theo}.')
     MO_TA = ('Giới hạn số buổi phải lên lớp trong tuần. '
              '"theo": "gv" (mặc định) | "lop".')
     VI_DU = {"loai": "toi_da_ngay_moi_tuan",
@@ -728,6 +790,7 @@ class ToiDaNgayMoiTuan(QuyTac):
 
 @dang_ky('khong_ke_nhau')
 class KhongKeNhau(QuyTac):
+    MAU_CAU = ('«{a}» và «{b}» KHÔNG được xếp sát nhau.')
     MO_TA = 'Hai nhóm môn của cùng một lớp không được xếp sát nhau (liền tiết).'
     VI_DU = {"loai": "khong_ke_nhau",
              "ghi_chu": "Không xếp Toán ngay sát Vật lý",
@@ -769,6 +832,7 @@ class KhongKeNhau(QuyTac):
 
 @dang_ky('phai_ke_nhau')
 class PhaiKeNhau(QuyTac):
+    MAU_CAU = ('«{a}» và «{b}» PHẢI xếp sát nhau.')
     MO_TA = ('Mọi tiết của nhóm a phải nằm sát nhóm b, cùng lớp cùng buổi '
              '(vd: chuyên đề luôn nối tiếp tiết chính). Đây là quy tắc CỨNG — '
              'nếu quá khó xếp hãy đổi sang "uu_tien_ke_nhau".')
@@ -825,6 +889,7 @@ class PhaiKeNhau(QuyTac):
 
 @dang_ky('gom_tiet')
 class GomTiet(QuyTac):
+    MAU_CAU = ('{loc} được cắt thành cụm {cum}.')
     MO_TA = ('Đổi cách chia cụm cho riêng một môn/lớp, đè lên "dinh_muc_mon". '
              '[2] = 2 tiết dính liền; [1,1] = tách 2 buổi; [2,1] = 1 buổi 2 '
              'tiết + 1 buổi 1 tiết.')
@@ -842,6 +907,8 @@ class GomTiet(QuyTac):
 
 @dang_ky('uu_tien_o')
 class UuTienO(QuyTac):
+    MAU_CAU = ('NÊN xếp {loc} vào[ {thu}][ {tiet}] — cộng {diem} điểm '
+               'cho MỖI TIẾT xếp được như vậy.')
     MO_TA = ('Cộng điểm nếu xếp đúng thứ/tiết mong muốn (điểm âm = tránh). '
              'Không bắt buộc, chỉ dùng để chọn phương án đẹp hơn.')
     VI_DU = {"loai": "uu_tien_o",
@@ -871,6 +938,9 @@ class UuTienO(QuyTac):
 
 @dang_ky('uu_tien_ke_nhau')
 class UuTienKeNhau(QuyTac):
+    MAU_CAU = ('NÊN xếp «{a}» sát «{b}»[ (chỉ tính khi cùng nhóm môn: '
+               '{cung_nhom_mon})] — cộng {diem} điểm cho mỗi cụm xếp '
+               'được như vậy.')
     MO_TA = 'Cộng điểm khi nhóm a nằm sát nhóm b trong cùng lớp, cùng buổi.'
     VI_DU = {"loai": "uu_tien_ke_nhau",
              "ghi_chu": "Nên xếp chuyên đề nối tiếp tiết chính",
@@ -928,6 +998,8 @@ class UuTienKeNhau(QuyTac):
 
 @dang_ky('uu_tien_it_buoi')
 class UuTienItBuoi(QuyTac):
+    MAU_CAU = ('NÊN dồn {loc} vào ÍT buổi — TRỪ {diem} điểm cho MỖI '
+               'BUỔI phải lên lớp.')
     MO_TA = ('Trừ điểm theo tổng số buổi giáo viên phải lên lớp — càng dồn '
              'buổi cho thầy cô càng được điểm cao.')
     VI_DU = {"loai": "uu_tien_it_buoi", "loc": {}, "diem": 4}
@@ -942,6 +1014,8 @@ class UuTienItBuoi(QuyTac):
 
 @dang_ky('uu_tien_trai_deu')
 class UuTienTraiDeu(QuyTac):
+    MAU_CAU = ('NÊN để {loc} cách nhau ít nhất {cach} ngày — cộng '
+               '{diem} điểm cho mỗi cặp cách đủ xa.')
     MO_TA = ('Cộng điểm khi hai buổi học của cùng một môn (trong cùng lớp) '
              'cách nhau từ "cach" ngày trở lên.')
     VI_DU = {"loai": "uu_tien_trai_deu", "loc": {}, "cach": 2, "diem": 3}
@@ -1034,7 +1108,6 @@ def _in_nhom(ten_nhom, ds):
 def _gon(obj):
     """In JSON dễ đọc: mỗi khoá 1 dòng, riêng danh sách thì gom lại 1 dòng."""
     import json
-    import re
     s = json.dumps(obj, ensure_ascii=False, indent=2)
     s = re.sub(r'\[\s+([^\[\]{}]*?)\s+\]',
                lambda m: '[' + ', '.join(x.strip() for x in
@@ -1058,3 +1131,230 @@ def _xuong_dong(s, rong):
 
 if __name__ == '__main__':
     in_danh_muc()
+
+
+# ==========================================================================
+# ĐỌC LẠI — Đợt 3 việc 1
+# --------------------------------------------------------------------------
+#  Sinh một câu tiếng Việt mô tả ĐÚNG điều máy sắp làm, để người dùng đối chiếu
+#  với ghi_chu họ tự gõ. Lý do có phần này: 20/8 thầy cô khai ba quy tắc có
+#  ghi_chu nói "không trùng ngày với" mà loai lại là chi_xep_thu — nghĩa NGƯỢC
+#  HẲN. Phần mềm nhận cả hai, không kêu một tiếng.
+#
+#  KHÔNG viết tay 17 hàm sinh câu. Ba mảnh:
+#    · mô tả bộ lọc            -> cau_bo_loc(), viết MỘT lần cho cả 17 loại
+#    · định dạng theo "kieu"   -> _dinh_dang(), viết MỘT lần mỗi kiểu
+#    · vị ngữ của từng loại    -> MAU_CAU, một CHUỖI MẪU, không phải một hàm
+#
+#  MAU_CAU là chuỗi chứ không phải hàm: ít chỗ sai hơn hẳn, và @dang_ky kiểm
+#  được ngay lúc nạp mô-đun. Thiếu MAU_CAU hoặc có ô {ten} không khớp TRUONG
+#  thì "import quy_tac" DỪNG — cả chương trình không chạy, chứ không phải
+#  "ca thử đỏ ở đâu đó".
+#
+#  KHÔNG có đường lùi "thiếu MAU_CAU thì tự ghép từ TRUONG": đường lùi biến
+#  việc quên thành việc IM LẶNG, đúng hạng lỗi cả dự án này viết ra để chống.
+#
+#  HÀM RỜI, nhận MỘT DICT QUY TẮC, không gắn vào form và không đọc gì từ
+#  request. Đợt 4 (chatbox) dùng lại y nguyên làm "bộ hiển thị"; gắn vào form
+#  thì Đợt 4 buộc phải chép bản thứ hai — đúng kiểu lệch đã trả giá ở
+#  khop_loc() / _cum_cua().
+# ==========================================================================
+
+# Nhãn tiếng Việt cho các giá trị của kiểu "chon". Khai một chỗ, dùng chung —
+# giá trị trong cả dự án không trùng nhau nên không cần khai theo từng trường.
+NHAN_GIA_TRI = {
+    'toan_truong': 'toàn trường',
+    'moi_lop': 'trong từng lớp',
+    'gv': 'giáo viên',
+    'lop': 'lớp',
+    'mon_lop': 'từng môn của từng lớp',
+}
+
+
+def _liet_ke(xs, noi='và'):
+    """['a','b','c'] -> 'a, b và c'. Rỗng -> ''."""
+    xs = [str(x) for x in xs if str(x).strip()]
+    if not xs:
+        return ''
+    if len(xs) == 1:
+        return xs[0]
+    return f'{", ".join(xs[:-1])} {noi} {xs[-1]}'
+
+
+def cau_bo_loc(dk):
+    """Bộ lọc -> câu tiếng Việt. Dùng chung cho cả 17 loại và cho cả "a"/"b".
+
+       Bộ lọc rỗng nghĩa là áp cho TẤT CẢ — phải nói ra thành chữ, vì đó đúng
+       là chỗ người dùng hay tưởng nhầm là "chưa khai xong".
+    """
+    if not isinstance(dk, dict) or not dk:
+        return 'mọi tiết'
+    phan = []
+    mon = (_mot_hoac_nhieu(dk.get('mon'))
+           or _mot_hoac_nhieu(dk.get('nhom_mon')))
+    cd = dk.get('la_chuyen_de')
+    if mon:
+        phan.append(_liet_ke(mon))
+        if cd is True:
+            phan.append('(chỉ tiết chuyên đề)')
+        elif cd is False:
+            phan.append('(không tính tiết chuyên đề)')
+    elif cd is True:
+        # Không khai môn mà khai la_chuyen_de thì CHÍNH NÓ là đầu câu. Bản đầu
+        # cho ra "mọi tiết (chỉ tiết chuyên đề)" — đúng nghĩa nhưng đọc như một
+        # cái ngoặc thừa, và người dùng lướt qua đúng chỗ cần đọc.
+        phan.append('tiết chuyên đề')
+    elif cd is False:
+        phan.append('tiết chính (không phải chuyên đề)')
+    else:
+        phan.append('mọi tiết')
+    lop = _mot_hoac_nhieu(dk.get('lop'))
+    if lop:
+        phan.append('của ' + _liet_ke(lop))
+    gv = _mot_hoac_nhieu(dk.get('gv'))
+    if gv:
+        phan.append('do ' + _liet_ke(gv) + ' dạy')
+    cau = ' '.join(phan)
+    tru = dk.get('tru')
+    if isinstance(tru, dict) and tru:
+        # Đóng ngoặc cho mệnh đề TRỪ: không có nó thì câu chạy thẳng vào vị ngữ
+        # ("SHCN, TRỪ mọi tiết do N.Uyên dạy CHỈ được xếp vào...") và người đọc
+        # không biết chữ "CHỈ" thuộc vế nào.
+        cau += ' (TRỪ ' + cau_bo_loc(tru) + ')'
+    return cau
+
+
+def _dinh_dang(kieu, gt):
+    """Một giá trị -> chữ, theo đúng "kieu" đã khai trong TRUONG.
+
+       Viết MỘT lần cho mỗi kiểu, không phải một lần cho mỗi loại quy tắc.
+    """
+    if gt is None:
+        return ''
+    if kieu == 'loc':
+        return cau_bo_loc(gt)
+    if kieu in ('ds_thu', 'so_thu'):
+        return _liet_ke([f'Thứ {x}' for x in _mot_hoac_nhieu(gt)])
+    if kieu in ('ds_tiet', 'so_tiet'):
+        return _liet_ke([f'tiết {x}' for x in _mot_hoac_nhieu(gt)])
+    if kieu in ('ds_tiet_buoi', 'so_tiet_buoi'):
+        # Gắn "của buổi" MỘT lần ở cuối, không lặp theo từng số: bản đầu cho ra
+        # "tiết thứ 1 của buổi và tiết thứ 2 của buổi".
+        ds = _mot_hoac_nhieu(gt)
+        if not ds:
+            return ''
+        return 'tiết thứ ' + _liet_ke([str(x) for x in ds]) + ' của buổi'
+    if kieu == 'ds_o':
+        return _liet_ke([f'Thứ {o[0]} tiết {o[1]}'
+                         for o in gt if isinstance(o, (list, tuple))
+                         and len(o) == 2])
+    if kieu == 'ds_so':
+        return ' + '.join(str(x) for x in _mot_hoac_nhieu(gt)) + ' tiết'
+    if kieu == 'dung_sai':
+        return 'có' if gt else 'không'
+    if kieu == 'chon':
+        return NHAN_GIA_TRI.get(str(gt), str(gt))
+    return str(gt)
+
+
+def _gia_tri_o(cls, r, ten_o):
+    """Giá trị đã định dạng cho một ô. Ô có thể là TÊN TRƯỜNG hoặc TÊN NHÓM
+       (hai trường thay thế nhau như tiet / tiet_trong_buoi cùng nhom 'tiet')."""
+    for t in cls.TRUONG:
+        if t['ten'] == ten_o and r.get(ten_o) is not None:
+            return _dinh_dang(t['kieu'], r[ten_o])
+    for t in cls.TRUONG:                      # thử theo NHÓM
+        if t.get('nhom') == ten_o and r.get(t['ten']) is not None:
+            return _dinh_dang(t['kieu'], r[t['ten']])
+    return ''
+
+
+def _dung_mau(mau, gia_tri):
+    """Ghép chuỗi mẫu. [đoạn] bị BỎ HẲN nếu có ô nào bên trong rỗng.
+
+       Cần đoạn tuỳ chọn vì nhiều loại có trường không bắt buộc (uu_tien_o có
+       thể khai thu, hoặc tiet, hoặc cả hai, hoặc không cái nào).
+    """
+    def doan(m):
+        t = m.group(1)
+        if any(not gia_tri.get(o) for o in _o_trong_mau(t)):
+            return ''
+        return re.sub(r'\{(\w+)\}', lambda x: gia_tri.get(x.group(1), ''), t)
+    cau = re.sub(r'\[([^\[\]]*)\]', doan, mau)
+    cau = re.sub(r'\{(\w+)\}', lambda x: gia_tri.get(x.group(1), ''), cau)
+    return ' '.join(cau.split())
+
+
+def cau_doc_lai(r):
+    """Một quy tắc -> câu tiếng Việt mô tả ĐÚNG điều máy sắp làm.
+
+       Nhận DICT, không nhận đối tượng QuyTac: chatbox của Đợt 4 sinh ra dict
+       trước khi có đối tượng nào.
+    """
+    if not isinstance(r, dict):
+        return ''
+    cls = DANH_MUC.get(r.get('loai'))
+    if cls is None:
+        return ''
+    gia_tri = {o: _gia_tri_o(cls, r, o) for o in _o_trong_mau(cls.MAU_CAU)}
+    return _dung_mau(cls.MAU_CAU, gia_tri)
+
+
+# --------------------------------------------------------------------------
+# SO CÂU MÁY VỚI ghi_chu NGƯỜI GÕ — chỉ báo khi có BẰNG CHỨNG NGƯỢC
+# --------------------------------------------------------------------------
+#  KHÔNG đo độ giống nhau. Hai câu bao giờ chẳng khác nhau; báo theo độ giống
+#  là đẻ ra báo động giả, mà báo động giả thì thầy cô học cách bỏ qua — đúng
+#  bài học "đừng nói quá" của khung cảnh báo 2C.
+#
+#  Từ khoá gắn theo NHÓM chứ không theo loại, nên loại mới thừa hưởng sẵn.
+#  Và đây chỉ là GỢI Ý: câu đọc lại hiện LUÔN LUÔN, từ khoá chỉ quyết định có
+#  tô cảnh báo hay không. Thầy cô viết "Sử với Toán đừng dính nhau" thì không
+#  từ khoá nào khớp — lúc đó vẫn phải có câu đọc lại để họ tự đối chiếu.
+TU_KHOA_NHOM = {
+    'chi': ('chỉ ', 'duy nhất', 'chỉ được'),
+    'khong': ('không xếp', 'không được xếp', 'tránh', 'cấm'),
+    'khac_ngay': ('khác ngày', 'không cùng ngày', 'không trùng ngày',
+                  'không chung ngày', 'khác buổi'),
+    'cung_ngay': ('cùng ngày', 'chung ngày', 'trùng ngày'),
+    'ke_nhau': ('kề nhau', 'sát nhau', 'liền nhau', 'nối tiếp'),
+    'co_dinh': ('cố định', 'đúng vào', 'ghim vào'),
+}
+
+# Loại nào thuộc "ý niệm" nào. Khai theo LOẠI vì một nhóm hiển thị
+# (NHOM_LOAI) chứa nhiều ý niệm ngược nhau — chi_xep_thu và khong_xep_thu
+# cùng nhóm "GIỚI HẠN NGÀY / TIẾT" nhưng nghĩa ngược hẳn.
+Y_NIEM = {
+    'chi_xep_thu': 'chi', 'chi_xep_tiet': 'chi',
+    'khong_xep_thu': 'khong', 'khong_xep_tiet': 'khong',
+    'khong_xep_o': 'khong', 'khong_ke_nhau': 'khong',
+    'co_dinh': 'co_dinh',
+    'khac_ngay': 'khac_ngay', 'cung_ngay': 'cung_ngay',
+    'phai_ke_nhau': 'ke_nhau', 'uu_tien_ke_nhau': 'ke_nhau',
+}
+
+
+def so_ghi_chu(r):
+    """Ghi chú người gõ có mâu thuẫn với loại đã chọn không?
+
+       Trả None nếu không có bằng chứng ngược, hoặc một câu cảnh báo.
+       CHỈ báo khi ghi_chu chứa từ khoá của một ý niệm KHÁC. Không có từ khoá
+       nào -> None, và câu đọc lại vẫn hiện như thường.
+    """
+    if not isinstance(r, dict):
+        return None
+    cua_toi = Y_NIEM.get(r.get('loai'))
+    ghi = str(r.get('ghi_chu', '')).lower()
+    if not ghi:
+        return None
+    thay = [y for y, tu in TU_KHOA_NHOM.items()
+            if y != cua_toi and any(t in ghi for t in tu)]
+    # Nếu ghi_chu cũng chứa từ khoá của CHÍNH ý niệm đang chọn thì thôi, không
+    # báo: câu kiểu "chỉ xếp Thứ 2, không xếp ngày khác" là hợp lệ.
+    if cua_toi and any(t in ghi for t in TU_KHOA_NHOM.get(cua_toi, ())):
+        return None
+    if not thay:
+        return None
+    return ('Ghi chú của bạn nghe như một quy tắc kiểu khác. '
+            'Hãy đọc kỹ câu máy hiểu ở trên — nếu hai câu nói hai chuyện '
+            'khác nhau thì loại quy tắc đang chọn là sai.')

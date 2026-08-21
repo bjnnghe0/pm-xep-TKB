@@ -136,6 +136,10 @@ tr.tat { opacity: .5; }
    khai báo chung ở trên đã cho 40px/15px, và tests/thu_them_quy_tac.py CA 6
    đọc thẳng tệp này để canh. */
 .thu-hop button { margin-top: 10px; }
+/* Câu đọc lại (Đợt 3 việc 1). Chữ >= 15px theo ngưỡng chạm của dự án —
+   đây là câu người dùng PHẢI đọc, không phải chú thích phụ. */
+#doc-lai { font-size: 15px; line-height: 1.5; }
+#doc-lai-canh-bao { margin-top: 8px; font-weight: 600; }
 .thu-hop { margin-top: 12px; padding: 11px; border-radius: 6px; font-size: 13px; }
 
 /* Màn hình hẹp: ô vuông giãn đều, danh sách dài thấp lại cho đỡ chiếm chỗ. */

@@ -35,6 +35,7 @@ python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh 
 python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
 python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
 python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
+python3 tests/thu_doc_lai.py            # Đợt 3 việc 1: câu đọc lại
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -83,6 +84,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
+| `tests/thu_doc_lai.py` | Đợt 3 việc 1: câu đọc lại. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện** | **Chạy khi thêm loại quy tắc hoặc sửa `MAU_CAU`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
 | `tai_khoan.py` | Đọc/ghi `tai_khoan.json` + băm scrypt. **Không biết gì về HTTP** | Dùng chung cho `web.py` và `tao_mat_khau.py` — đừng chép bản thứ hai |
@@ -996,6 +998,13 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
   QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.
+- `python3 tests/thu_doc_lai.py`: **28/28 mục ĐẠT** (~5s), 6 ca. Lùi ra thì đỏ
+  đúng phần của nó: `so_ghi_chu` luôn trả None → 25/28 · bỏ nhánh `doc_lai` ở
+  `web.py` → 24/28 · cho hai loại dùng CHUNG một `MAU_CAU` → 27/28.
+  > **Mục cuối suýt là một mục canh sai chỗ.** Bản đầu chỉ so CÂU ĐÃ DỰNG, và
+  > **không** bắt được template chép lại — vì mỗi loại dựng câu từ `VI_DU`
+  > riêng nên chuỗi ra vẫn khác nhau. Phải so **chính `MAU_CAU`** mới bắt được.
+  > Một mục canh sai chỗ trông y hệt một mục canh đúng chỗ.
 - `python3 tests/thu_dau_ban.py`: **39/39 mục ĐẠT** (~90s), 6 ca. Lùi ra thì đỏ
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
@@ -1213,6 +1222,36 @@ chỗ khiến hai loại không lẫn được nữa; chỉ đọc vế đầu t
 **4. Giữ ngưỡng chạm**: chữ ≥ 15px, nút và ô chọn cao ≥ 40px. Thầy cô dùng điện
 thoại. `tests/thu_them_quy_tac.py` CA 6 đã canh sẵn, nhãn dài hơn thì phải xem
 lại bố cục bằng mắt vì CA 6 **không** bắt được chữ tràn khung.
+
+### Việc 1 — ĐÃ LÀM (21/8)
+
+`quy_tac.cau_doc_lai(r)` nhận **một dict quy tắc**, trả câu tiếng Việt. Ba mảnh,
+và chỉ mảnh thứ ba là việc của người thêm loại mới:
+
+| Mảnh | Viết mấy lần |
+|---|---|
+| `cau_bo_loc()` — mô tả bộ lọc | **1 lần** cho cả 17 loại |
+| `_dinh_dang()` — theo `kieu` đã khai trong `TRUONG` | **1 lần mỗi kiểu** |
+| `MAU_CAU` — vị ngữ | một **chuỗi mẫu** mỗi loại |
+
+`@dang_ky` **TỪ CHỐI** đăng ký lớp thiếu `MAU_CAU`, hoặc có ô `{ten}` không
+khớp `TRUONG` → `import quy_tac` DỪNG. Không có đường lùi "tự ghép từ TRUONG".
+
+> **Viết câu đọc lại đã bắt được lỗi trong chính bản thảo của tôi.** Phải đọc
+> `def diem()` của bốn tiêu chí mềm mới viết đúng được vị ngữ, và hoá ra
+> `uu_tien_it_buoi` là điểm **TRỪ** (`return -dv * số buổi`) chứ không phải
+> cộng, còn `uu_tien_o` tính theo **từng TIẾT** (`d += dv * c.size`) chứ không
+> phải mỗi lần. Câu đầu tôi viết sai cả dấu lẫn đơn vị. Đó chính là thứ mà câu
+> đọc lại sinh ra để chặn — chỉ khác là lần này nó chặn người viết ra nó.
+
+`so_ghi_chu(r)` so ghi chú người gõ với **ý niệm** của loại (`Y_NIEM` +
+`TU_KHOA_NHOM`), và **chỉ báo khi có bằng chứng ngược**. Câu đọc lại thì hiện
+**LUÔN LUÔN** — từ khoá là gợi ý, không phải phán quyết.
+
+Đường HTTP: `POST /api/thu-quy-tac` với `{"doc_lai": true}`. **Không thêm đường
+mới** (vẫn 19). Nhánh rẽ đặt **trước** cả phép kiểm "đang xếp" lẫn `KHOA_THU`:
+câu đọc lại chỉ ghép chuỗi (đo được **20 lượt / 0,01 giây**), bắt nó xếp hàng
+sau một lượt xếp thử 8 giây thì ô nhập đứng hình đúng lúc người dùng đang gõ.
 
 ### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
 
