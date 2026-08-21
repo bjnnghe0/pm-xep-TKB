@@ -1083,6 +1083,15 @@ Bảy lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
 [ ] Thêm --host (giữ 127.0.0.1 cho tới khi có TLS)
+[ ] BẬT AI NGOÀI CHO CHATBOX = gửi TÊN GIÁO VIÊN, TÊN LỚP, TÊN MÔN của
+    trường ra một máy chủ ở nước ngoài. Đây là QUYẾT ĐỊNH CỦA NHÀ TRƯỜNG,
+    không phải quyết định kỹ thuật. Phải hỏi ý nhà trường TRƯỚC KHI bật,
+    đúng như lúc xin phép công khai TKB trên GitHub Pages.
+    Về kỹ thuật thì urllib trong thư viện chuẩn gọi được, không phá luật
+    "chỉ dùng thư viện chuẩn + openpyxl". Nhưng kỹ thuật làm được không có
+    nghĩa là được phép làm.
+    Mặc định TẮT, và tắt theo kiểu fail-closed: khoá thiếu hoặc hỏng thì
+    dùng luật viết tay, không bao giờ tự bật.
 [ ] ĐỢT 3 — GIAO DIỆN TẠO QUY TẮC. Bốn việc, thiết kế ở mục riêng bên
     dưới, CHƯA DUYỆT:
       1. Câu ĐỌC LẠI sinh từ máy, hiện cạnh ghi_chu người dùng gõ
@@ -1205,6 +1214,26 @@ chỗ khiến hai loại không lẫn được nữa; chỉ đọc vế đầu t
 thoại. `tests/thu_them_quy_tac.py` CA 6 đã canh sẵn, nhãn dài hơn thì phải xem
 lại bố cục bằng mắt vì CA 6 **không** bắt được chữ tràn khung.
 
+### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
+
+Đợt 4 (chatbox) chia làm **ba lớp độc lập**, và **hai trong ba lớp đó chính là
+Đợt 3**:
+
+| Lớp của Đợt 4 | Ai làm | Ở đâu |
+|---|---|---|
+| Bộ **phân tích**: câu tiếng Việt → bản nháp | Đợt 4 | mới |
+| Bộ **kiểm tra**: bản nháp → hợp lệ hay không | **Đợt 3 việc 2** | dùng lại y nguyên |
+| Bộ **hiển thị**: bản nháp → câu đọc lại | **Đợt 3 việc 1** | dùng lại y nguyên |
+
+> **Vì vậy Đợt 3 PHẢI viết hai thứ đó thành HÀM RỜI nhận MỘT DICT QUY TẮC**,
+> không gắn vào form, không đọc gì từ `request`:
+> ```
+> cau_doc_lai(r, bt)   -> str          (việc 1)
+> kiem_ban_nhap(r, bt) -> [vấn đề]     (việc 2)
+> ```
+> Gắn vào form thì Đợt 4 buộc phải chép bản thứ hai — đúng kiểu lệch đã trả giá
+> ở `khop_loc()` / `_cum_cua()`. Đây là ràng buộc kiến trúc, không phải gợi ý.
+
 ### Ba ràng buộc phải giữ
 
 1. **KHÔNG thay `ghi_chu` bằng câu sinh ra, kể cả khi người dùng bấm đồng ý.**
@@ -1217,6 +1246,132 @@ lại bố cục bằng mắt vì CA 6 **không** bắt được chữ tràn khu
 3. **Phạm vi ra 0 lớp thì CẢNH BÁO, không CHẶN.** Quy tắc không khớp gì là
    "không cấm gì mà vẫn báo ĐẠT" — đúng bẫy `n_uyen == 0`, lần này ở phía người
    dùng. Nhưng chặn hẳn thì có lúc chặn oan (học kỳ này lớp đó chưa có môn ấy).
+
+---
+
+## Đợt 4 — chatbox tạo quy tắc (THIẾT KẾ, **CHƯA DUYỆT**)
+
+Chạy **hoàn toàn bằng luật viết tay tại chỗ**. **KHÔNG gọi AI ở đợt này.**
+Chỉ để sẵn chỗ cắm.
+
+### Hợp đồng: BẢN NHÁP
+
+Ba lớp chỉ trao đổi với nhau qua đúng một cấu trúc. Đây là hợp đồng, đổi nó là
+đổi cả ba:
+
+```python
+BanNhap = {
+    'quy_tac':  dict | None,   # ĐÚNG hình dạng một quy tắc trong cauhinh.json
+    'do_tin':   'chac' | 'doan' | 'khong_hieu',
+    'thieu':    [{'khoa': str, 'cau_hoi': str, 'chon': [...]}],
+    'nguon':    'luat' | 'api',
+    'vi_sao':   str,           # vì sao bộ phân tích hiểu như vậy
+}
+```
+
+Ba bất biến của hợp đồng:
+- `do_tin == 'khong_hieu'` ⇒ `quy_tac is None`. Không có chuyện "chưa hiểu
+  nhưng đây là quy tắc tôi đoán".
+- `thieu` khác rỗng ⇒ **không được thêm vào danh sách**, phải hỏi cho xong.
+- `quy_tac` đi qua **đúng** `kiem_khoa_quy_tac()` như một quy tắc gõ tay. Khoá
+  lạ thì DỪNG — không có cửa riêng cho chatbox.
+
+> `quy_tac` **cố ý** dùng y nguyên hình dạng của `cauhinh.json`, không phải một
+> hình dạng trung gian riêng. Nhờ vậy bộ kiểm tra và bộ hiển thị của Đợt 3 nhận
+> nó mà không cần biết nó từ đâu tới — và khi nối API sau này, **chỉ lớp phân
+> tích đổi**.
+
+### ĐƯỜNG ĐI BẮT BUỘC — hai lần bấm người, hai cửa khác nhau
+
+```
+câu người gõ
+  -> POST /api/hieu-cau       (chỉ ĐỌC; không ghi tệp, không đụng nháp phiên)
+  -> bản nháp + độ tin cậy + câu đọc lại + phạm vi
+  -> NGƯỜI BẤM "Thêm vào danh sách"
+  -> POST /api/them-quy-tac   (nháp CỦA PHIÊN, chỉ trong bộ nhớ — 2A-2a)
+  -> NGƯỜI BẤM "Lưu vào cauhinh.json"
+  -> POST /api/luu-quy-tac    (đòi DẤU BẢN — 2C)
+```
+
+> **KHÔNG dựng cơ chế "chờ xác nhận" mới.** Nháp theo phiên của 2A-2a ĐÃ LÀ
+> trạng thái chưa xác nhận, và nút Lưu của 2C đã là cửa thứ hai. Chatbox chỉ
+> được đứng ở **đầu** dây chuyền đó, không được rẽ tắt.
+
+**Ca thử ghim, hai tầng:**
+1. **Cấu trúc** — soi cây cú pháp mô-đun bộ phân tích: không được nhắc tới
+   `luu_quy_tac`, `_gon_json`, `os.replace`, hay `open(..., 'w')`. Bắt LỚP lỗi,
+   không bắt một lần lỗi — cùng kiểu `thu_ghim_du_lieu.py`.
+2. **Hành vi** — gửi một câu qua `/api/hieu-cau` rồi khẳng định `cauhinh.json`
+   **không đổi một byte** (so md5) **và** `so_moi` của phiên **vẫn bằng 0**.
+   Mục thứ hai mới là mục thật; mục thứ nhất chỉ chặn trước.
+
+### Bộ KIỂM TRA chạy trên MỌI bản nháp, không phân biệt nguồn
+
+Luật viết tay hay API đều qua đúng một cửa `kiem_ban_nhap()`. Bảy phép kiểm,
+**năm cái đã có sẵn**:
+
+| # | Kiểm | Có sẵn? |
+|---|---|---|
+| 1 | `loai` có trong `DANH_MUC` không | có (`kiem_khoa_quy_tac`) |
+| 2 | Khoá lạ / `tru` rỗng / sai kiểu | có (`kiem_bo_loc`) |
+| 3 | Miền `thu` / `tiet` / `o` | có (`_kiem_thu`, `_kiem_tiet`, `_kiem_o`) |
+| 4 | Có cụm nào bị chặn hết mọi ô | có (`_kiem_tra_so_bo`) |
+| 5 | Còn xếp được không (1 lần thử / 1 giây) | có (cảnh báo sớm 2C) |
+| 6 | **Tên GV / lớp / môn có THẬT không** | **mới** |
+| 7 | **Trùng với quy tắc đã có không** | **mới** |
+
+Phép 6 quan trọng hơn vẻ ngoài: nó bắt đúng cái bẫy `n_uyen == 0` ở phía người
+dùng — bộ lọc gõ sai tên thì khớp 0 cụm, **không cấm gì cả mà vẫn báo ĐẠT**.
+
+### Bộ phân tích KHÔNG ĐƯỢC ĐOÁN
+
+- **Thực thể nhận bằng TRA BẢNG, không bằng suy đoán.** Tên lớp / môn / GV chỉ
+  được nhận khi khớp nguyên văn với dữ liệu thật (sau khi hạ hoa-thường). Không
+  có "gần giống", không có sửa lỗi chính tả.
+- **Dải KHÔNG tự mở.** *"12B3 đến 12B6"* sinh một mục `thieu` kèm `chon` =
+  `[12B3, 12B4, 12B5, 12B6]` để người bấm xác nhận — không tự điền.
+- **Hai nhóm luật cùng khớp → `doan`, liệt kê CẢ HAI**, không chọn hộ.
+- **Không nhóm nào khớp → `khong_hieu`**, chỉ sang form nhập tay.
+  **TUYỆT ĐỐI không chọn một loại "gần đúng"** — đó chính là lỗi QT 14/15/16 ở
+  dạng tự động, và ở dạng đó nó xảy ra hàng ngày chứ không phải một lần.
+
+### Độ tin cậy phải HIỆN RA
+
+| `do_tin` | Câu mở đầu | Màu |
+|---|---|---|
+| `chac` | **"Tôi hiểu là:"** | xanh |
+| `doan` | **"Tôi đoán là … nhưng chưa chắc, kiểm lại giúp:"** + `vi_sao` | vàng |
+| `khong_hieu` | **"Tôi chưa hiểu câu này."** + nút mở form | xám |
+
+Nhánh `doan` **bắt buộc** hiện `vi_sao` (từ khoá nào đã khớp). Không nói được
+vì sao thì không được phép nói "tôi đoán".
+
+### Chỗ cắm cho API — để chỗ, KHÔNG viết mã gọi
+
+```python
+def hieu(cau, bt) -> BanNhap: ...      # interface, một hàm
+```
+Hai cài đặt: `hieu_theo_luat()` (Đợt 4) và `hieu_theo_api()` (**chưa viết**).
+Chọn bằng `cauhinh_may_chu.json` — **không** phải `cauhinh.json`, cùng lẽ với
+danh sách tên máy: đây là cấu hình của MỘT máy, không phải dữ liệu nhà trường,
+và nó đã `.gitignore`.
+
+```json
+{ "hieu_cau_bang_ai": false }
+```
+
+> **Mặc định TẮT, và fail-closed theo hướng NGƯỢC với thói quen.** Khoá thiếu
+> hoặc hỏng → dùng luật viết tay. Nhưng khoá **bật** mà chưa có cài đặt API →
+> **DỪNG kèm câu rõ**, tuyệt đối không âm thầm rơi về luật viết tay: người quản
+> trị sẽ tưởng AI đang chạy trong khi không. Im lặng rơi về là đúng hạng lỗi cả
+> dự án này viết ra để chống.
+
+### Giá phải trả: một đường dẫn mới
+
+`POST /api/hieu-cau` đưa tổng số đường từ **19 lên 20**. Kèm theo bắt buộc:
+cập nhật **bảng đường dẫn nguồn-duy-nhất**, thêm vào `ca_a1c_moi_duong_deu_bi_gac`,
+và đường này **cần phiên + cần xác thực** — nó đọc tên 28 giáo viên và tên lớp
+của trường.
 
 ---
 
