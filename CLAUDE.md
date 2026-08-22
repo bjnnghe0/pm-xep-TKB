@@ -47,6 +47,8 @@ python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \
         --trang-thai sai --ly-do "..."   # bản này dùng được hay không
 python3 luu_tuan.py de-dang  --tuan 2026-08-24   # bản nào ĐĂNG ĐƯỢC
 python3 luu_tuan.py so <tệp.xlsx> --tuan 2026-08-24   # so với bản đã lưu
+        # mặc định in HẸP (<= 60 cột) cho điện thoại, cắt ở 20 ô
+        # --rong = bảng 84 cột · --het = in hết
 python3 luu_tuan.py dang-thu --tuan 2026-08-24    # sinh JSON vào thư mục TẠM
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
@@ -102,7 +104,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
 | `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng** |
 | `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
-| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
+| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp** |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 9 |
 | `tests/thu_sinh_dang.py` | 4 ca. **CA 2 canh KIẾN TRÚC bằng cây cú pháp**: `sinh_dang.py` không được gọi `doc_phieu*`, không bóc khoá `'ban'`, và mọi hàm công khai phải bắt đầu bằng `(goc, ma_tuan)`. CA 3 thử gọi thẳng vào ruột với bản SAI làm đối số | **Chạy khi sửa `sinh_dang.py` hoặc `ban_de_dang()`** |
@@ -1246,7 +1248,10 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > đây là ĐÚNG chứ không phạm luật "đừng ghim hằng số": `TRUONG_O` không phải
   > dữ liệu nhà trường mà là một **quyết định về phạm vi công khai**, và cả
   > điểm của mục này là bắt người nới nó phải đi hỏi lại nhà trường.
-- `python3 tests/thu_kho_tuan.py`: **113/113 mục ĐẠT** (~3s, đo 22/8/2026), 8 ca.
+- `python3 tests/thu_kho_tuan.py`: **126/126 mục ĐẠT** (~8s, đo 22/8/2026), 9 ca.
+  CA 9 đo bề rộng thật qua tiến trình con: dạng mặc định **39 cột**,
+  `--rong` **89 cột**. Lùi ra thì đỏ: quay lại in bảng rộng mặc định →
+  122/126 · bỏ trần 20 ô → 123/126 · nới trần lên 200 → 123/126.
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng →
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng → 92/100 ·
   thiếu khoá thì coi là `dung` → 99/100 · `chon_ban` ĐOÁN khi có nhiều bản

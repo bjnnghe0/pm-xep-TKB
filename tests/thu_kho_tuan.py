@@ -21,12 +21,14 @@
    CA 6  Phiếu hỏng thì DỪNG, không ghi đè lên nó
    CA 7  Bản "sai" KHÔNG BAO GIỜ ra được đường đăng, dù gõ đúng mã tuần
    CA 8  So một tệp với một bản đã lưu — chỉ đọc, đếm đúng số ô khác
+   CA 9  Lệnh `so` in VỪA MÀN HÌNH ĐIỆN THOẠI: hẹp, cắt ở 20 ô
 ==========================================================================
 """
 import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -569,6 +571,71 @@ def ca_8_so_tep_voi_ban_da_luu(tm):
 
 
 # ==========================================================================
+def ca_9_lenh_so_in_vua_dien_thoai(tm):
+    print('\nCA 9 — lệnh `so` in VỪA màn hình điện thoại')
+    print('-' * 74)
+    GOC_DA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    goc = os.path.join(tm, 'kho9')
+    MA = '2026-01-05'
+
+    # dựng hai tệp lệch NHIỀU hơn trần in (mỗi lớp 25 ô, đổi hết cột D)
+    o1 = o_mau(so_tiet=25)
+    t1 = dung_xlsx(os.path.join(tm, 'p1.xlsx'), o1)
+    o2 = dict(o1)
+    for r in range(8, 33):
+        o2[f'D{r}'] = f'Môn Khác {r} (T.Khác)'
+    t2 = dung_xlsx(os.path.join(tm, 'p2.xlsx'), o2)
+
+    import doc_tkb as D
+    K.them_ban(goc, MA, t1, 'người thử', tach=D.doc(t1))
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử')
+
+    def chay(*co):
+        r = subprocess.run(
+            [sys.executable, os.path.join(GOC_DA, 'luu_tuan.py'),
+             '--kho', goc, 'so', t2, '--tuan', MA] + list(co),
+            cwd=GOC_DA, capture_output=True, text=True, timeout=60)
+        return r
+
+    TRAN = 20            # người dùng chốt 22/8/2026
+    r = chay()
+    kiem(r.returncode == 0, f'Chạy được dạng mặc định — {r.returncode}')
+    dong = r.stdout.split('\n')
+    rong = max((len(x) for x in dong), default=0)
+    kiem(rong <= 60,
+         f'Dạng MẶC ĐỊNH hẹp: dòng rộng nhất {rong} cột (phải <= 60)')
+    kiem('còn' in r.stdout and '--het' in r.stdout,
+         'Quá trần thì nói còn bao nhiêu ô và chỉ cách in hết')
+    kiem('kho:' in r.stdout and 'so :' in r.stdout,
+         'Mỗi ô khác in thành khối ngắn kho/so, không kẻ bảng')
+    kiem('-' * 30 not in r.stdout, 'và KHÔNG có đường kẻ bảng dài')
+
+    dem = r.stdout.count('     kho: ')
+    kiem(dem == TRAN, f'In đúng {TRAN} ô đầu — đếm được {dem}')
+
+    r2 = chay('--het')
+    dem2 = r2.stdout.count('     kho: ')
+    kiem(dem2 > dem, f'--het in nhiều hơn — {dem} -> {dem2}')
+    kiem('--het để in hết' not in r2.stdout,
+         'và không còn câu nhắc --het nữa')
+
+    r3 = chay('--rong')
+    rong3 = max((len(x) for x in r3.stdout.split('\n')), default=0)
+    kiem(rong3 > rong, f'--rong in bảng rộng hơn — {rong} -> {rong3}')
+    kiem('-' * 30 in r3.stdout, 'và CÓ đường kẻ bảng')
+    kiem('TRÁI (kho)' in r3.stdout, 'với tiêu đề cột TRÁI/PHẢI')
+
+    r4 = chay('--rong', '--het')
+    kiem(r4.returncode == 0 and r4.stdout.count('T2 tiết') >= 1,
+         'Hai cờ đi cùng nhau vẫn chạy')
+
+    # CHỈ ĐỌC: kho không đổi sau mọi lượt so
+    p, _ = K.doc_phieu_ky(goc, MA)
+    kiem(len((p or {}).get('ban') or []) == 1,
+         'Sau bốn lượt `so`, kho vẫn ĐÚNG MỘT bản — lệnh chỉ đọc')
+
+
+# ==========================================================================
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -584,6 +651,7 @@ def main():
         ca_6_phieu_hong_thi_dung(tm)
         ca_7_ban_sai_khong_ra_duoc_duong_dang(tm)
         ca_8_so_tep_voi_ban_da_luu(tm)
+        ca_9_lenh_so_in_vua_dien_thoai(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

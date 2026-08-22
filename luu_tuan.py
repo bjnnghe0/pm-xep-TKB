@@ -11,6 +11,8 @@
                        --trang-thai sai --ly-do "..."
    python3 luu_tuan.py de-dang  --tuan 2026-08-24
    python3 luu_tuan.py so       <tệp.xlsx> --tuan 2026-08-24 [--ban N]
+                                # mặc định in HẸP cho điện thoại;
+                                # --rong = bảng 84 cột, --het = in hết
    python3 luu_tuan.py dang-thu --tuan 2026-08-24 [--ra <thư mục>]
 
  `xem` CHỈ ĐỌC, không ghi một byte nào — dùng để ngó trước khi lưu.
@@ -31,6 +33,10 @@ import kho_tuan as K
 import sinh_dang as SD
 
 GOC = os.path.dirname(os.path.abspath(__file__))
+
+# Số ô in ra trước khi dừng. 132 ô đổ ra màn hình điện thoại thì bằng
+# không in gì — người dùng chốt 22/8/2026.
+TRAN_O = 20
 
 
 def _bang_ten_mon():
@@ -131,11 +137,17 @@ def _so(goc, a):
                 print(f'   {x}')
             return 1
 
-    print(f'   TRÁI  (kho)  : {ban.get("tep")}')
-    print(f'                  lưu {ban.get("gio_luu")} · '
-          f'trạng thái {K.trang_thai_cua(ban)!r}')
-    print(f'   PHẢI  (so)   : {a.tep}')
-    print(f'   Bộ đọc       : {A["bo_doc"].get("bam_ma")}')
+    if a.rong:
+        print(f'   TRÁI  (kho)  : {ban.get("tep")}')
+        print(f'                  lưu {ban.get("gio_luu")} · '
+              f'trạng thái {K.trang_thai_cua(ban)!r}')
+        print(f'   PHẢI  (so)   : {a.tep}')
+        print(f'   Bộ đọc       : {A["bo_doc"].get("bam_ma")}')
+    else:
+        print(f'  kho: {os.path.basename(ban.get("tep") or "")[:34]}')
+        print(f'       {(ban.get("gio_luu") or "")[:19]} · '
+              f'{K.trang_thai_cua(ban)}')
+        print(f'  so : {os.path.basename(a.tep)[:34]}')
     if A['bo_doc'] != B['bo_doc']:
         print('   ⚠ hai bên đọc bằng HAI bộ đọc khác nhau')
 
@@ -155,20 +167,45 @@ def _so(goc, a):
             o = (x or y).get('o_excel')
             khac.append((k[0], k[1], k[2], o, mo(x), mo(y)))
     print(f'\n   {len(khac)} ô KHÁC NHAU '
-          f'(kho {len(A["o"])} ô · so {len(B["o"])} ô):\n')
-    if khac:
-        print(f'   {"lớp":<7}{"khi nào":<14}{"ô":<6}{"TRÁI (kho)":<30}PHẢI (so)')
-        print('   ' + '-' * 84)
-    tran = len(khac) if a.tat_ca else 200
-    for lop, thu, tiet, o, cu, moi in khac[:tran]:
-        print(f'   {lop:<7}T{thu} tiết {tiet:<6}{o:<6}{cu:<30}{moi}')
-    if len(khac) > tran:
-        print(f'   … và {len(khac) - tran} ô nữa (thêm --tat-ca để in hết)')
+          f'(kho {len(A["o"])} ô · so {len(B["o"])} ô)\n')
 
-    for ten, r in (('kho', A), ('so', B)):
-        if r['dem_tach_duoc']:
-            print(f'   số tiết/lớp ({ten:<3}): {r["dem_tach_duoc"]}')
-    print(f'\n   TỔNG: {len(khac)} ô khác.')
+    tran = len(khac) if a.het else TRAN_O
+    if a.rong:
+        if khac:
+            print(f'   {"lớp":<7}{"khi nào":<14}{"ô":<6}'
+                  f'{"TRÁI (kho)":<30}PHẢI (so)')
+            print('   ' + '-' * 84)
+        for lop, thu, tiet, o, cu, moi in khac[:tran]:
+            print(f'   {lop:<7}T{thu} tiết {tiet:<6}{o:<6}{cu:<30}{moi}')
+    else:
+        # Dạng HẸP — mặc định. Người dùng đọc trên ĐIỆN THOẠI là chính, và
+        # một bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì.
+        lop_truoc = None
+        for lop, thu, tiet, o, cu, moi in khac[:tran]:
+            if lop != lop_truoc:
+                print(f'  ── {lop} ──')
+                lop_truoc = lop
+            print(f'  T{thu} tiết {tiet}  ({o})')
+            print(f'     kho: {cu}')
+            print(f'     so : {moi}')
+    if len(khac) > tran:
+        print(f'\n   … còn {len(khac) - tran} ô nữa, thêm --het để in hết.')
+
+    print()
+    if a.rong:
+        for ten, r in (('kho', A), ('so', B)):
+            if r['dem_tach_duoc']:
+                print(f'   số tiết/lớp ({ten:<3}): {r["dem_tach_duoc"]}')
+    else:
+        da, db2 = A['dem_tach_duoc'], B['dem_tach_duoc']
+        moi_lop = sorted(set(da) | set(db2))
+        if moi_lop:
+            print('  số tiết/lớp   kho   so')
+            for l in moi_lop:
+                x, y = da.get(l, 0), db2.get(l, 0)
+                dau = '' if x == y else f'  {y - x:+d}'
+                print(f'  {l:<12}{x:>4}{y:>6}{dau}')
+    print(f'\n  TỔNG: {len(khac)} ô khác.')
     return 0
 
 
@@ -242,8 +279,10 @@ def main(argv=None):
     p.add_argument('--tuan', required=True)
     p.add_argument('--ban', type=int, default=None,
                    help='số thứ tự bản; bỏ trống thì lấy bản đánh dấu "dung"')
-    p.add_argument('--tat-ca', action='store_true',
-                   help='in hết, không cắt ở 200 dòng')
+    p.add_argument('--rong', action='store_true',
+                   help='in bảng rộng 84 cột; mặc định in dạng HẸP cho điện thoại')
+    p.add_argument('--het', action='store_true',
+                   help=f'in hết, không dừng ở {TRAN_O} ô đầu')
 
     p = sub.add_parser('dang-thu',
                        help='sinh JSON một tuần để đăng — ghi vào thư mục TẠM')
