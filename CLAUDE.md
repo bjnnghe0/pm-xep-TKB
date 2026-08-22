@@ -1511,6 +1511,15 @@ MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu kh�
     (Người dùng đã chốt 21/8: CHẤP NHẬN giới hạn, ĐỪNG làm bây giờ. Nút Sửa
      chỉ hiện trên quy tắc nháp là đúng — nút hứa việc nó không làm được thì
      tệ hơn không có nút.)
+[ ] Đường đăng THỨ HAI đi qua ban_de_dang().
+    sinh_dang.py đang là NGƯỜI GỌI DUY NHẤT, nên câu "mọi đường đăng đều
+    đi qua cửa" chưa bị thử lần nào — một bất biến chỉ có một người tuân
+    thủ thì chưa phải bất biến, mới là một lời hứa.
+    CHƯA CÓ đường thật thứ hai thì CHƯA DỰNG. Dựng một đường giả chỉ để
+    ca thử xanh là đúng NẾP HỎNG 12: mốc so lấy từ chính thứ đang canh,
+    lùi bản vá ra không đỏ được mục nào.
+    Xem lại khi mở Đợt 4 (docs/).
+
 [ ] BA CHỮ TRONG NHÃN chờ người dùng quyết sau khi xem màn hình thật —
     "ô", "nhóm", "cụm" có phải chữ của PHẦN MỀM chứ không phải chữ thầy cô
     quen dùng không:
