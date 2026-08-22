@@ -63,7 +63,8 @@ chặn cài gói vào hệ thống. Đã dựng sẵn một venv dùng chung:
 > báo `ModuleNotFoundError`). **Trên Windows** thì thay bằng `python`.
 
 Dựng lại khi cần: `python3 -m venv ~/.venvs/xeptkb && ~/.venvs/xeptkb/bin/pip install openpyxl`
-(hiện dùng Python 3.12.3 + openpyxl 3.1.5).
+(đo 22/8/2026: Python 3.12.3 + openpyxl 3.1.5 — `~/.venvs/xeptkb/bin/python
+-c "import sys,openpyxl;print(sys.version.split()[0],openpyxl.__version__)"`).
 
 Trên máy Windows của nhà trường thì vẫn đúng như `HUONG_DAN.md`: cài Python,
 chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
@@ -622,7 +623,9 @@ lại xem đã gác chưa.
 > còn một cách lưu khác giữ nguyên được từng ký tự, HTTP thì không.
 >
 > **Thêm chỗ ghi ô Excel mới thì PHẢI dùng `_dat_o(ws, hàng, cột, giá_trị)`,
-> đừng gọi thẳng `ws.cell(...)`.** Kiểm kê được 25 chỗ ghi, 17 giá trị rơi vào
+> đừng gọi thẳng `ws.cell(...)`.** Kiểm kê các chỗ ghi bằng
+> `grep -c "_dat_o(" xep_tkb.py` (**22** lúc 22/8/2026 — trước đây tài liệu ghi
+> tay là 25). Trong đó có những giá trị rơi vào
 > **đầu ô**, trong đó 2 đường sửa được qua HTTP: `thong_tin.tuan` (→ `Khối 12!A4`)
 > và `ghi_chu` của quy tắc **MỀM** (`cham_diem` dùng nó làm khoá dict → ghi thẳng
 > vào ô, **không có tiền tố**; quy tắc CỨNG thì vô hại vì có `[tên_loại] ` đứng
@@ -645,9 +648,20 @@ lại xem đã gác chưa.
 ### Ổ NTFS, Windows song song, và phép tự kiểm GHI ĐƯỢC
 
 Máy này **có Windows cài song song** — đo bằng `efibootmgr`:
-`Boot0000* Windows Boot Manager`, cộng đủ bộ phân vùng Windows trên `nvme0n1`
+`Boot0000* Windows Boot Manager`, cộng đủ bộ phân vùng Windows trên **`nvme1n1`**
 (EFI System · Microsoft reserved · Microsoft basic data · Windows recovery).
-Thư mục dự án thì nằm trên một phân vùng **NTFS** (`nvme1n1p2`, nhãn `NAM MEO`).
+Thư mục dự án nằm trên một phân vùng **NTFS ở Ổ KHÁC**: **`nvme0n1p2`**, nhãn
+`NAM MEO`, 657,3 GB — đo lại 22/8/2026.
+
+> **⚠ Tài liệu này từng ghi NGƯỢC HAI Ổ** — nói Windows ở `nvme0n1` và dự án ở
+> `nvme1n1p2`, trong khi thật ra ngược hẳn lại. Sửa 22/8/2026. Không ca thử nào
+> đỏ vì chuyện này, và cũng không thể có: đó là số đo về phần cứng, không phải
+> về mã. Cách duy nhất là đo lại:
+> ```bash
+> findmnt --target .    # -> /dev/nvme0n1p2  ntfs3
+> lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT | grep -iE 'nvme|NAM'
+> ```
+> Đừng chép hai tên này đi đâu nữa — chúng đổi khi cắm thêm ổ hoặc đổi máy.
 
 > **Lỗi im lặng nhất của cả phần mềm.** Windows tắt kiểu **"khởi động nhanh"**
 > (fast startup) là ngủ đông chứ không tắt hẳn, nên phân vùng còn ở trạng thái
@@ -735,7 +749,7 @@ UUID=8018451718450D9A /media/adminnam/NAM\040MEO ntfs3 rw,nosuid,nodev,relatime,
 ```
 
 > **BẪY DẤU CÁCH đã bắt đúng người viết ra nó.** `grep "NAM MEO" /etc/fstab`
-> cho **0 dòng**, vì fstab ghi dấu cách thành `\040`. Kết luận "ổ do udisks tự
+> cho **0 dòng** (đo lại 22/8/2026: vẫn 0), vì fstab ghi dấu cách thành `\040`. Kết luận "ổ do udisks tự
 > gắn" sinh ra từ đúng cú grep hụt đó.
 >
 > **BÀI HỌC RỘNG HƠN CẢ DẤU CÁCH: một lệnh không ra kết quả KHÔNG có nghĩa là
@@ -1324,7 +1338,8 @@ MƯỜI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
     ghim độ bền vật lý. Đừng đọc bảng "cắt điện giả lập" mà tưởng đã xong.
 [ ] Quyền 600 của tai_khoan.json: mới đo được BIT ĐƯỢC LƯU VÀ ĐỌC LẠI ĐÚNG
     trên ntfs3 (nhờ tuỳ chọn gắn "acl"). CHƯA đo được người dùng KHÁC có bị
-    chặn thật không — máy chỉ có một tài khoản (uid 1000) và không có sudo.
+    chặn thật không — máy chỉ có một tài khoản (uid 1000; đo lại 22/8/2026:
+    `awk -F: '$3>=1000 && $3<65534' /etc/passwd | wc -l` -> 1) và không có sudo.
     Suy luận là uid khác rơi vào lớp "other" nên 600 chặn, nhưng đó là suy
     luận chứ không phải số đo.
 [ ] Tách 3 tài khoản RIÊNG cho 3 người, thay cho một tài khoản chung.

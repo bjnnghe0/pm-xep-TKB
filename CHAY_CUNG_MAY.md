@@ -115,7 +115,8 @@ systemctl --user start xeptkb.service
 systemctl --user is-active xeptkb.service        # -> active
 ```
 
-**Đã đo cả hai bên** trên một bản sao của dịch vụ này:
+**Đã đo cả hai bên** trên một bản sao của dịch vụ này (đo trước 21/8/2026;
+hai con số dưới là đồng hồ, máy chậm hơn thì lệch):
 
 | Cấu hình | Kết quả |
 |---|---|
@@ -220,7 +221,8 @@ trên.
 | Khởi động lại máy | **ĐÃ ĐO — KHÔNG mất** | Xem mục 7 |
 | `tailscale logout` | **CHƯA BIẾT — nghi nhất** | Khoá cất serve gắn **theo profile** (`_serve/<ID hồ sơ>`, đọc từ nhị phân). `logout` là thứ đụng vào hồ sơ. Chưa ai chạy thử trên máy này |
 | `tailscale down` | **CHƯA BIẾT** | Trợ giúp của bản đang cài chỉ nói `Disconnect from Tailscale`, không một chữ serve/funnel. Nhưng dù cấu hình còn nguyên thì `down` vẫn đưa máy offline — **"cấu hình còn" khác "thầy cô vào được"** |
-| Đổi tài khoản / hồ sơ | **CHƯA BIẾT** | Máy đang có đúng **1 hồ sơ**. Muốn đo phải tạo hồ sơ thứ hai, tức phải `tailscale login` |
+| Đổi tài khoản / hồ sơ | **CHƯA BIẾT** | Máy đang có đúng **1 hồ sơ** (đo lại 22/8/2026: `tailscale switch --list`
+cho đúng một dòng dữ liệu, không kể dòng tiêu đề). Muốn đo phải tạo hồ sơ thứ hai, tức phải `tailscale login` |
 | Nâng cấp gói | **Đo được phần TỆP, chưa đo được HỆ QUẢ** | `postinst` **khởi động lại daemon ở MỌI lần nâng cấp**. Không script nào xoá trạng thái (chỉ nhánh `purge` mới `rm -rf`). Nhưng chưa ai đo binary MỚI đọc trạng thái CŨ có giữ serve không |
 
 > **⚠ Máy này TỰ NÂNG CẤP tailscale lúc nửa đêm — đã xảy ra ít nhất một lần.**
