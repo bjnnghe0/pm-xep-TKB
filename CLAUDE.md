@@ -304,7 +304,7 @@ Chặn trên = `so_lan_thu × gioi_han_buoc` nút, hữu hạn, không phụ thu
 > dồn hết mọi môn vào **một** thứ: đúng là vô nghiệm, nhưng bộ giải bí ngay ở nút
 > đầu và trả về sau **0,0 giây** — chứng minh được đúng một điều vô nghĩa. Cấu
 > hình dùng thật là dồn vào **hai** thứ: vẫn vô nghiệm (24 tiết không nhét vừa
-> 10 ô) nhưng đủ rộng để quay lui bùng nổ — đo được **đốt trọn 20.000 bước trong
+> 10 ô) nhưng đủ rộng để quay lui bùng nổ — đo được (MÁY A) **đốt trọn 20.000 bước trong
 > ~6 giây mỗi lượt**, và nhân ba bộ đếm thì thời gian nhân ba (5,9s → 17,6s).
 
 `gop_tim_kiem()` là **nơi duy nhất** dựng dict `tim_kiem`. Trước đây ba chỗ chép
@@ -474,7 +474,7 @@ Chỉ nút Lưu mới ghi file, ghi xong thì xoá `PHIEN['them']`. Chỉ số q
 số trong danh sách đã ghép; quy tắc từ file không xoá được (dùng công tắc để tắt).
 
 `/api/thu-quy-tac` **giải ngay trong luồng HTTP** — ngoại lệ có chủ ý của quy tắc
-"không giải trong handler", vì nó chặn cứng 30 lần thử / 8 giây (đo được ~2,3 giây)
+"không giải trong handler", vì nó chặn cứng 30 lần thử / 8 giây (đo được ~2,3 giây trên MÁY A)
 chứ không phải ~50 giây như lượt xếp thật. Nó cũng **không đụng vào `TT`** nên
 không ghi đè kết quả đang hiện trên màn hình.
 
@@ -638,7 +638,7 @@ lại xem đã gác chưa.
 
 > **Hai bài học khi viết ca thử đua tranh** (mất công mới rút ra được):
 > 1. **Đếm số phản hồi 200 không đo được chồng lấn.** Bộ giải giữ GIL nên luồng
->    HTTP đói hẳn: đo được người thứ 8 mãi 1,06 giây mới được phục vụ, sau khi
+>    HTTP đói hẳn: đo được (MÁY A) người thứ 8 mãi 1,06 giây mới được phục vụ, sau khi
 >    lượt trước đã xong ở 0,78 giây — nhận 200 là ĐÚNG. Phải đo **thẳng số luồng
 >    `_chay` cùng sống**.
 > 2. **Khe hở hẹp thì ca thử xanh cả trên mã hỏng.** Nới bằng cách thêm 50ms vào
@@ -802,7 +802,7 @@ Dấu bản của QĐ 7 **không** bắt được lỗ QĐ 4 — lúc đó `cauh
 
 > **Kiểm dấu nằm TRONG `KHOA_GHI` — lỗi A4 lần thứ hai.** Kiểm ở ngoài rồi mới
 > vào khoá thì hai người cùng bấm Lưu sẽ **cùng** thấy dấu khớp, rồi lần lượt
-> ghi đè nhau. Đo được: đẩy phép kiểm ra ngoài khoá thì **8 trong 12** yêu cầu
+> ghi đè nhau. Đo được (MÁY A): đẩy phép kiểm ra ngoài khoá thì **8 trong 12** yêu cầu
 > song song ghi được, thay vì đúng 1.
 
 > **409 chứ không 400.** Hai mã nói hai chuyện: 400 = *"bạn gửi sai"*,
@@ -835,10 +835,12 @@ mà giao diện không nói một tiếng. Vì sao lọt: `them_quy_tac()` **có
 `X.BaiToan(cfg)`, nhưng phép kiểm đó (`_kiem_tra_so_bo`) chỉ bắt được *"có cụm
 nào hết sạch ô hợp lệ không"* — kiểm **TĨNH**. Cấu hình hỏng thật lại vô nghiệm
 kiểu **TỔ HỢP**: mỗi cụm đều còn ô, chỉ là không xếp chung được. Đo: `BaiToan()`
-trên bản hỏng dựng xong trong **1 ms, không kêu một tiếng**. Còn `luu_quy_tac()`
+trên bản hỏng dựng xong trong **1 ms, không kêu một tiếng** (MÁY A). Còn `luu_quy_tac()`
 thì không dựng `BaiToan` gì cả.
 
 **Không có phép kiểm rẻ tiền nào bắt được lỗi này — muốn biết thì phải xếp thử.**
+
+Đo trên **MÁY A**:
 
 | | Cấu hình TỐT | Cấu hình VÔ NGHIỆM |
 |---|---|---|
@@ -872,7 +874,7 @@ dựng bằng `innerHTML`: mọi id JS gọi tới đều phải có trong HTML 
 
 ### Ba chỗ dễ sai, đã xử
 
-1. **Không giải trong hàm xử lý HTTP.** Một lượt xếp mất ~50 giây; giải ngay trong
+1. **Không giải trong hàm xử lý HTTP.** Một lượt xếp mất ~50 giây (MÁY A); giải ngay trong
    handler thì trình duyệt treo, người dùng tưởng hỏng rồi bấm lại. Bộ giải chạy ở
    `threading.Thread`, trang hỏi `/api/trang-thai` mỗi 0,7 giây.
 2. **`SystemExit` phải bắt trong luồng.** `kiem_bo_loc()`, `_bao_loi()`,
@@ -934,7 +936,7 @@ Không CDN, không font ngoài, không `fetch`, không `localStorage`. Mở bằ
   mốc `/*JS-BAT-DAU*/` … `/*JS-KET-THUC*/` — **hai mốc này để ca thử bóc ra kiểm**,
   đừng xoá. Chuỗi `</` trong JSON được đổi thành `<\/` để không cắt ngang thẻ
   `<script>`.
-- Ô ghi dạng mảng phẳng `[lop, ngay, vitri, mon, gv]` cho nhẹ file (~14 KB).
+- Ô ghi dạng mảng phẳng `[lop, ngay, vitri, mon, gv]` cho nhẹ file.
 - Ba chế độ xem chọn bằng nút, lựa chọn ghi vào địa chỉ trang (`#lop=12B3`,
   `#gv=N.Uyên`, `#khoi`) nên **chia sẻ được đúng màn hình đang xem** và tải lại
   không mất. Không dùng `localStorage` — người xem có thể mở bằng `file://`.
@@ -1089,8 +1091,43 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 | Số **dòng hậu kiểm** | đọc dòng `Tổng: N/N quy tắc ĐẠT` của `python3 xep_tkb.py` |
 
 > **Số KHÔNG đếm được bằng một lệnh** — thời gian chạy, kết quả lùi-bản-vá, số
-> đo đua tranh, kết quả mô phỏng — thì **giữ, và phải kèm ngày đo**. Chúng là
-> ảnh chụp một lần đo, không phải thuộc tính của mã.
+> đo đua tranh, kết quả mô phỏng — thì **giữ, và phải kèm ngày đo VÀ TÊN MÁY**.
+> Chúng là ảnh chụp một lần đo trên MỘT máy, không phải thuộc tính của mã.
+
+### MÁY A — mọi số hiệu năng trong tài liệu này đo trên đây
+
+```
+MÁY A   admin · Intel Core i5-12400F · 12 nhân · 62 GB RAM
+        Python 3.12.3 + openpyxl 3.1.5 (~/.venvs/xeptkb)
+        thư mục dự án: /dev/nvme0n1p2, ntfs3
+        (kiểm kê 22/8/2026)
+```
+
+> **Số hiệu năng không kèm máy là số vô nghĩa — máy khác là số khác.** Mọi con
+> số thời gian / bộ nhớ trong tài liệu này ngầm hiểu là **MÁY A**.
+
+**Đo lại 22/8/2026 trên MÁY A — năm số cũ vẫn đúng trong sai số:**
+
+| Số | Tài liệu ghi | Đo lại 22/8 |
+|---|---|---|
+| `TK.bam()` một lượt scrypt | 27 ms | **29,6 ms** |
+| đọc tệp + dựng `BaiToan` + tính phạm vi mọi quy tắc | 2,67 ms | **2,45 ms** |
+| `os.stat` trên ntfs3 | 0,78 µs | **0,84 µs** |
+| dựng `BaiToan` | 1 ms | **1,2 ms** |
+| `cau_doc_lai` cho mọi quy tắc | 20 lượt / 0,01 giây | **0,11 ms** |
+
+**Số hiệu năng CHƯA đo lại** — vẫn của MÁY A, nhưng **ngày đo không còn ghi
+lại** (chúng ra đời rải rác 19–21/8/2026): `~50 giây` một lượt xếp · bảng
+`0,1 s … 9,3 s` của cảnh báo sớm · `537 MB` cho 32 lượt scrypt · `1,06 / 0,78
+giây` của ca thử đua tranh · `8 trong 12` yêu cầu song song · `~2,3 giây` của
+`/api/thu-quy-tac` · `5,9s → 17,6s` của chế độ tái lập · bảng mô phỏng ngưỡng
+khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, ghi ngay tại chỗ.
+
+> **Hai số đã XOÁ 22/8/2026 vì không quyết định nào dựa vào chúng:**
+> `240 giây` (thời gian `thu_phien.py` treo khi lùi bản vá — đồng hồ canh lấy
+> số **180**, không phải 240) và `~14 KB` (cỡ `tkb_web.html` — không có số đối
+> chứng nào để so, và lựa chọn "mảng phẳng" đã tự biện minh bằng chữ "cho nhẹ
+> file"; đo lại 22/8 là **15 KB**, tức nó cũng đã trôi rồi).
 
 ---
 
@@ -1211,7 +1248,7 @@ MƯỜI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 8 | **Bóc khoá của câu trả lời HỎNG ngay trong dòng khẳng định** — lại là kiểu 2 | Ca thử CA 7 (`thu_doc_lai.py`) viết `pv4['ve'][1]['so_cum']` và `d['pham_vi']['so_cum']`. Chạy trên mã đúng thì xanh; lùi bản vá ra thì **`IndexError` / `KeyError`** — vỡ, không đỏ. Bài học mở rộng: luật cũ chỉ nói về *dữ liệu vào* hỏng, nhưng bản hỏng còn có thể trả **THIẾU KHOÁ** ở câu trả lời. Nên câu đúng là: **mọi phép bóc trong dòng khẳng định phải chịu được hình dạng mà BẢN HỎNG trả về**, cả vào lẫn ra. Cách chữa: `isinstance` + `.get()` trước, rồi mới so — và in luôn hình dạng thật ra thông báo (`các khoá ['canh_bao', 'cau', 'loi']`) để biết ngay đã thiếu gì.<br><br>**Gặp lại ngay hôm sau, lần này ở ca thử CÓ SẴN:** lùi `noi_dung` khỏi `/api/quy-tac` thì `thu_them_quy_tac.py` **CA 1** ném `KeyError` ở dòng `r['noi_dung'].get('thu')` — vỡ ngay ca đầu, nên CA 8 (ca thật sự canh chuyện đó) **không bao giờ chạy**. Bài học thêm: viết ca thử mới đúng chuẩn là chưa đủ — **lùi bản vá ra rồi xem NÓ VỠ Ở ĐÂU**, vì chỗ vỡ thường nằm trong một ca cũ chẳng liên quan |
-| 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
+| 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — ngồi đợi mãi vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
 | 9 | **Chốt canh TRẢ VỀ SỚM nên không bao giờ nhìn tới thứ nó canh** | `doc_tkb._duong_sheet()` `return` ngay khi khớp sheet đầu tiên, nên danh sách "các sheet khác" chỉ chứa những sheet đứng TRƯỚC nó — tức gần như luôn RỖNG. Sheet bị bỏ sót đúng là `THEO DÕI BÙ TBK`, sheet đứng sau `Khối 12` và là sheet **chứa lý do nghỉ**. Nếu Đợt 4 tin vào danh sách đó để lọc trước khi đăng thì nó đăng luôn thứ đáng lẽ phải chặn. Hàm vẫn trả đúng cái nó được hỏi (đường dẫn sheet), chỉ sai ở cái nó trả **kèm theo** — nên không ca thử nào về đường chính đỏ. Sửa ở `e312121` |
 | 10 | **Hai tệp thử khác nhau ở đúng chỗ khiến nhánh cần canh không bao giờ chạy tới** | Mục *"không cái nào bị đè"* của `thu_kho_tuan.py` **xanh cả khi đã bỏ hẳn vòng chống va chạm tên** — vì hai tệp thử có tên gốc khác nhau (`d.xlsx`, `e.xlsx`) nên tên đích vốn đã khác, vòng đó chưa bao giờ quay lấy một lần. Phải **ÉP** điều kiện va chạm: cùng tên gốc, cùng giây, và **truyền giây vào** (`khi=`) chứ không trông vào việc máy chạy đủ nhanh — ca thử phụ thuộc tốc độ máy là ca thử sẽ chớp đỏ trên máy của trường. Sửa ở `e312121` |
 
@@ -1279,7 +1316,7 @@ MƯỜI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
    (Nếp hỏng 9.)
 10. Hai dữ liệu thử của mục này có **khác nhau ở đúng chỗ** khiến nhánh cần
    canh không bao giờ chạy tới không? Nhánh chỉ chạy khi hai thứ TRÙNG nhau
-   (trùng tên, trùng khoá, trùng giây) thì phải **ép cho trùng**, và ép bằng
+   (trùng tên, trùng giây, trùng khoá) thì phải **ép cho trùng**, và ép bằng
    tham số truyền vào chứ không bằng tốc độ máy. (Nếp hỏng 10.)
 
 ---
@@ -1508,7 +1545,8 @@ khớp `TRUONG` → `import quy_tac` DỪNG. Không có đường lùi "tự gh�
 
 Đường HTTP: `POST /api/thu-quy-tac` với `{"doc_lai": true}`. **Không thêm đường
 mới** (vẫn 19). Nhánh rẽ đặt **trước** cả phép kiểm "đang xếp" lẫn `KHOA_THU`:
-câu đọc lại chỉ ghép chuỗi (đo được **20 lượt / 0,01 giây**), bắt nó xếp hàng
+câu đọc lại chỉ ghép chuỗi (đo được **20 lượt / 0,01 giây** trên MÁY A;
+đo lại 22/8/2026: mọi quy tắc hết **0,11 ms**), bắt nó xếp hàng
 sau một lượt xếp thử 8 giây thì ô nhập đứng hình đúng lúc người dùng đang gõ.
 
 ### Việc 3 — ĐÃ LÀM (21/8): nhãn tiếng Việt cho 17 loại
@@ -1560,7 +1598,7 @@ những tên khai trong bộ lọc mà **không có trong dữ liệu nhà trư�
 
 `/api/quy-tac` **chở sẵn phạm vi của từng quy tắc** (`lop` · `mon` · `gv` ·
 `so_cum` · `so_tiet`) để màn hình Quy tắc lọc được theo GV / môn / lớp. Đo trên
-`cauhinh.json` thật: cả lượt — đọc tệp + dựng `BaiToan` + 17 lần tính phạm vi —
+`cauhinh.json` thật (MÁY A; đo lại 22/8: 2,45 ms): cả lượt — đọc tệp + dựng `BaiToan` + 17 lần tính phạm vi —
 hết **2,67 ms** (3,7 ms cả vòng HTTP). Tính ở máy chủ vì *"quy tắc này chạm vào
 ai"* **là ngữ nghĩa của bộ lọc**; để JS tự bóc `noi_dung.loc` là dựng bản cài
 thứ hai, đúng kiểu lệch đã trả giá ở `khop_loc()` / `_cum_cua()`.
@@ -1952,7 +1990,7 @@ CÁI CÒ. Đó là kiểu hỏng số 6 trong bảng kỷ luật.
 
 `tuoi_tai_khoan()` soi dấu tệp `(st_ino, st_mtime_ns, st_size)` ở **đầu
 `doc_phien()`** — cùng chỗ với phép kiểm QĐ 3 đã có, để hai thứ đi liền một
-mạch. Đo trên **chính ổ ntfs3 của dự án**: `os.replace()` đổi `st_ino` mỗi lần
+mạch. Đo trên **chính ổ ntfs3 của dự án** (MÁY A; đo lại 22/8: 0,84 µs): `os.replace()` đổi `st_ino` mỗi lần
 ghi, 5 lần ghi liên tiếp cho 5 mốc `mtime` phân biệt, `os.stat` tốn **0,78 µs**
 — rẻ hơn bốn bậc so với một lượt scrypt.
 
@@ -2003,7 +2041,7 @@ nào là mở một kênh đo thời gian để dò xem tài khoản nào có th
 > scrypt bằng hàm băm rẻ tiền", thứ mà phép so bằng-nhau không bao giờ thấy.
 
 `KHOA_BAM = Semaphore(2)`: `scrypt` cấp phát 16 MB và **nhả GIL**, nên nhiều lời
-gọi chạy song song thật — đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB.
+gọi chạy song song thật — đã đo 32 lần cùng lúc đẩy tiến trình lên 537 MB (MÁY A).
 `/api/dang-nhap` là đường **chưa xác thực** duy nhất tốn kém như vậy.
 
 ---
@@ -2070,7 +2108,7 @@ hạn). Chiều kia chỉ mất một phần của 15 phút, không đáng đổ
 ### Ba chỗ dễ sai, đã xử — và ca thử canh từng chỗ
 
 1. **Nhánh bị khoá VẪN chạy đủ một lượt `scrypt`.** Phép kiểm nằm **SAU**
-   `TK.bam()`, không phải trước. Chặn trước cho "đỡ tốn CPU" là đổi 27 ms lấy
+   `TK.bam()`, không phải trước. Chặn trước cho "đỡ tốn CPU" là đổi 27 ms (MÁY A) lấy
    một kênh đo: gõ bậy cho đủ ngưỡng rồi xem lần kế tiếp trả lời nhanh hay
    chậm là biết
    tài khoản có thật hay không. **Hệ quả phải chấp nhận: khoá tạm KHÔNG giảm
@@ -2132,7 +2170,7 @@ còn tồn tại.
 Ngưỡng 5 của QĐ 6 đúng cho **tài khoản riêng từng người**: ai gõ sai thì người
 đó chịu. Cả khoa dùng CHUNG một tài khoản thì số lần gõ sai của ba người **cộng
 dồn vào một ô**. Đo (mô phỏng 200.000 ngày, 3 người, 2%/người/ngày rơi vào cảnh
-nhớ nhầm mật khẩu; tốc độ dò đo trên máy này: scrypt 27,0 ms, `KHOA_BAM=2` →
+nhớ nhầm mật khẩu; tốc độ dò đo trên **MÁY A**: scrypt 27,0 ms, `KHOA_BAM=2` →
 69,8 lần/giây = 251.284 lần/giờ nếu không khoá):
 
 | Ngưỡng | Khoá oan | Tốc độ dò tối đa | So với không khoá |
