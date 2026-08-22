@@ -1186,7 +1186,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+MƯỜI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1198,6 +1198,8 @@ Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 8 | **Bóc khoá của câu trả lời HỎNG ngay trong dòng khẳng định** — lại là kiểu 2 | Ca thử CA 7 (`thu_doc_lai.py`) viết `pv4['ve'][1]['so_cum']` và `d['pham_vi']['so_cum']`. Chạy trên mã đúng thì xanh; lùi bản vá ra thì **`IndexError` / `KeyError`** — vỡ, không đỏ. Bài học mở rộng: luật cũ chỉ nói về *dữ liệu vào* hỏng, nhưng bản hỏng còn có thể trả **THIẾU KHOÁ** ở câu trả lời. Nên câu đúng là: **mọi phép bóc trong dòng khẳng định phải chịu được hình dạng mà BẢN HỎNG trả về**, cả vào lẫn ra. Cách chữa: `isinstance` + `.get()` trước, rồi mới so — và in luôn hình dạng thật ra thông báo (`các khoá ['canh_bao', 'cau', 'loi']`) để biết ngay đã thiếu gì.<br><br>**Gặp lại ngay hôm sau, lần này ở ca thử CÓ SẴN:** lùi `noi_dung` khỏi `/api/quy-tac` thì `thu_them_quy_tac.py` **CA 1** ném `KeyError` ở dòng `r['noi_dung'].get('thu')` — vỡ ngay ca đầu, nên CA 8 (ca thật sự canh chuyện đó) **không bao giờ chạy**. Bài học thêm: viết ca thử mới đúng chuẩn là chưa đủ — **lùi bản vá ra rồi xem NÓ VỠ Ở ĐÂU**, vì chỗ vỡ thường nằm trong một ca cũ chẳng liên quan |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — hết 240 giây vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
+| 9 | **Chốt canh TRẢ VỀ SỚM nên không bao giờ nhìn tới thứ nó canh** | `doc_tkb._duong_sheet()` `return` ngay khi khớp sheet đầu tiên, nên danh sách "các sheet khác" chỉ chứa những sheet đứng TRƯỚC nó — tức gần như luôn RỖNG. Sheet bị bỏ sót đúng là `THEO DÕI BÙ TBK`, sheet đứng sau `Khối 12` và là sheet **chứa lý do nghỉ**. Nếu Đợt 4 tin vào danh sách đó để lọc trước khi đăng thì nó đăng luôn thứ đáng lẽ phải chặn. Hàm vẫn trả đúng cái nó được hỏi (đường dẫn sheet), chỉ sai ở cái nó trả **kèm theo** — nên không ca thử nào về đường chính đỏ. Sửa ở `e312121` |
+| 10 | **Hai tệp thử khác nhau ở đúng chỗ khiến nhánh cần canh không bao giờ chạy tới** | Mục *"không cái nào bị đè"* của `thu_kho_tuan.py` **xanh cả khi đã bỏ hẳn vòng chống va chạm tên** — vì hai tệp thử có tên gốc khác nhau (`d.xlsx`, `e.xlsx`) nên tên đích vốn đã khác, vòng đó chưa bao giờ quay lấy một lần. Phải **ÉP** điều kiện va chạm: cùng tên gốc, cùng giây, và **truyền giây vào** (`khi=`) chứ không trông vào việc máy chạy đủ nhanh — ca thử phụ thuộc tốc độ máy là ca thử sẽ chớp đỏ trên máy của trường. Sửa ở `e312121` |
 
 > ### KIỂU HỎNG SỐ 2 ĐÃ DÍNH BỐN LẦN — đếm lại cho khỏi quên
 >
@@ -1257,6 +1259,14 @@ Tám lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
    thì dữ liệu dựng ra có **mâu thuẫn được** với `cauhinh.json` thật không?
    Bộ lọc nên chọn thứ KHÔNG KHỚP GÌ CẢ, để nó không bao giờ có ý kiến về dữ
    liệu nhà trường — xem `NHAP_A` trong `tests/thu_phien.py`.
+9. Mục này canh một **giá trị trả KÈM THEO** (danh sách phụ, cờ, số đếm) chứ
+   không phải giá trị chính? Nếu có thì hỏi tiếp: hàm có thể trả **đúng cái
+   chính mà sai cái kèm theo** không — và lúc đó có mục nào đỏ không?
+   (Nếp hỏng 9.)
+10. Hai dữ liệu thử của mục này có **khác nhau ở đúng chỗ** khiến nhánh cần
+   canh không bao giờ chạy tới không? Nhánh chỉ chạy khi hai thứ TRÙNG nhau
+   (trùng tên, trùng khoá, trùng giây) thì phải **ép cho trùng**, và ép bằng
+   tham số truyền vào chứ không bằng tốc độ máy. (Nếp hỏng 10.)
 
 ---
 
