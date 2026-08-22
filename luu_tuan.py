@@ -7,6 +7,9 @@
    python3 luu_tuan.py xem     <tệp.xlsx>
    python3 luu_tuan.py them    <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
    python3 luu_tuan.py liet-ke
+   python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \\
+                       --trang-thai sai --ly-do "..."
+   python3 luu_tuan.py de-dang  --tuan 2026-08-24
 
  `xem` CHỈ ĐỌC, không ghi một byte nào — dùng để ngó trước khi lưu.
 
@@ -124,9 +127,35 @@ def main(argv=None):
     p.add_argument('--dong-y-lech', action='store_true',
                    help='xác nhận đã biết A4 lệch với --tuan')
 
+    p = sub.add_parser('danh-dau', help='đánh dấu một bản dùng được hay không')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ban', type=int, required=True, help='số thứ tự, đếm từ 1')
+    p.add_argument('--trang-thai', required=True, choices=list(K.TRANG_THAI))
+    p.add_argument('--ly-do', default='',
+                   help='BẮT BUỘC khi trạng thái là dung hoặc sai')
+
+    p = sub.add_parser('de-dang', help='bản nào của tuần này ĐĂNG ĐƯỢC')
+    p.add_argument('--tuan', required=True)
+
     sub.add_parser('liet-ke', help='các tuần đang có trong kho')
     a = ap.parse_args(argv)
     goc = a.kho or K.goc_mac_dinh()
+
+    if a.lenh == 'danh-dau':
+        r = K.danh_dau_ban(goc, a.tuan, a.ban, a.trang_thai, a.ly_do)
+        print(('[XONG] ' if r['ok'] else '[DỪNG] ') + r['cau'])
+        return 0 if r['ok'] else 1
+
+    if a.lenh == 'de-dang':
+        ds, tu_choi = K.ban_de_dang(goc, a.tuan)
+        if tu_choi:
+            print('[KHÔNG ĐĂNG ĐƯỢC] ' + tu_choi)
+            return 1
+        print(f'{len(ds)} bản ĐĂNG ĐƯỢC của tuần {a.tuan}:')
+        for b in ds:
+            print(f'   {b.get("tep")}')
+            print(f'      lý do đánh dấu "dung": {b.get("ly_do")}')
+        return 0
 
     if a.lenh == 'liet-ke':
         ds = K.liet_ke(goc)
@@ -136,9 +165,13 @@ def main(argv=None):
         print(f'{len(ds)} tuần trong {goc}:')
         for x in ds:
             p2 = x['phieu'] or {}
-            print(f'   {x["ma_tuan"]}  {x["so_ban"]} bản  '
+            tt = x.get('theo_trang_thai') or {}
+            mo = ' '.join(f'{k}={v}' for k, v in sorted(tt.items())) or '-'
+            print(f'   {x["ma_tuan"]}  {x["so_ban"]} bản  [{mo}]  '
                   f'{(p2.get("nhan") or "")!r}'
                   + (f'   [PHIẾU HỎNG] {x["loi"]}' if x['loi'] else ''))
+            if p2.get('ghi_chu'):
+                print(f'      ghi chú tuần: {p2["ghi_chu"]}')
         return 0
 
     biet, loi_bang = _bang_ten_mon()

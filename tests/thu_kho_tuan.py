@@ -19,6 +19,7 @@
    CA 4  KHÔNG BAO GIỜ ĐÈ, và trùng SHA-256 thì TỪ CHỐI không ghi một chữ
    CA 5  Dấu bộ đọc đi theo từng bản tách
    CA 6  Phiếu hỏng thì DỪNG, không ghi đè lên nó
+   CA 7  Bản "sai" KHÔNG BAO GIỜ ra được đường đăng, dù gõ đúng mã tuần
 ==========================================================================
 """
 import io
@@ -443,6 +444,82 @@ def ca_6_phieu_hong_thi_dung(tm):
 
 
 # ==========================================================================
+def ca_7_ban_sai_khong_ra_duoc_duong_dang(tm):
+    print('\nCA 7 — bản "sai" KHÔNG ra được đường đăng, dù gõ ĐÚNG mã tuần')
+    print('-' * 74)
+    goc = os.path.join(tm, 'kho7')
+    MA = '2026-01-05'
+    t1 = dung_xlsx(os.path.join(tm, 'k1.xlsx'), o_mau(so_tiet=3))
+    t2 = dung_xlsx(os.path.join(tm, 'k2.xlsx'), o_mau(so_tiet=4))
+
+    # --- mặc định là "chua_ro", và "chua_ro" cũng KHÔNG ra được ---
+    a = K.them_ban(goc, MA, t1, 'người thử')
+    kiem(a.get('ok') is True, 'Lưu bản đầu')
+    kiem(K.trang_thai_cua(a.get('ban') or {}) == K.TRANG_THAI_MAC_DINH,
+         f'Bản mới mặc định là {K.TRANG_THAI_MAC_DINH!r} — '
+         f'{K.trang_thai_cua(a.get("ban") or {})!r}')
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(ds == [] and bool(tu_choi),
+         'Chưa đánh dấu -> cửa đăng TỪ CHỐI (fail-closed), không phải cho qua')
+    kiem('chua_ro' in (tu_choi or ''), 'và nói rõ đang có mấy bản, trạng thái gì')
+
+    # --- ly_do BẮT BUỘC ---
+    kiem(K.kiem_trang_thai('sai', '')[0] is False, 'Đánh dấu "sai" mà thiếu ly_do -> chặn')
+    kiem(K.kiem_trang_thai('dung', '  ')[0] is False, 'ly_do toàn khoảng trắng -> chặn')
+    kiem(K.kiem_trang_thai('chua_ro', '')[0] is True, '"chua_ro" thì không đòi ly_do')
+    kiem(K.kiem_trang_thai('linh tinh', 'x')[0] is False, 'Trạng thái lạ -> chặn')
+    kiem(K.danh_dau_ban(goc, MA, 1, 'sai', '')['ok'] is False,
+         'danh_dau_ban cũng đòi ly_do, không ném')
+    kiem(K.danh_dau_ban(goc, MA, 99, 'sai', 'x')['ok'] is False,
+         'Số thứ tự ngoài khoảng -> từ chối, không ném')
+
+    # --- đánh dấu SAI: vẫn phải bị chặn ---
+    r = K.danh_dau_ban(goc, MA, 1, 'sai', 'ca thử: cố tình đánh dấu sai')
+    kiem(r.get('ok') is True, f'Đánh dấu bản 1 là "sai" — {r.get("cau")}')
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(ds == [] and bool(tu_choi),
+         'Tuần CHỈ có bản "sai" -> cửa đăng trả RỖNG, dù mã tuần gõ đúng')
+    kiem('sai' in (tu_choi or ''), 'và câu từ chối nói có bản sai')
+
+    # --- bản sai KHÔNG bị xoá: nó là bằng chứng ---
+    p, _ = K.doc_phieu_ky(goc, MA)
+    kiem(len((p or {}).get('ban') or []) == 1, 'Bản "sai" VẪN nằm trong phiếu')
+    b0 = ((p or {}).get('ban') or [{}])[0]
+    kiem(os.path.exists(os.path.join(goc, MA, b0.get('tep', 'x'))),
+         'và tệp của nó VẪN còn trên đĩa — không xoá bằng chứng')
+    kiem((b0.get('ly_do') or '').strip() != '', 'và lý do được ghi lại')
+
+    # --- thêm một bản ĐÚNG: chỉ bản đó ra được ---
+    b = K.them_ban(goc, MA, t2, 'người thử')
+    kiem(b.get('ok') is True, 'Lưu bản thứ hai')
+    K.danh_dau_ban(goc, MA, 2, 'dung', 'ca thử: bản này dùng được')
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(tu_choi is None and len(ds) == 1,
+         f'Cửa đăng trả ĐÚNG MỘT bản — {len(ds)}')
+    if ds:
+        kiem(K.trang_thai_cua(ds[0]) == 'dung', 'và đó là bản "dung"')
+        kiem(ds[0].get('tep') != b0.get('tep'),
+             'và KHÔNG phải bản đã đánh dấu sai')
+
+    # --- bản ghi CŨ thiếu khoá thì coi như chưa xét, KHÔNG coi là dùng được ---
+    p, _ = K.doc_phieu_ky(goc, MA)
+    for x in (p or {}).get('ban') or []:
+        x.pop('trang_thai', None)
+    io.open(K.duong_phieu(goc, MA), 'w', encoding='utf-8').write(
+        json.dumps(p, ensure_ascii=False))
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(ds == [] and bool(tu_choi),
+         'Phiếu CŨ thiếu khoá trang_thai -> coi như chưa xét, KHÔNG cho đăng')
+
+    # --- phiếu hỏng thì cũng không đăng ---
+    io.open(K.duong_phieu(goc, MA), 'w', encoding='utf-8').write('{ hỏng')
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(ds == [] and bool(tu_choi), 'Phiếu HỎNG -> cửa đăng từ chối, không ném')
+    kiem(K.ban_de_dang(goc, '2026-01-12')[0] == [],
+         'Tuần chưa có -> trả rỗng, không ném')
+
+
+# ==========================================================================
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -456,6 +533,7 @@ def main():
         ca_4_khong_de_va_tu_choi_trung(tm)
         ca_5_dau_bo_doc(tm)
         ca_6_phieu_hong_thi_dung(tm)
+        ca_7_ban_sai_khong_ra_duoc_duong_dang(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

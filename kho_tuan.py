@@ -51,6 +51,33 @@ MAU_MA_TUAN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 # Tên tệp an toàn: bỏ mọi thứ có thể đi ra khỏi thư mục hoặc phá vỏ lệnh.
 MAU_BAN = re.compile(r'[^0-9A-Za-zÀ-ỹ._-]+')
 
+# --------------------------------------------------------------------------
+# TRẠNG THÁI CỦA MỘT BẢN — "bản này có dùng được không"
+# --------------------------------------------------------------------------
+# Vì sao phải có: một tuần có thể có NHIỀU bản mâu thuẫn nhau, và phiếu phải
+# ghi được bản nào dùng được. Đã xảy ra thật — tuần 2026-08-24 có hai bản, bản
+# 21/8 bỏ mất 6 tiết chuyên đề Sử và đổi giáo viên; Khoa xác nhận 22/8/2026 là
+# bản đó SAI. Không có trường này thì cả hai bản nằm cạnh nhau, trông như nhau.
+#
+# KHÔNG XOÁ BẢN SAI. Nó là bằng chứng, và là ca thử thật duy nhất đang có.
+TRANG_THAI = ('dung', 'sai', 'chua_ro')
+TRANG_THAI_MAC_DINH = 'chua_ro'
+
+
+def kiem_trang_thai(tt, ly_do):
+    """Trả (ok, câu). `ly_do` BẮT BUỘC khi nói "dung" hoặc "sai".
+
+       Vì sao bắt buộc: một bản bị đánh dấu SAI mà không nói vì sao thì sáu
+       tháng nữa không ai dám tin cái dấu đó, và sẽ có người gỡ nó ra.
+    """
+    if tt not in TRANG_THAI:
+        return False, (f'trang_thai phải là một trong {TRANG_THAI}, '
+                       f'nhận được {tt!r}.')
+    if tt in ('dung', 'sai') and not (ly_do or '').strip():
+        return False, (f'Đánh dấu {tt!r} thì PHẢI ghi ly_do. Một bản bị đánh '
+                       'dấu mà không nói vì sao thì cái dấu đó không đáng tin.')
+    return True, None
+
 
 def goc_mac_dinh():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), TEN_KHO)
@@ -139,7 +166,7 @@ def _gio_ten(khi):
 # ==========================================================================
 def them_ban(goc, ma_tuan, duong_tep, nguoi, ghi_chu='', tach=None,
              nhan=None, tu_ngay=None, den_ngay=None, nam_hoc=None,
-             hoc_ky=None, khi=None):
+             hoc_ky=None, khi=None, trang_thai=None, ly_do=''):
     """Thêm MỘT bản vào tuần. Trả dict kết quả. KHÔNG BAO GIỜ NÉM.
 
        Kết quả luôn có khoá `ok` (bool) và `cau` (câu tiếng Việt cho người
@@ -163,6 +190,12 @@ def them_ban(goc, ma_tuan, duong_tep, nguoi, ghi_chu='', tach=None,
     if not os.path.isfile(duong_tep):
         ra['cau'] = f'{duong_tep!r} không phải một tệp.'
         return ra
+    trang_thai = trang_thai or TRANG_THAI_MAC_DINH
+    ok, cau = kiem_trang_thai(trang_thai, ly_do)
+    if not ok:
+        ra['cau'] = cau
+        return ra
+
     if not (nguoi or '').strip():
         ra['cau'] = ('Phải ghi TÊN NGƯỜI LƯU. Không có tên thì phiếu không nói '
                      'được ai đưa bản này vào, và đó là cả điểm của việc lưu.')
@@ -236,7 +269,8 @@ def them_ban(goc, ma_tuan, duong_tep, nguoi, ghi_chu='', tach=None,
     ban = {'tep': f'ban/{ten}', 'tach': f'tach/{ten_tach}' if ten_tach else None,
            'gio_luu': khi.isoformat(timespec='seconds'), 'sha256': bam,
            'nguoi_luu': nguoi.strip(), 'ghi_chu': (ghi_chu or '').strip(),
-           'ten_goc': os.path.basename(duong_tep)}
+           'ten_goc': os.path.basename(duong_tep),
+           'trang_thai': trang_thai, 'ly_do': (ly_do or '').strip()}
     if tach is not None:
         ban['bo_doc'] = tach.get('bo_doc')
 
@@ -272,6 +306,95 @@ def them_ban(goc, ma_tuan, duong_tep, nguoi, ghi_chu='', tach=None,
     return ra
 
 
+def trang_thai_cua(ban):
+    """Trạng thái của một bản, TOÀN PHẦN. Bản ghi cũ thiếu khoá -> "chua_ro".
+
+       Thiếu khoá KHÔNG được coi là "dung". Phiếu ghi từ trước khi có trường
+       này thì đúng là chưa ai xét, và chưa xét thì chưa dùng được.
+    """
+    if not isinstance(ban, dict):
+        return TRANG_THAI_MAC_DINH
+    tt = ban.get('trang_thai')
+    return tt if tt in TRANG_THAI else TRANG_THAI_MAC_DINH
+
+
+def ban_de_dang(goc, ma_tuan):
+    """CỬA CHẶN ĐƯỜNG ĐĂNG. Trả (danh sách bản dùng được, câu từ chối|None).
+
+       ┌────────────────────────────────────────────────────────────────────┐
+       │ MỌI ĐƯỜNG ĐĂNG PHẢI ĐI QUA ĐÂY. Đừng đọc thẳng `phieu['ban']` rồi  │
+       │ tự lọc — đó là bản cài thứ hai, và bản thứ hai sẽ lệch.            │
+       └────────────────────────────────────────────────────────────────────┘
+
+       CHỈ trả bản `trang_thai == "dung"`. Hai trạng thái kia đều bị chặn:
+
+         "sai"     — đã biết là sai. Hiển nhiên.
+         "chua_ro" — CHƯA AI XÉT. Cũng chặn, và đây là chỗ dễ cãi nhất:
+                     mặc định của một bản mới là "chua_ro", nên nếu cho nó
+                     qua thì cửa này KHÔNG chặn gì cả trong trường hợp
+                     thường gặp nhất. Fail-closed: chưa biết đúng thì chưa
+                     đăng. Cái giá là phải đánh dấu tay một lần mỗi tuần —
+                     rẻ hơn nhiều so với đăng nhầm một bản sai, vì trang
+                     công khai thì cả trường đọc, và git thì nhớ vĩnh viễn.
+    """
+    p, loi = doc_phieu_ky(goc, ma_tuan)
+    if loi:
+        return [], f'Phiếu tuần {ma_tuan} hỏng: {loi}'
+    if p is None:
+        return [], f'Kho chưa có tuần {ma_tuan}.'
+    ds = [b for b in (p.get('ban') or []) if trang_thai_cua(b) == 'dung']
+    if ds:
+        return ds, None
+    dem = {}
+    for b in p.get('ban') or []:
+        t = trang_thai_cua(b)
+        dem[t] = dem.get(t, 0) + 1
+    return [], (
+        f'Tuần {ma_tuan} KHÔNG có bản nào đánh dấu "dung" — không đăng gì cả.\n'
+        f'      Đang có: {dem or "(không bản nào)"}.\n'
+        '      Đánh dấu bằng: luu_tuan.py danh-dau --tuan <mã> --ban <n> '
+        '--trang-thai dung --ly-do "..."')
+
+
+def danh_dau_ban(goc, ma_tuan, chi_so, trang_thai, ly_do=''):
+    """Đặt trạng thái cho MỘT bản đã lưu. `chi_so` đếm từ 1. KHÔNG BAO GIỜ NÉM.
+
+       KHÔNG xoá bản nào, không đụng tệp `ban/` — chỉ sửa phiếu.
+    """
+    ra = {'ok': False, 'cau': '', 'ban': None}
+    ok, cau = kiem_trang_thai(trang_thai, ly_do)
+    if not ok:
+        ra['cau'] = cau
+        return ra
+    p, loi = doc_phieu_ky(goc, ma_tuan)
+    if loi:
+        ra['cau'] = loi + '\n      KHÔNG ghi đè lên phiếu hỏng.'
+        return ra
+    if p is None:
+        ra['cau'] = f'Kho chưa có tuần {ma_tuan}.'
+        return ra
+    ds = p.get('ban') or []
+    if not isinstance(chi_so, int) or not (1 <= chi_so <= len(ds)):
+        ra['cau'] = (f'Số thứ tự bản phải từ 1 đến {len(ds)}, '
+                     f'nhận được {chi_so!r}.')
+        return ra
+    b = ds[chi_so - 1]
+    cu = trang_thai_cua(b)
+    b['trang_thai'] = trang_thai
+    b['ly_do'] = (ly_do or '').strip()
+    try:
+        GB.ghi_nguyen_tu(duong_phieu(goc, ma_tuan),
+                         json.dumps(p, ensure_ascii=False, indent=1) + '\n',
+                         ben=True)
+    except OSError as e:
+        ra['cau'] = f'Không ghi được phiếu: {e}'
+        return ra
+    ra['ok'] = True
+    ra['ban'] = b
+    ra['cau'] = (f'Bản {chi_so} ({b.get("tep")}) : {cu} -> {trang_thai}.')
+    return ra
+
+
 def liet_ke(goc):
     """Mọi tuần trong kho, mới nhất trước. TOÀN PHẦN: kho chưa có -> []."""
     if not os.path.isdir(goc):
@@ -281,6 +404,11 @@ def liet_ke(goc):
         if not MAU_MA_TUAN.match(ten):
             continue
         p, loi = doc_phieu_ky(goc, ten)
+        ds = (p.get('ban') or []) if p else []
+        dem = {}
+        for b in ds:
+            t = trang_thai_cua(b)
+            dem[t] = dem.get(t, 0) + 1
         ra.append({'ma_tuan': ten, 'phieu': p, 'loi': loi,
-                   'so_ban': len(p.get('ban') or []) if p else 0})
+                   'so_ban': len(ds), 'theo_trang_thai': dem})
     return ra
