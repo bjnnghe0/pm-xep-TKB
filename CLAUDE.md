@@ -38,6 +38,7 @@ python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản s�
 python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
 python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
 python3 tests/thu_kho_tuan.py           # kho TKB theo tuần + bộ đọc .xlsx
+python3 tests/thu_sinh_dang.py          # BẮT BUỘC khi sửa sinh_dang.py
 
 python3 luu_tuan.py xem <tệp.xlsx>       # đọc thử một tuần, KHÔNG ghi gì
 python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
@@ -46,6 +47,7 @@ python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \
         --trang-thai sai --ly-do "..."   # bản này dùng được hay không
 python3 luu_tuan.py de-dang  --tuan 2026-08-24   # bản nào ĐĂNG ĐƯỢC
 python3 luu_tuan.py so <tệp.xlsx> --tuan 2026-08-24   # so với bản đã lưu
+python3 luu_tuan.py dang-thu --tuan 2026-08-24    # sinh JSON vào thư mục TẠM
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -99,9 +101,11 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `ghi_ben.py` | **MỘT bản cài duy nhất** của việc ghi tệp cho bền: `ghi_nguyen_tu` · `chep_ben` · `dong_bo_tep` · `dong_bo_thu_muc`. Không biết gì về HTTP, cấu hình, hay Excel | Dùng chung cho `tai_khoan.py`, `web.py`, `kho_tuan.py` — **đừng chép bản thứ hai** |
 | `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
 | `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng** |
-| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` / `them` / `liet-ke` | `xem` không ghi một byte nào |
+| `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
+| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp** |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 9 |
+| `tests/thu_sinh_dang.py` | 4 ca. **CA 2 canh KIẾN TRÚC bằng cây cú pháp**: `sinh_dang.py` không được gọi `doc_phieu*`, không bóc khoá `'ban'`, và mọi hàm công khai phải bắt đầu bằng `(goc, ma_tuan)`. CA 3 thử gọi thẳng vào ruột với bản SAI làm đối số | **Chạy khi sửa `sinh_dang.py` hoặc `ban_de_dang()`** |
 | `tests/thu_kho_tuan.py` | 6 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |
 | `tests/thu_o_tong.py` | Sáu ô "TỔNG SỐ TIẾT/TUẦN" (dòng 43) phải đếm **từ dòng đầu vùng dữ liệu**. Dòng đầu suy từ `vi_tri_bang`, dòng phải phủ suy từ `khung_gio` — **không ghim số trần**. CA 3 vá một cột về dòng sau trên **bản chép** rồi đòi bộ dò ĐỎ đúng một cột | **Chạy khi sửa `mau_tkb.xlsx` hoặc `xuat_excel()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
@@ -1230,6 +1234,18 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
+- `python3 tests/thu_sinh_dang.py`: **32/32 mục ĐẠT** (~5s, đo 22/8/2026), 4 ca.
+  Lùi ra thì đỏ đúng phần của nó: đọc thẳng `phieu['ban'][0]` thay vì qua cửa
+  → 23/32 · cho hàm công khai NHẬN thẳng một bản → 29/32 · bỏ cửa chặn `docs/`
+  → 28/32 · cho bản `chua_ro` đăng được → 29/32 · **nới `TRUONG_O` thêm hai
+  trường → 30/32**.
+  > **Mục cuối lúc đầu KHÔNG biết đỏ.** Bản đầu so `d['truong_o']` với chính
+  > `SD.TRUONG_O` — tức so đầu ra với hằng số sinh ra nó, nên nới hằng số thì
+  > **hai vế cùng đổi** và mục vẫn xanh (đo: 30/30, không một mục nào đỏ). Nay
+  > ghim thẳng bộ trường ĐÃ DUYỆT bằng literal trong ca thử. Ghim literal ở
+  > đây là ĐÚNG chứ không phạm luật "đừng ghim hằng số": `TRUONG_O` không phải
+  > dữ liệu nhà trường mà là một **quyết định về phạm vi công khai**, và cả
+  > điểm của mục này là bắt người nới nó phải đi hỏi lại nhà trường.
 - `python3 tests/thu_kho_tuan.py`: **113/113 mục ĐẠT** (~3s, đo 22/8/2026), 8 ca.
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng →
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng → 92/100 ·

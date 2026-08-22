@@ -11,6 +11,7 @@
                        --trang-thai sai --ly-do "..."
    python3 luu_tuan.py de-dang  --tuan 2026-08-24
    python3 luu_tuan.py so       <tệp.xlsx> --tuan 2026-08-24 [--ban N]
+   python3 luu_tuan.py dang-thu --tuan 2026-08-24 [--ra <thư mục>]
 
  `xem` CHỈ ĐỌC, không ghi một byte nào — dùng để ngó trước khi lưu.
 
@@ -27,6 +28,7 @@ import sys
 
 import doc_tkb as D
 import kho_tuan as K
+import sinh_dang as SD
 
 GOC = os.path.dirname(os.path.abspath(__file__))
 
@@ -170,6 +172,40 @@ def _so(goc, a):
     return 0
 
 
+def _dang_thu(goc, a):
+    """Sinh JSON một tuần để đăng, ghi vào thư mục TẠM. KHÔNG ghi vào docs/."""
+    import tempfile
+    ra = a.ra or tempfile.mkdtemp(prefix='dang_thu_')
+    that = os.path.realpath(ra)
+    cam = os.path.realpath(os.path.join(GOC, 'docs'))
+    if that == cam or that.startswith(cam + os.sep):
+        print('[DỪNG] KHÔNG ghi vào docs/. Thư mục đó là thứ GitHub Pages')
+        print('       phục vụ ra Internet, và git thì nhớ vĩnh viễn. Lệnh này')
+        print('       chỉ sinh thử; việc đăng thật là quyết định của người.')
+        return 1
+
+    d, tu_choi = SD.du_lieu_dang(goc, a.tuan)
+    if tu_choi:
+        print('[KHÔNG ĐĂNG ĐƯỢC] ' + tu_choi)
+        return 1
+
+    os.makedirs(ra, exist_ok=True)
+    dd = os.path.join(ra, f'{a.tuan}.json')
+    io.open(dd, 'w', encoding='utf-8').write(
+        json.dumps(d, ensure_ascii=False, indent=1) + '\n')
+    print(f'[XONG] {dd}')
+    print(f'   tuần      : {d.get("ma_tuan")}  {d.get("nhan")!r}  '
+          f'{d.get("tu_ngay")} → {d.get("den_ngay")}')
+    print(f'   trường ra : {d.get("truong_o")}')
+    print(f'   {len(d.get("o") or [])} ô · {len(d.get("lop") or [])} lớp · '
+          f'{len(d.get("gv") or [])} giáo viên')
+    ng = d.get('nguon') or {}
+    print(f'   nguồn     : bản lưu {ng.get("gio_luu")}')
+    print(f'               lý do đánh dấu "dung": {ng.get("ly_do_dung")}')
+    print('\n   Đây là THƯ MỤC TẠM. Không có gì được ghi vào docs/.')
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description='Lưu và xem kho TKB theo tuần.')
@@ -209,6 +245,12 @@ def main(argv=None):
     p.add_argument('--tat-ca', action='store_true',
                    help='in hết, không cắt ở 200 dòng')
 
+    p = sub.add_parser('dang-thu',
+                       help='sinh JSON một tuần để đăng — ghi vào thư mục TẠM')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ra', default=None,
+                   help='thư mục ra; bỏ trống thì dùng thư mục tạm. KHÔNG nhận docs/')
+
     sub.add_parser('liet-ke', help='các tuần đang có trong kho')
     a = ap.parse_args(argv)
     goc = a.kho or K.goc_mac_dinh()
@@ -228,6 +270,9 @@ def main(argv=None):
             print(f'   {b.get("tep")}')
             print(f'      lý do đánh dấu "dung": {b.get("ly_do")}')
         return 0
+
+    if a.lenh == 'dang-thu':
+        return _dang_thu(goc, a)
 
     if a.lenh == 'so':
         return _so(goc, a)
