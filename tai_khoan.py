@@ -20,6 +20,8 @@ import hashlib
 import hmac
 import json
 import os
+
+import ghi_ben as GB
 import re
 import secrets
 import sys
@@ -210,44 +212,14 @@ def ghi(duong_dan, ds):
 
 
 def _ghi_nguyen_tu(duong_dan, chuoi, ben):
-    """Ghi đè một tệp nhỏ: tệp tạm -> os.replace. Quyền 600 ngay lúc tạo.
+    """Ghi đè một tệp nhỏ, quyền 600 ngay lúc tạo. Bản cài ở `ghi_ben.py`.
 
-       `ben=True` thì fsync cả tệp lẫn thư mục cha — dành cho tai_khoan.json,
-       tệp mà mất là không ai đăng nhập được nữa. `ben=False` bỏ fsync, dành cho
-       sổ khoá tạm: nội dung của nó VỨT ĐI ĐƯỢC (mất thì mọi người được thử lại
-       từ đầu, không ai bị khoá oan), mà nó lại bị ghi ở đường CHƯA XÁC THỰC nên
-       không đáng để một người gõ sai mật khẩu ép được ta fsync.
-
-       Tên tệp tạm kèm PID: một lần sập giữa chừng không được phép chặn vĩnh
-       viễn mọi lần ghi sau đó. Hai tiến trình (web.py và tao_mat_khau.py) cùng
-       ghi cũng không đụng nhau vì mỗi bên một tên tạm.
+       Giữ lại tên riêng này vì hai lời gọi trong tệp luôn dùng quyền 0o600 —
+       gói lại một chỗ thì không ai quên tham số đó. Mọi phần còn lại (tệp
+       tạm kèm PID, os.replace, fsync tệp và thư mục cha) nay CHỈ CÓ MỘT bản
+       cài, dùng chung với `web.py` và `kho_tuan.py`.
     """
-    tam = f'{duong_dan}.tam.{os.getpid()}.json'
-    # O_EXCL + 0o600: quyền đặt NGAY LÚC TẠO, không để hở một khe nào ở 644.
-    fd = os.open(tam, os.O_CREAT | os.O_WRONLY | os.O_EXCL, 0o600)
-    try:
-        with os.fdopen(fd, 'w', encoding='utf-8') as f:
-            f.write(chuoi)
-            f.flush()
-            if ben:
-                os.fsync(f.fileno())
-        os.replace(tam, duong_dan)
-    except BaseException:
-        try:
-            os.remove(tam)
-        except OSError:
-            pass
-        raise
-    if ben and os.name == 'posix':
-        try:
-            fdt = os.open(os.path.dirname(os.path.abspath(duong_dan)),
-                          os.O_RDONLY)
-            try:
-                os.fsync(fdt)
-            finally:
-                os.close(fdt)
-        except OSError:
-            pass
+    GB.ghi_nguyen_tu(duong_dan, chuoi, ben, quyen=0o600)
 
 
 def doc_tho(duong_dan):

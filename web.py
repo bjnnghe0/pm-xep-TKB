@@ -32,6 +32,7 @@ import traceback
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import ghi_ben as GB
 import quy_tac as QT
 import tai_khoan as TK
 import xep_tkb as X
@@ -829,51 +830,12 @@ def _ten_tep_an_toan(ten, khoa='thong_tin.file_xuat'):
 #  Đo được: cả mẫu ghi nguyên tử ĐẦY ĐỦ (ghi + fsync tệp + replace + fsync thư
 #  mục) mất trung vị 1,1 ms cho tệp ~4 KB — nút Lưu không chậm đi.
 
-def _dong_bo_tep(f):
-    """Ép nội dung tệp đang mở xuống đĩa thật."""
-    f.flush()
-    os.fsync(f.fileno())
-
-
-def _dong_bo_thu_muc(tm):
-    """Ép CÁI TÊN vừa đổi xuống đĩa. Trả True nếu đã làm được.
-
-       Trả về bool chứ không nuốt im lặng, để ca thử khẳng định được.
-
-       Trên Windows os.open() không mở được thư mục nên bước này bỏ qua —
-       nói thẳng ra đây chứ không giấu: phần đổi tên trên NTFS đi qua nhật ký
-       siêu dữ liệu nên tương đối bền, còn RỦI RO CÒN LẠI thì vẫn còn. Bước
-       fsync tệp tạm ở trên mới là bước quan trọng nhất, và bước đó chạy trên
-       cả hai hệ điều hành.
-    """
-    if os.name != 'posix':
-        return False
-    try:
-        fd = os.open(tm, os.O_RDONLY)
-    except OSError:
-        return False
-    try:
-        os.fsync(fd)
-        return True
-    except OSError:
-        return False                 # vài hệ tệp không cho fsync thư mục
-    finally:
-        os.close(fd)
-
-
-def _chep_ben(nguon, dich):
-    """shutil.copy() nhưng ép xuống đĩa.
-
-       Vì sao bản sao lưu cũng phải fsync: mất điện ngay sau khi bấm Lưu thì
-       cauhinh.json mới đã bền, nhưng cauhinh.bak.json có thể rỗng — tức mất
-       đúng cái phao cứu sinh, trong khi người dùng đinh ninh là có. Đó là kiểu
-       hỏng tệ nhất của dự án này: im lặng và mất dữ liệu.
-    """
-    with open(nguon, 'rb') as f:
-        dl = f.read()
-    with open(dich, 'wb') as f:
-        f.write(dl)
-        _dong_bo_tep(f)
+# Ba hàm ghi-cho-bền nay nằm ở `ghi_ben.py`, dùng chung với `tai_khoan.py`
+# và `kho_tuan.py`. Đặt bí danh cấp mô-đun để phần dưới không phải đổi một
+# dòng nào, và để ca thử A11 vẫn vá được đúng chỗ cũ.
+_dong_bo_tep = GB.dong_bo_tep
+_dong_bo_thu_muc = GB.dong_bo_thu_muc
+_chep_ben = GB.chep_ben
 
 
 # ==========================================================================

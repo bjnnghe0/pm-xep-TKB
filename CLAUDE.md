@@ -37,6 +37,11 @@ python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được 
 python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
 python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
 python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
+python3 tests/thu_kho_tuan.py           # kho TKB theo tuần + bộ đọc .xlsx
+
+python3 luu_tuan.py xem <tệp.xlsx>       # đọc thử một tuần, KHÔNG ghi gì
+python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
+python3 luu_tuan.py liet-ke              # các tuần đang có trong kho
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -86,6 +91,13 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
+| `ghi_ben.py` | **MỘT bản cài duy nhất** của việc ghi tệp cho bền: `ghi_nguyen_tu` · `chep_ben` · `dong_bo_tep` · `dong_bo_thu_muc`. Không biết gì về HTTP, cấu hình, hay Excel | Dùng chung cho `tai_khoan.py`, `web.py`, `kho_tuan.py` — **đừng chép bản thứ hai** |
+| `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
+| `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, liệt kê. **KHÔNG biết Excel là gì** | Bốn luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY |
+| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` / `them` / `liet-ke` | `xem` không ghi một byte nào |
+| `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp** |
+| `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 9 |
+| `tests/thu_kho_tuan.py` | 6 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |
 | `tests/thu_o_tong.py` | Sáu ô "TỔNG SỐ TIẾT/TUẦN" (dòng 43) phải đếm **từ dòng đầu vùng dữ liệu**. Dòng đầu suy từ `vi_tri_bang`, dòng phải phủ suy từ `khung_gio` — **không ghim số trần**. CA 3 vá một cột về dòng sau trên **bản chép** rồi đòi bộ dò ĐỎ đúng một cột | **Chạy khi sửa `mau_tkb.xlsx` hoặc `xuat_excel()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. **Tha SÀN KHÁC-RỖNG** (`> 0`, `> 1`, `>= 1` — chỉ toán tử thứ tự, chỉ số 0 và 1), vì CLAUDE.md bắt buộc phải khẳng định số đếm khác 0 trước khi dùng. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
@@ -1078,6 +1090,16 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
+- `python3 tests/thu_kho_tuan.py`: **77/77 mục ĐẠT** (~2s, đo 22/8/2026), 6 ca.
+  Lùi ra thì đỏ đúng phần của nó: bỏ luật từ chối trùng SHA-256 → 62/77 ·
+  ghi đè lên phiếu hỏng → 66/77 · bỏ vòng chống va chạm tên → 74/77 ·
+  nuốt lặng vùng Thứ 7 → 69/77 · bỏ phép so vùng COUNTA → 69/77 · gộp ngầm
+  tên môn → 70/77 · bỏ dấu bộ đọc → 70/77 · bỏ hai lớp chắn tệp-không-zip
+  → 75/76 (ĐỎ, không VỠ). **Không lần nào Traceback.**
+  > **Hai mục lúc đầu KHÔNG biết đỏ, đã sửa.** "Không cái nào bị đè" xanh cả
+  > khi bỏ vòng chống va chạm, vì hai tệp thử vốn đã khác tên gốc — nay có
+  > mục ép **cùng tên gốc, cùng giây** (truyền `khi=`, không trông vào tốc độ
+  > máy). Đúng bài học "một mục canh sai chỗ trông y hệt mục canh đúng chỗ".
 - `python3 tests/thu_o_tong.py`: **36/36 mục ĐẠT** (~2s, đo 21/8/2026), 5 ca.
   Vá `D43` về `COUNTA(D10:D42)` trên **bản chép** thì bộ dò ĐỎ **đúng một cột**,
   năm cột kia vẫn sạch, và `mau_tkb.xlsx` thật không bị đụng. CA 4 chứng minh

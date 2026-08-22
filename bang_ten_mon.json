@@ -1,0 +1,36 @@
+{
+ "_doc_truoc": [
+  "BẢNG TÊN MÔN — THẦY CÔ DUYỆT TAY, PHẦN MỀM KHÔNG BAO GIỜ TỰ GỘP.",
+  "Tệp này CÓ COMMIT (khác luu_tru/ đã gitignore) vì nó là QUYẾT ĐỊNH",
+  "thầy cô duyệt, không phải dữ liệu lưu trữ. Mất theo ổ nghĩa là phải",
+  "ngồi duyệt lại từng chuỗi bằng tay.",
+  "",
+  "biet = những chuỗi ĐÃ được duyệt. Chuỗi ngoài danh sách này sẽ hiện",
+  "       ra ở mục 'tên môn lạ' khi nạp tuần, để thầy cô ngó rồi quyết.",
+  "",
+  "gop  = cặp 'chuỗi lạ' -> 'tên chuẩn', CHỈ thêm bằng tay sau khi đã",
+  "       chắc hai chuỗi đó THẬT SỰ là một môn. Bộ đọc doc_tkb.py KHÔNG",
+  "       đọc mục này — nó chỉ là sổ ghi để bước hiển thị dùng sau.",
+  "       Đo trên hai tệp tuần 1 thật của trường (22/8/2026): 19 chuỗi",
+  "       môn khác nhau cho khoảng 12 môn. Năm chuỗi chưa có trong",
+  "       cauhinh.json: 'GDKTPL', 'Chuyên đề Ngữ Văn', 'Chuyên đề sử',",
+  "       'Chuyên đề địa lí', 'chuyên đề Địa lí'. CHƯA gộp cái nào."
+ ],
+ "biet": [
+  "Chuyên đề Lịch sử",
+  "Chuyên đề Ngữ văn",
+  "Chuyên đề Toán",
+  "Chuyên đề Địa lí",
+  "GDKT-PL",
+  "Hoá học",
+  "HĐTN&HN",
+  "Lịch sử",
+  "Ngữ văn",
+  "SHCN",
+  "Sinh học",
+  "Toán học",
+  "Vật lý",
+  "Địa lí"
+ ],
+ "gop": {}
+}

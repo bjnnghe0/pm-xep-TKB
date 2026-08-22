@@ -316,3 +316,40 @@ nó lên · và ghi được xuống đĩa.
 | Vào được nhưng bấm **Lưu** hỏng | Ổ NTFS đang ở chế độ **chỉ đọc**. Máy chủ lẽ ra đã từ chối khởi động và nói rõ — xem journal. Chữa: vào Windows tắt "khởi động nhanh" rồi *Shut down* hẳn |
 | Xếp xong báo thiếu `openpyxl` | `ExecStart` đang trỏ nhầm `/usr/bin/python3`. Phải là `~/.venvs/xeptkb/bin/python3` |
 | Chỉ hỏng lúc vừa bật máy | `RequiresMountsFor` khai sai — xem lại mục 3c |
+
+---
+
+## 9. Kho TKB theo tuần — CHÉP SANG Ổ KHÁC, KHÔNG CÓ AI LÀM HỘ
+
+`luu_tru/` đã **gitignore**. Nghĩa là **git KHÔNG phải bản sao lưu của nó** —
+lịch sử TKB cả năm học chỉ nằm trên ổ `NAM MEO`. Mất ổ là mất sạch, và không
+có bản thứ hai ở đâu cả.
+
+Cắm ổ ngoài (USB, ổ cứng rời) rồi chạy **đúng một dòng này**:
+
+```bash
+rsync -a --delete "/media/adminnam/NAM MEO/projects/PM xep tkb/luu_tru/" \
+      "/media/adminnam/<TÊN Ổ NGOÀI>/sao_luu_tkb/"
+```
+
+> **Ba điều phải biết, đừng bỏ:**
+> 1. **Dấu `/` cuối đường nguồn là bắt buộc.** Có `/` thì chép *nội dung*
+>    thư mục; thiếu `/` thì chép *cả thư mục* vào trong, thành
+>    `sao_luu_tkb/luu_tru/…` — lần sau chạy lại sẽ ra thêm một tầng nữa.
+> 2. **`--delete` xoá ở ĐÍCH những gì không còn ở nguồn.** Đó là ý muốn (bản
+>    sao giống hệt), nhưng nó cũng nghĩa là: nếu nguồn hỏng hoặc rỗng thì lần
+>    chạy kế tiếp sẽ xoá luôn bản sao. Ngó `luu_tru/` trước khi chạy.
+> 3. **Phải là Ổ KHÁC, không phải thư mục khác trên cùng ổ.** Chép sang chỗ
+>    khác của `NAM MEO` không chống được cái đang lo, là hỏng ổ.
+
+**KHÔNG có script tự chạy, và đó là chủ ý.** Một việc chạy nền chép dữ liệu
+thật của nhà trường sang một đường dẫn mà không ai nhìn là thứ sẽ âm thầm chép
+sai chỗ, hoặc âm thầm ngừng chạy. Dòng lệnh trên do người gõ, người nhìn kết
+quả — mỗi tuần một lần, sau khi lưu tuần mới.
+
+Kiểm bản sao có thật không:
+
+```bash
+diff -rq "/media/adminnam/NAM MEO/projects/PM xep tkb/luu_tru/" \
+         "/media/adminnam/<TÊN Ổ NGOÀI>/sao_luu_tkb/"   # không in gì = khớp
+```

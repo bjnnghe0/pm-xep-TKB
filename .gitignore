@@ -44,3 +44,7 @@ khoa_dang_nhap.json.tam.*.json
 # Môi trường ảo Python
 .venv/
 venv/
+
+# Kho TKB theo tuần — DỮ LIỆU THẬT của trường, không đưa lên git.
+# ⚠ Nghĩa là git KHÔNG phải bản sao lưu của nó. Xem CHAY_CUNG_MAY.md mục 9.
+luu_tru/
