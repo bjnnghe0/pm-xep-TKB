@@ -397,46 +397,73 @@ def danh_dau_ban(goc, ma_tuan, chi_so, trang_thai, ly_do=''):
 
 def sua_tuan(goc, ma_tuan, **doi):
     """Sửa khai báo cấp TUẦN (tu_ngay, den_ngay, nhan, nam_hoc, hoc_ky,
-       ghi_chu). KHÔNG đụng danh sách bản, KHÔNG đụng tệp gốc, KHÔNG đụng bản
-       tách. KHÔNG BAO GIỜ NÉM.
-
-       Vì sao cần: ô A4 của tệp trường có thể SAI, và chỉ người hỏi được nhà
-       trường mới biết đúng là gì. Tuần 2026-08-24 là ca thật — A4 ghi 23/8,
-       mà 23/8 là CHỦ NHẬT; Khoa chốt 22/8/2026 rằng tuần tính từ Thứ Hai.
-       Sửa `tu_ngay` ở phiếu, còn chuỗi A4 nguyên văn thì giữ nguyên trong
-       `tach/<bản>.json` khoá `tuan_A4.tho` — hai chỗ, hai vai trò.
-    """
+       ghi_chu). KHÔNG đụng danh sách bản. KHÔNG BAO GIỜ NÉM."""
     CHO_PHEP = ('tu_ngay', 'den_ngay', 'nhan', 'nam_hoc', 'hoc_ky', 'ghi_chu')
     ra = {'ok': False, 'cau': '', 'doi': {}}
     la = [k for k in doi if k not in CHO_PHEP]
     if la:
         ra['cau'] = f'Khoá lạ: {la}. Chỉ sửa được {CHO_PHEP}.'
         return ra
-    p2, loi = doc_phieu_ky(goc, ma_tuan)
+    p, loi = doc_phieu_ky(goc, ma_tuan)
     if loi:
         ra['cau'] = loi + '\n      KHÔNG ghi đè lên phiếu hỏng.'
         return ra
-    if p2 is None:
+    if p is None:
         ra['cau'] = f'Kho chưa có tuần {ma_tuan}.'
         return ra
     for k, v in doi.items():
         if v is not None:
-            ra['doi'][k] = (p2.get(k), v)
-            p2[k] = v
+            ra['doi'][k] = (p.get(k), v)
+            p[k] = v
     if not ra['doi']:
         ra['cau'] = 'Không có gì để sửa.'
         return ra
     try:
         GB.ghi_nguyen_tu(duong_phieu(goc, ma_tuan),
-                         json.dumps(p2, ensure_ascii=False, indent=1) + '\n',
+                         json.dumps(p, ensure_ascii=False, indent=1) + '\n',
                          ben=True)
     except OSError as e:
         ra['cau'] = f'Không ghi được phiếu: {e}'
         return ra
     ra['ok'] = True
-    ra['cau'] = ' · '.join(f'{k}: {a!r} -> {b!r}'
-                           for k, (a, b) in ra['doi'].items())
+    ra['cau'] = ' · '.join(f'{k}: {a!r} -> {b!r}' for k, (a, b) in ra['doi'].items())
     return ra
+
+
+def duong_ban(goc, ma_tuan, ban):
+    """Đường dẫn thật tới tệp gốc của một bản. TOÀN PHẦN: thiếu -> None."""
+    if not isinstance(ban, dict) or not ban.get('tep'):
+        return None
+    return os.path.join(thu_muc_tuan(goc, ma_tuan), ban['tep'])
+
+
+def chon_ban(goc, ma_tuan, chi_so=None):
+    """Chọn MỘT bản để đối chiếu. Trả (bản|None, câu lỗi|None).
+
+       `chi_so` None thì lấy bản duy nhất đánh dấu "dung". KHÔNG đoán khi có
+       nhiều lựa chọn — bắt người gõ `--ban`.
+    """
+    p, loi = doc_phieu_ky(goc, ma_tuan)
+    if loi:
+        return None, loi
+    if p is None:
+        return None, f'Kho chưa có tuần {ma_tuan}.'
+    ds = p.get('ban') or []
+    if not ds:
+        return None, f'Tuần {ma_tuan} chưa có bản nào.'
+    if chi_so is not None:
+        if not isinstance(chi_so, int) or not (1 <= chi_so <= len(ds)):
+            return None, f'Số thứ tự bản phải từ 1 đến {len(ds)}.'
+        return ds[chi_so - 1], None
+    dung = [b for b in ds if trang_thai_cua(b) == 'dung']
+    if len(dung) == 1:
+        return dung[0], None
+    if not dung:
+        return None, (f'Tuần {ma_tuan} chưa có bản nào đánh dấu "dung", nên '
+                      'không tự chọn được. Gõ thêm --ban <n> để chỉ rõ. '
+                      f'Đang có {len(ds)} bản.')
+    return None, (f'Tuần {ma_tuan} có {len(dung)} bản đánh dấu "dung" — không '
+                  'tự chọn được. Gõ thêm --ban <n>.')
 
 
 def liet_ke(goc):

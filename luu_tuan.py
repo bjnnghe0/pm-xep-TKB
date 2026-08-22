@@ -10,6 +10,7 @@
    python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \\
                        --trang-thai sai --ly-do "..."
    python3 luu_tuan.py de-dang  --tuan 2026-08-24
+   python3 luu_tuan.py so       <tệp.xlsx> --tuan 2026-08-24 [--ban N]
 
  `xem` CHỈ ĐỌC, không ghi một byte nào — dùng để ngó trước khi lưu.
 
@@ -106,6 +107,69 @@ def _lech_ngay(r, ma_tuan):
             'Đúng cái nào thì gõ lại với --tuan <ngày đúng> --dong-y-lech.']
 
 
+def _so(goc, a):
+    """So tệp `a.tep` với một bản trong kho. CHỈ ĐỌC, không ghi một byte nào."""
+    ban, loi = K.chon_ban(goc, a.tuan, a.ban)
+    if loi:
+        print(f'[DỪNG] {loi}')
+        return 1
+    kho = K.duong_ban(goc, a.tuan, ban)
+    if not kho or not os.path.exists(kho):
+        print(f'[DỪNG] Bản trong phiếu trỏ tới {ban.get("tep")!r} mà tệp đó '
+              'không có trên đĩa.')
+        return 1
+
+    biet, _ = _bang_ten_mon()
+    A = D.doc(kho, ten_mon_biet=biet)          # TRÁI  = bản trong kho
+    B = D.doc(a.tep, ten_mon_biet=biet)        # PHẢI  = tệp đang cầm
+    for ten, r in (('bản trong kho', A), ('tệp đang so', B)):
+        if r['loi']:
+            print(f'[DỪNG] Không đọc được {ten}:')
+            for x in r['loi']:
+                print(f'   {x}')
+            return 1
+
+    print(f'   TRÁI  (kho)  : {ban.get("tep")}')
+    print(f'                  lưu {ban.get("gio_luu")} · '
+          f'trạng thái {K.trang_thai_cua(ban)!r}')
+    print(f'   PHẢI  (so)   : {a.tep}')
+    print(f'   Bộ đọc       : {A["bo_doc"].get("bam_ma")}')
+    if A['bo_doc'] != B['bo_doc']:
+        print('   ⚠ hai bên đọc bằng HAI bộ đọc khác nhau')
+
+    if K.bam_tep(kho) == K.bam_tep(a.tep):
+        print('\n   HAI TỆP GIỐNG HỆT NHAU TỪNG BYTE (SHA-256 trùng).')
+        return 0
+
+    key = lambda o: (o['lop'], o['thu'], o['tiet'])
+    da = {key(o): o for o in A['o']}
+    db = {key(o): o for o in B['o']}
+    mo = lambda o: (f'{o["mon"]} ({o["gv"]})' if o and o.get('gv')
+                    else (o['mon'] if o else '(TRỐNG)'))
+    khac = []
+    for k in sorted(set(da) | set(db)):
+        x, y = da.get(k), db.get(k)
+        if mo(x) != mo(y):
+            o = (x or y).get('o_excel')
+            khac.append((k[0], k[1], k[2], o, mo(x), mo(y)))
+    print(f'\n   {len(khac)} ô KHÁC NHAU '
+          f'(kho {len(A["o"])} ô · so {len(B["o"])} ô):\n')
+    if khac:
+        print(f'   {"lớp":<7}{"khi nào":<14}{"ô":<6}{"TRÁI (kho)":<30}PHẢI (so)')
+        print('   ' + '-' * 84)
+    tran = len(khac) if a.tat_ca else 200
+    for lop, thu, tiet, o, cu, moi in khac[:tran]:
+        print(f'   {lop:<7}T{thu} tiết {tiet:<6}{o:<6}{cu:<30}{moi}')
+    if len(khac) > tran:
+        print(f'   … và {len(khac) - tran} ô nữa (thêm --tat-ca để in hết)')
+
+    for ten, r in (('kho', A), ('so', B)):
+        if r['dem_tach_duoc']:
+            print(f'   số tiết/lớp ({ten:<3}): {r["dem_tach_duoc"]}')
+    print(f'\n   TỔNG: {len(khac)} ô khác.')
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description='Lưu và xem kho TKB theo tuần.')
@@ -137,6 +201,14 @@ def main(argv=None):
     p = sub.add_parser('de-dang', help='bản nào của tuần này ĐĂNG ĐƯỢC')
     p.add_argument('--tuan', required=True)
 
+    p = sub.add_parser('so', help='so một tệp với một bản đã lưu — CHỈ ĐỌC')
+    p.add_argument('tep')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ban', type=int, default=None,
+                   help='số thứ tự bản; bỏ trống thì lấy bản đánh dấu "dung"')
+    p.add_argument('--tat-ca', action='store_true',
+                   help='in hết, không cắt ở 200 dòng')
+
     sub.add_parser('liet-ke', help='các tuần đang có trong kho')
     a = ap.parse_args(argv)
     goc = a.kho or K.goc_mac_dinh()
@@ -156,6 +228,9 @@ def main(argv=None):
             print(f'   {b.get("tep")}')
             print(f'      lý do đánh dấu "dung": {b.get("ly_do")}')
         return 0
+
+    if a.lenh == 'so':
+        return _so(goc, a)
 
     if a.lenh == 'liet-ke':
         ds = K.liet_ke(goc)

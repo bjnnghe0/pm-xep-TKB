@@ -20,6 +20,7 @@
    CA 5  Dấu bộ đọc đi theo từng bản tách
    CA 6  Phiếu hỏng thì DỪNG, không ghi đè lên nó
    CA 7  Bản "sai" KHÔNG BAO GIỜ ra được đường đăng, dù gõ đúng mã tuần
+   CA 8  So một tệp với một bản đã lưu — chỉ đọc, đếm đúng số ô khác
 ==========================================================================
 """
 import io
@@ -519,6 +520,54 @@ def ca_7_ban_sai_khong_ra_duoc_duong_dang(tm):
          'Tuần chưa có -> trả rỗng, không ném')
 
 
+def ca_8_so_tep_voi_ban_da_luu(tm):
+    print('\nCA 8 — so một tệp với một bản đã lưu')
+    print('-' * 74)
+    goc = os.path.join(tm, 'kho8')
+    MA = '2026-01-05'
+    t1 = dung_xlsx(os.path.join(tm, 's1.xlsx'), o_mau(so_tiet=3))
+    a = K.them_ban(goc, MA, t1, 'người thử')
+    kiem(a.get('ok') is True, 'Lưu một bản')
+
+    ban, loi = K.chon_ban(goc, MA, None)
+    kiem(ban is None and bool(loi),
+         'Chưa bản nào "dung" -> KHÔNG tự chọn, bắt gõ --ban')
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử')
+    ban, loi = K.chon_ban(goc, MA, None)
+    kiem(ban is not None and loi is None, 'Có đúng một bản "dung" -> tự chọn được')
+
+    dd = K.duong_ban(goc, MA, ban)
+    kiem(dd and os.path.exists(dd), f'Truy được đường dẫn tệp gốc — {bool(dd)}')
+    kiem(K.duong_ban(goc, MA, {}) is None, 'Bản ghi rỗng -> trả None, không ném')
+    kiem(K.bam_tep(dd) == K.bam_tep(t1), 'Tệp trong kho khớp SHA-256 với tệp gốc')
+
+    # đếm ô khác đúng: dựng một tệp lệch ĐÚNG MỘT ô
+    o = o_mau(so_tiet=3)
+    o['D8'] = 'Môn Khác Hẳn (T.Khác)'
+    t2 = dung_xlsx(os.path.join(tm, 's2.xlsx'), o)
+    A, B = D.doc(dd), D.doc(t2)
+    kiem(A.get('loi') == [] and B.get('loi') == [], 'Đọc được cả hai bên')
+    key = lambda x: (x['lop'], x['thu'], x['tiet'])
+    da = {key(x): x for x in A.get('o') or []}
+    db = {key(x): x for x in B.get('o') or []}
+    khac = [k for k in set(da) | set(db)
+            if (da.get(k) or {}).get('mon') != (db.get(k) or {}).get('mon')]
+    kiem(len(khac) == 1, f'Lệch đúng MỘT ô thì đếm ra 1 — {len(khac)}')
+    kiem(K.bam_tep(dd) != K.bam_tep(t2), 'và SHA-256 hai tệp khác nhau')
+
+    # chọn bản khi có NHIỀU bản "dung" -> không đoán
+    t3 = dung_xlsx(os.path.join(tm, 's3.xlsx'), o_mau(so_tiet=5))
+    K.them_ban(goc, MA, t3, 'người thử')
+    K.danh_dau_ban(goc, MA, 2, 'dung', 'ca thử: bản thứ hai cũng dùng được')
+    ban2, loi2 = K.chon_ban(goc, MA, None)
+    kiem(ban2 is None and bool(loi2),
+         'HAI bản "dung" -> KHÔNG đoán, bắt gõ --ban')
+    kiem(K.chon_ban(goc, MA, 2)[0] is not None, 'Gõ --ban 2 thì chọn được')
+    kiem(K.chon_ban(goc, MA, 0)[0] is None, '--ban 0 -> từ chối, không ném')
+    kiem(K.chon_ban(goc, '2026-01-12', None)[0] is None,
+         'Tuần chưa có -> từ chối, không ném')
+
+
 # ==========================================================================
 def main():
     dat_dong_ho_canh(180)
@@ -534,6 +583,7 @@ def main():
         ca_5_dau_bo_doc(tm)
         ca_6_phieu_hong_thi_dung(tm)
         ca_7_ban_sai_khong_ra_duoc_duong_dang(tm)
+        ca_8_so_tep_voi_ban_da_luu(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

@@ -45,6 +45,7 @@ python3 luu_tuan.py liet-ke              # các tuần đang có trong kho
 python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \
         --trang-thai sai --ly-do "..."   # bản này dùng được hay không
 python3 luu_tuan.py de-dang  --tuan 2026-08-24   # bản nào ĐĂNG ĐƯỢC
+python3 luu_tuan.py so <tệp.xlsx> --tuan 2026-08-24   # so với bản đã lưu
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -1229,10 +1230,11 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
-- `python3 tests/thu_kho_tuan.py`: **100/100 mục ĐẠT** (~3s, đo 22/8/2026), 7 ca.
+- `python3 tests/thu_kho_tuan.py`: **113/113 mục ĐẠT** (~3s, đo 22/8/2026), 8 ca.
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng →
   CA 7 lùi ra thì đỏ đúng phần của nó: cho bản "sai" lọt cửa đăng → 92/100 ·
-  thiếu khoá thì coi là `dung` → 99/100.
+  thiếu khoá thì coi là `dung` → 99/100 · `chon_ban` ĐOÁN khi có nhiều bản
+  "dung" → 112/113 (đo trên bản 113 mục).
   (Sáu ca đầu, đo trước khi thêm CA 7/8: **77/77**.)
   Lùi ra thì đỏ đúng phần của nó: bỏ luật từ chối trùng SHA-256 → 62/77 ·
   ghi đè lên phiếu hỏng → 66/77 · bỏ vòng chống va chạm tên → 74/77 ·
