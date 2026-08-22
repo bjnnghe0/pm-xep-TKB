@@ -1,8 +1,10 @@
 # Dự án: Phần mềm xếp thời khóa biểu
 
 Khoa Khoa học Cơ bản — Trường Cao đẳng Đà Lạt. Xếp TKB 6 lớp khối 12
-(12B1–12B6), buổi chiều tiết 6–10, Thứ 2 → Thứ 6. Mỗi lớp 24 tiết/tuần trên
-lưới 25 ô (5 ngày × 5 tiết), dư đúng 1 ô trống.
+(12B1–12B6), buổi chiều tiết 6–10, Thứ 2 → Thứ 6. Mỗi lớp học hết một
+số tiết/tuần vừa đúng nhỏ hơn lưới một ô, nên dư đúng **1 ô trống** (đo
+22/8/2026: **24 tiết** trên lưới **25 ô** = 5 ngày × 5 tiết; đếm lại bằng lệnh
+ở mục "Số đếm — ĐỪNG CHÉP, HÃY ĐẾM").
 
 Người dùng cuối là giáo viên, **không biết lập trình**: họ chỉ mở
 `cauhinh.json` bằng Notepad và bấm đúp `chay.bat`.
@@ -13,7 +15,7 @@ Người dùng cuối là giáo viên, **không biết lập trình**: họ ch�
 
 ```bash
 python3 xep_tkb.py                      # xếp và xuất TKB_Khoi12.xlsx
-python3 xep_tkb.py --quy-tac            # in danh mục 17 loại quy tắc + mẫu JSON
+python3 xep_tkb.py --quy-tac            # in danh mục mọi loại quy tắc + mẫu JSON
 python3 xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
 python3 xep_tkb.py --seed 99 --lan 800  # đổi seed / số lần thử
 python3 xep_tkb.py --cauhinh khac.json  # dùng file cấu hình khác
@@ -86,7 +88,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `cauhinh.json` | Dữ liệu (lớp, GV, số tiết) + toàn bộ danh sách quy tắc | Người dùng cuối sửa. Không phá cấu trúc. |
 | `cauhinh_may_chu.json` | Danh sách `host_cho_phep` / `origin_cho_phep`. **Đã gitignore**, mỗi máy một khác | Thiếu thì mặc định chỉ 127.0.0.1. Sửa xong phải chạy lại `web.py` |
 | `cauhinh.khoi12.goc.json` | **Bản gốc chỉ có khối 12**, đóng băng ở tag `v1.0-khoi12` | **KHÔNG được sửa.** Chỉ để đối chiếu |
-| `quy_tac.py` | 17 loại quy tắc, registry `DANH_MUC` | **Mọi logic nghiệp vụ nằm ở đây** |
+| `quy_tac.py` | Mọi loại quy tắc + registry `DANH_MUC` | **Mọi logic nghiệp vụ nằm ở đây** |
 | `xep_tkb.py` | Mô hình dữ liệu, bộ giải, hậu kiểm, xuất Excel | **Không được hardcode quy tắc nghiệp vụ** |
 | `mau_tkb.xlsx` | Mẫu Excel của trường (1 sheet "Khối 12") | Chương trình copy rồi ghi đè D8:I32 |
 | `TKB_Khoi12.xlsx` | Kết quả (3 sheet) | File sinh ra, ghi đè mỗi lần chạy |
@@ -97,9 +99,9 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_truong.py` | Mọi loại có `TRUONG`; khoá lạ cấp cao nhất thì DỪNG | Chạy khi thêm loại quy tắc |
 | `tests/thu_them_quy_tac.py` | Thêm/xoá/lưu qua API; kích thước ô nhập trong CSS; CA 8 canh **nhân bản** + cửa chặn trùng câu `ghi_chu` | Chạy khi sửa form quy tắc |
 | `tests/tien_ich_web.py` | `MayChuTam` (máy chủ thật) + `Khach` (socket trần, gửi được yêu cầu **dị dạng**: sai `Content-Type`, thiếu/nói dối `Content-Length`, `chunked`, và qua `tho_dong()` là **tiêu đề trùng tên**) | Hạ tầng dùng chung của mọi ca thử web |
-| `tests/thu_an_ninh.py` | 10 bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
+| `tests/thu_an_ninh.py` | Các bất biến an ninh: thân dị dạng · nguồn gốc · sao lưu · ghi nguyên tử · khoá một lượt · traceback · công thức Excel · trần thân · phễu tiêu đề · fsync | **Chạy khi sửa `web.py` hoặc chỗ ghi ô Excel** |
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
-| `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — 17 câu **và** 17 chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
+| `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — mọi câu **và** mọi chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
 | `ghi_ben.py` | **MỘT bản cài duy nhất** của việc ghi tệp cho bền: `ghi_nguyen_tu` · `chep_ben` · `dong_bo_tep` · `dong_bo_thu_muc`. Không biết gì về HTTP, cấu hình, hay Excel | Dùng chung cho `tai_khoan.py`, `web.py`, `kho_tuan.py` — **đừng chép bản thứ hai** |
 | `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
 | `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng** |
@@ -125,7 +127,7 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `web.py` + `web/` | Giao diện web cục bộ (chỉ thư viện chuẩn) | Chỉ gọi vào `xep_tkb.py`, không sửa |
 | `tests/thu_web.py` | Web: giống dòng lệnh, bắt `SystemExit`, khoá một-lượt | Chạy khi sửa `web.py` |
 | `xuat_html.py` | Sinh `tkb_web.html` — một file tự chứa để chia sẻ | Không phụ thuộc openpyxl |
-| `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp 150 ô với Excel | Chạy khi sửa `xuat_html.py` |
+| `tests/thu_xuat_html.py` | Trang tĩnh: tự chứa, khớp từng ô với Excel | Chạy khi sửa `xuat_html.py` |
 | `DUA_LEN_MANG.md` | Hướng dẫn GitHub Pages cho người không rành kỹ thuật | Cập nhật khi đổi quy trình |
 | `docs/` | `index.html` (bản sao `tkb_web.html`) + `.nojekyll` rỗng — thư mục GitHub Pages phục vụ | Do script ghi, đừng sửa tay |
 | `xeptkb.service` · `CHAY_CUNG_MAY.md` | Dịch vụ systemd **phạm vi người dùng** (không cần sudo, đã có `Linger=yes`) + hướng dẫn cài/kiểm/gỡ. Mỗi dòng dễ sai đều kèm số đo | Cập nhật khi đổi cổng, đường dẫn, hay trình thông dịch |
@@ -178,7 +180,7 @@ vitri_ok o_cam ngay vitri qt qt_gy`
 - **Ô trống** được mô hình hoá thành một `Cum` giả `la_trong=True`, size = số ô dư
   (`xep_tkb.py:209`). Khi luật `khong_tiet_trong_giua_buoi` bật (mặc định `True`),
   miền bị ghim `vitri_ok = {SO_TIET - size}` để dồn ô trống về cuối buổi
-  (`xep_tkb.py:224`) → 24 tiết + 1 ô trống lấp kín đúng 25 ô, không có tiết trống
+  (`xep_tkb.py:224`) → số tiết + 1 ô trống lấp kín vừa hết lưới, không có tiết trống
   chen giữa buổi. Đặt luật này `false` thì ô trống giữ nguyên miền đầy đủ và có
   thể rơi vào giữa buổi.
 - `chia_cum(so_tiet, mau_cum)` cắt số tiết/tuần thành các cụm theo `dinh_muc_mon.cum`,
@@ -270,7 +272,8 @@ Thêm khoá lọc mới thì chỉ sửa `khop_loc()`, hai chỗ tự động th
 > **Bài học vì sao phải gộp.** Trước đây `_cum_cua()` có bản cài riêng và
 > **không hiểu `la_chuyen_de`**. Đo được: cùng bộ lọc `{"la_chuyen_de": true}`,
 > `khop()` khớp đúng 24 cụm chuyên đề, còn `_cum_cua()` lại đụng **48 cặp
-> (lớp, môn) thuộc 9 môn KHÔNG phải chuyên đề** — sai hoàn toàn, và im lặng.
+> (lớp, môn) thuộc 9 môn KHÔNG phải chuyên đề** (ba số đo trên dữ liệu
+> trước 19/8/2026; bài học thì vẫn đúng dù số có đổi) — sai hoàn toàn, và im lặng.
 > Cứ để hai bản cài song song thì kiểu lệch này còn tái diễn.
 
 Kiểm khai báo cũng dùng chung, ở mức module trong `quy_tac.py`:
@@ -289,7 +292,7 @@ là chạy được) → thêm vào đúng nhóm trong `in_danh_muc()` → thêm
 ### Chế độ tái lập — `tim_kiem.che_do_tai_lap`
 
 Bộ giải chặn bằng **đồng hồ treo tường**, nên hai lần chạy cùng seed vẫn cho số
-phương án khác nhau (đã thấy 396 → 395 → 396). Con số lệch thì nhỏ, nhưng hệ quả
+phương án khác nhau (đã thấy 396 → 395 → 396 trên MÁY A, trước 19/8/2026). Con số lệch thì nhỏ, nhưng hệ quả
 thì không: **mọi hồi quy thật đều có thể bị đổ cho "dao động bình thường"**.
 
 Bật `che_do_tai_lap` (trong mục `tim_kiem` của `cauhinh.json`, hoặc cờ
@@ -331,7 +334,8 @@ quy tắc `thich()` ô đó.
 Kiểm tra nền trong `dat_duoc()` (không phải quy tắc, luôn chạy): trùng ô của lớp,
 trùng ô của giáo viên, `o_cam`, và luật `mot_cum_moi_mon_moi_ngay`.
 
-`main()` chạy nhiều seed (`tim_kiem.so_lan_thu` — `cauhinh.json` đang đặt 400,
+`main()` chạy nhiều seed (`tim_kiem.so_lan_thu` — `cauhinh.json` đang đặt **400** lúc
+22/8/2026 — đọc lại bằng lệnh ở mục "Số đếm";
 mặc định trong mã là 300, ghi đè bằng `--lan`), mỗi lần giới hạn theo
 `gioi_han_buoc` (30000) và `gioi_han_giay_moi_lan` (3s), tổng
 `gioi_han_tong_giay` (60s).
@@ -445,7 +449,7 @@ Hoá 12B1–12B4 không Thứ 3,5 · Văn cô Đ.Duy không Thứ 2 · Sử cô 
 tiết 4,5 của buổi · Toán thầy M.Tuấn 12B2 khác ngày Toán thầy M.Hùng 12B4 ·
 Sử cô N.Xuân khác ngày lịch thầy M.Hùng.
 
-**3 tiêu chí mềm:** chuyên đề kề tiết chính (12đ) · dồn buổi cho GV (−4đ/buổi) ·
+**Các tiêu chí mềm** (đếm bằng lệnh ở mục "Số đếm"; **3** lúc 22/8/2026): chuyên đề kề tiết chính (12đ) · dồn buổi cho GV (−4đ/buổi) ·
 hai buổi cùng môn cách ≥ 2 ngày (3đ).
 
 **2 luật nền** (`luat_chung`): `khong_tiet_trong_giua_buoi`, `mot_cum_moi_mon_moi_ngay`.
@@ -453,7 +457,7 @@ hai buổi cùng môn cách ≥ 2 ngày (3đ).
 Cách gom tiết nằm ở `dinh_muc_mon.cum`: Toán/Văn `[2,1]`, HĐTN `[3]`,
 Sử/Địa/Lý/Sinh/Hoá/GDKT-PL `[2]`, chuyên đề & SHCN `[1]`.
 
-Mục `_quy_tac_de_san_chua_bat` chứa 7 quy tắc mẫu đang tắt — chép sang `quy_tac`
+Mục `_quy_tac_de_san_chua_bat` chứa các quy tắc mẫu đang tắt — chép sang `quy_tac`
 và bỏ `"bat": false` là dùng được.
 
 ---
@@ -471,7 +475,7 @@ sửa gì trong đó.
 | `POST /api/xep` | Bắt đầu một lượt; đang chạy thì trả **409** kèm "Đang xếp, vui lòng đợi." |
 | `GET /api/trang-thai?tu=N` | Tiến độ + nhật ký **từ dòng N trở đi** (đừng gửi lại cả khung log mỗi lần hỏi) |
 | `GET /api/quy-tac` · `POST /api/luu-quy-tac` | Đọc danh sách / ghi xuống file. `/api/quy-tac` phát **dấu bản** và **phạm vi từng quy tắc**; `/api/luu-quy-tac` **ĐÒI** khoá `dau`, lệch thì **409** |
-| `GET /api/loai-quy-tac` | Danh mục 17 loại: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
+| `GET /api/loai-quy-tac` | Danh mục mọi loại quy tắc: `MO_TA`, `TRUONG`, `VI_DU`, nhóm — sinh từ `QT.DANH_MUC` |
 | `GET /api/gia-tri` | Lớp / GV / môn / nhóm môn / thứ / tiết — đọc từ `cauhinh.json` |
 | `POST /api/them-quy-tac` · `POST /api/xoa-quy-tac` | Chỉ đổi cấu hình **của phiên**, không ghi file |
 | `POST /api/thu-quy-tac` | Xếp thử rút gọn (30 lần thử / 8 giây) để xem còn xếp được không. Thêm `"nhanh": true` thì hạ xuống **1 lần thử / 1 giây** — dùng cho cảnh báo sớm sau khi Lưu |
@@ -485,14 +489,14 @@ số trong danh sách đã ghép; quy tắc từ file không xoá được (dùn
 
 `/api/thu-quy-tac` **giải ngay trong luồng HTTP** — ngoại lệ có chủ ý của quy tắc
 "không giải trong handler", vì nó chặn cứng 30 lần thử / 8 giây (đo được ~2,3 giây trên MÁY A)
-chứ không phải ~50 giây như lượt xếp thật. Nó cũng **không đụng vào `TT`** nên
+chứ không phải cả một lượt xếp thật (xem mục "Ba chỗ dễ sai"). Nó cũng **không đụng vào `TT`** nên
 không ghi đè kết quả đang hiện trên màn hình.
 
 ### Kích thước ô nhập — có ngưỡng, có ca thử
 
 Mọi thứ bấm được (`input`, `select`, `textarea`, `button`, tab, ô vuông thứ/tiết,
 nút Xoá, công tắc): **min-height ≥ 40px, font-size ≥ 15px**. Ô đánh dấu là ngoại lệ,
-20×20px. Danh sách dài (28 giáo viên…) cao ≥ 200px, mỗi dòng ≥ 32px, có ô lọc và
+20×20px. Danh sách dài (mọi giáo viên…) cao ≥ 200px, mỗi dòng ≥ 32px, có ô lọc và
 dòng đếm. Danh sách ngắn cố định (thứ, tiết, lớp) dựng thành **dãy ô vuông bấm
 bật/tắt** ≥ 56×40px chứ không phải `<select multiple>` — cái đó cao vài pixel mỗi
 dòng, không bấm nổi.
@@ -501,16 +505,23 @@ dòng, không bấm nổi.
 > trang thật để đo. Nó bắt được việc khai sai cỡ, **không** bắt được lỗi bố cục
 > kiểu chữ tràn ra ngoài khung. Muốn chắc thì vẫn phải mở trình duyệt xem.
 
-### Mười bất biến an ninh — ĐỪNG làm hồi quy
+### Các bất biến an ninh — ĐỪNG làm hồi quy
 
 A1–A8 vá 19/8/2026 trước khi thêm đăng nhập; A9–A11 vá cùng ngày, ở **Đợt 1 của
 Giai đoạn 2** — cũng trước khi thêm đăng nhập, và đó là điều kiện tiên quyết:
 thêm cookie vào một máy chủ còn lỗ chèn đầu HTTP là làm an ninh **kém đi**, vì
 cookie tự đính kèm nên mọi lỗ cũ đều mượn được quyền của người vừa đăng nhập.
 
-Cả mười đều **hỏng ngay khi chạy cục bộ**, không phải rủi ro lý thuyết chờ tới
+Cả bảng đều **hỏng ngay khi chạy cục bộ**, không phải rủi ro lý thuyết chờ tới
 lúc mở Internet. Mỗi mục có ca thử riêng trong `tests/thu_an_ninh.py`; con số
 trong ngoặc là kết quả khi lùi lại bản cũ.
+
+> **Đếm bằng lệnh, đừng đếm bằng mắt:**
+> `grep -cE '^\| A[0-9]+ \|' CLAUDE.md`. Đo 22/8/2026: **9 dòng** có nhãn
+> `A`, nhưng nhãn chạy tới **A11** — **A5 và A6 không tồn tại**. Tài liệu
+> từng ghi "10 bất biến" ở 3 chỗ, tức con số đã trôi ít nhất một lần mà
+> không ai biết từ ngày nào. Nhãn là TÊN, không phải số thứ tự liên tục;
+> đừng suy số lượng từ nhãn lớn nhất.
 
 | # | Bất biến | Chỗ cài |
 |---|---|---|
@@ -909,11 +920,12 @@ dựng bằng `innerHTML`: mọi id JS gọi tới đều phải có trong HTML 
    hai** lý do — `_quay_lui` trả `False` (vét cạn) và `TimeoutError` (đụng trần)
    — nên trước đây không ai phân biệt nổi, và bất cứ ai muốn báo "cấu hình này
    vô nghiệm" đều buộc phải **nói quá**. `self.het_gio` phân biệt hai đường đó.
-   Với 90 cụm thì vét cạn gần như **không bao giờ** xảy ra trong ngân sách
+   Với số cụm cỡ này (đếm bằng lệnh ở mục "Số đếm"; **96** lúc 22/8/2026 —
+tài liệu trước ghi 90 và đã sai) thì vét cạn gần như **không bao giờ** xảy ra trong ngân sách
    thật, nên `vet_can=False` **KHÔNG** có nghĩa là "có nghiệm".
 
    `tests/thu_web.py` vẫn so **từng ô của vùng D8:I32** giữa hai đường chạy
-   (150 ô, 0 lệch). Sau khi gộp, ca thử này canh đúng chỗ đáng canh: phần còn lại
+   (mọi ô, **0 lệch**). Sau khi gộp, ca thử này canh đúng chỗ đáng canh: phần còn lại
    của `_chay()` — dựng cấu hình, tắt quy tắc tạm, xuất Excel — mới là chỗ có thể
    lệch khỏi dòng lệnh.
 
@@ -1186,29 +1198,48 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 
 ---
 
-## Trạng thái đã kiểm chứng (19/8/2026)
+## Trạng thái đã kiểm chứng — MỖI DÒNG MỘT NGÀY, KHÔNG PHẢI MỘT NGÀY CHUNG
+
+> **Tiêu đề mục này từng ghi `(19/8/2026)`, và cái ngày đó che cho quá nhiều
+> thứ.** Sáu bộ thử dưới đây **ra đời SAU 19/8** — `thu_dang_nhap`,
+> `thu_chong_do`, `thu_phien` (Giai đoạn 2, 20/8), `thu_doc_lai`,
+> `thu_dau_ban`, `thu_ghim_du_lieu` (Đợt 3, 21/8) — cộng ba bộ nữa làm 22/8:
+> `thu_o_tong`, `thu_kho_tuan`, `thu_sinh_dang`. Một ngày ở tiêu đề nói rằng
+> chúng đã được kiểm hôm 19/8, mà hôm đó chúng **chưa tồn tại**.
+>
+> Nay **mỗi gạch đầu dòng tự mang ngày của nó**. Dòng nào không có ngày là
+> dòng chưa ai soát lại — đó là thông tin, không phải thiếu sót.
+>
+> **Mẫu số của các con số lùi-bản-vá có thể KHÁC** mẫu số hiện tại (`13/18`
+> khi nay là `20/20`, `10/21` khi nay là `42/42`…). Đó **không phải lỗi**: mỗi
+> con số ấy chụp lại một lần đo tại thời điểm nó được viết, và điều nó khẳng
+> định là *"lùi bản vá ra thì SỐ MỤC ĐỎ đúng bằng chừng này"*, chứ không phải
+> tổng số mục hôm nay. Đừng "sửa" chúng cho khớp mẫu số mới — làm vậy là bịa
+> ra một phép đo chưa ai chạy.
+
 
 - `python3 xep_tkb.py`: 396 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
-  **−26**, **22/22 quy tắc ĐẠT**, xuất `TKB_Khoi12.xlsx`
-  đủ 3 sheet, 144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
-  New Roman + viền `thin` nguyên vẹn.
-- `python3 tu_kiem_tra.py`: 17 loại quy tắc đã đăng ký, ca CƠ SỞ + 11 ca thử đều
+  **−26**, **mọi quy tắc ĐẠT** (dòng `Tổng: N/N`, hai số bằng nhau —
+  đừng ghim N; đo 22/8/2026 là `23/23`), xuất `TKB_Khoi12.xlsx` đủ 3 sheet,
+  144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
+  New Roman + viền `thin` nguyên vẹn.  *(đo 19/8/2026)*
+- `python3 tu_kiem_tra.py`: mọi loại quy tắc đã đăng ký, ca CƠ SỞ + các ca thử đều
   **OK** (~105s), điểm từng ca −36 / −39 / −33 / −43 / −25 / −48 / −55 / −22 / 6 /
-  −49 / −50 / 33. 11 loại được thử trực tiếp; 6 loại còn lại (`chi_xep_tiet`,
+  −49 / −50 / 33. Một số loại được thử trực tiếp; số còn lại (`chi_xep_tiet`,
   `khong_xep_thu`, `khac_ngay`, và 3 loại `uu_tien_*`) được phủ qua ca CƠ SỞ vì
-  đã có sẵn trong `cauhinh.json`.
+  đã có sẵn trong `cauhinh.json`.  *(đo 19/8/2026)*
 - `python3 tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
-  dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.
+  dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.  *(đo 19/8/2026)*
 - `python3 tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
   khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
-  còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.
+  còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.  *(đo 19/8/2026)*
 - `python3 tests/thu_loc_tru.py`: **26/26 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
-  chỗ lọc thì tụt còn 5/25.
+  chỗ lọc thì tụt còn 5/25.  *(đo 19/8/2026)*
 - `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
-  cài riêng thì tụt còn 16/23.
+  cài riêng thì tụt còn 16/23.  *(đo 19/8/2026)*
 - `python3 tests/thu_web.py`: **66/66 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
-  đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
-  nhau giữa dòng lệnh và web.
+  đụng `cauhinh.json` thật. Mục quan trọng nhất: mọi ô của vùng D8:I32 giống hệt
+  nhau giữa dòng lệnh và web.  *(đo 19/8/2026)*
 - `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 12 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản
   vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
   A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
@@ -1217,25 +1248,25 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   **fail-open khi tệp hỏng → 197** · `endswith` → 200 · bỏ kiểm ký tự điều khiển → 201.
   Cổng gác mọi đường đo trên bộ 211 mục: thêm đường ghi mới mà quên gác → 210 ·
   bỏ cổng ở `do_POST` → 192 · bỏ cổng ở `do_GET` → 194 ·
-  **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.
+  **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.  *(đo 19/8/2026)*
 - `python3 tests/thu_truong.py`: **30/30 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
-  thì tụt còn 15/23.
+  thì tụt còn 15/23.  *(đo 19/8/2026)*
 - `python3 tests/thu_them_quy_tac.py`: **61/61 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
-  trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.
+  trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.  *(đo 19/8/2026)*
 - `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
-  QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.
+  QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.  *(đo 20/8/2026)*
 - `python3 tests/thu_doc_lai.py`: **44/44 mục ĐẠT** (~5s), 7 ca (đếm: `grep -cE "^def ca_"`). Lùi ra thì đỏ
   đúng phần của nó: `so_ghi_chu` luôn trả None → 25/28 · bỏ nhánh `doc_lai` ở
   `web.py` → 24/28 · cho hai loại dùng CHUNG một `MAU_CAU` → 27/28.
   > **Mục cuối suýt là một mục canh sai chỗ.** Bản đầu chỉ so CÂU ĐÃ DỰNG, và
   > **không** bắt được template chép lại — vì mỗi loại dựng câu từ `VI_DU`
   > riêng nên chuỗi ra vẫn khác nhau. Phải so **chính `MAU_CAU`** mới bắt được.
-  > Một mục canh sai chỗ trông y hệt một mục canh đúng chỗ.
+  > Một mục canh sai chỗ trông y hệt một mục canh đúng chỗ.  *(đo 21/8/2026)*
 - `python3 tests/thu_dau_ban.py`: **39/39 mục ĐẠT** (~90s), 6 ca. Lùi ra thì đỏ
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
-  bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.
+  bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.  *(đo 21/8/2026)*
 - `python3 tests/thu_sinh_dang.py`: **32/32 mục ĐẠT** (~5s, đo 22/8/2026), 4 ca.
   Lùi ra thì đỏ đúng phần của nó: đọc thẳng `phieu['ban'][0]` thay vì qua cửa
   → 23/32 · cho hàm công khai NHẬN thẳng một bản → 29/32 · bỏ cửa chặn `docs/`
@@ -1274,7 +1305,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 - `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
-  danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**
+  danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**  *(đo 21/8/2026)*
 - `python3 tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 13 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản vá
   ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
   bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
@@ -1282,16 +1313,16 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   đem sổ vào RAM → 39/52 · gỡ hẳn 2B → 25/52 · để `_ghi_so()` NÉM thay vì kêu to
   → 52/55 (và khi đó **mọi** lần đăng nhập, kể cả mật khẩu ĐÚNG, đều trả 500).
   **Không lần nào Traceback** — bản đầu có vỡ ở `doc_so()` khi thiếu tệp, đã sửa
-  thành hàm toàn phần.
+  thành hàm toàn phần.  *(đo 20/8/2026)*
 - `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (**~0,7s** — đo lại 21/8/2026,
   ba lượt cho 0,69 / 0,68 / 0,69 giây; con số `~10s` cũ đã sai. Chạy được bằng **cả**
   `python3` hệ thống lẫn venv, vì `openpyxl` chỉ nạp muộn trong `xuat_excel()`).
   Lùi `quy_tac.py:125` về
   `python` trần thì tụt còn 16/19; lùi thêm `web.py:1191` + `tai_khoan.py:123` thì 14/19.
-  Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.
-- `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
+  Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.  *(đo 21/8/2026)*
+- `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so từng ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
-  `node` — ca thử không đòi hỏi phải cài `node`.
+  `node` — ca thử không đòi hỏi phải cài `node`.  *(đo 19/8/2026)*
 - Dòng hậu kiểm = 3 kiểm tra nền + 1 dòng gom tiết mỗi môn + 1 dòng mỗi quy
   tắc cứng. **Đừng chép tổng vào đây** — nó đổi theo `cauhinh.json` (đo
   22/8/2026: `23/23`, trước đó tài liệu ghi `22` và đã sai).
@@ -1320,7 +1351,7 @@ MƯỜI MỘT lần đã dính, cùng một gốc — mỗi lần một kiểu k
 | 2 | `list.index()` ném `ValueError` | Ca thử **chết giữa chừng** thay vì báo đỏ; mọi ca sau nó không bao giờ chạy |
 | 3 | Chỉ xem giá trị trả về của hàm nạp | Bản fail-open trả `(None, None)` y hệt bản đúng → xanh giả, trong khi máy chủ mở toang |
 | 4 | Khớp chuỗi trong mã nguồn | Chuỗi đó cũng nằm trong **dòng chú thích** ngay trên — ca thử kiểm lời chú thích chứ không kiểm mã |
-| 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
+| 7 | **Ghim hằng số lấy từ `cauhinh.json`** | Ca thử đỏ vì **DỮ LIỆU đổi**, không vì mã sai — thầy cô thêm bốn quy tắc qua giao diện là ba bộ thử đỏ một lượt, mà không dòng mã nào sai. Tệ hơn ở chiều ngược lại: `c.gv == 'N.Uyên'` dùng để **tính kỳ vọng**, nên khi cô ấy không còn trong `phan_cong` thì số đếm thành 0, phép trừ hoá ra "giữ nguyên tất cả", và ca thử **XANH trong khi không kiểm gì cả**. Luật này CLAUDE.md đã ghi từ lâu mà vẫn có 12 chỗ vi phạm lúc rà 21/8/2026 — vì **luật viết ra không tự thi hành**. Nay có `tests/thu_ghim_du_lieu.py` bắt cả lớp lỗi |
 | 6 | **Gọi tay hàm nạp ngay trước khi khẳng định** | Biến thể của kiểu 1. `thu_dang_nhap.py` gọi `W.nap_tai_khoan_may_chu()` rồi mới khẳng định "tắt tài khoản có hiệu lực NGAY" — nên nó chứng minh HỆ QUẢ (phiên chết) mà bỏ qua CÁI CÒ (máy chủ có tự đọc lại tệp không). Ngoài đời `nap_tai_khoan_may_chu()` chỉ chạy một lần trong `main()`, tức QĐ 3 **sai suốt** mà ca thử vẫn xanh |
 | 8 | **Bóc khoá của câu trả lời HỎNG ngay trong dòng khẳng định** — lại là kiểu 2 | Ca thử CA 7 (`thu_doc_lai.py`) viết `pv4['ve'][1]['so_cum']` và `d['pham_vi']['so_cum']`. Chạy trên mã đúng thì xanh; lùi bản vá ra thì **`IndexError` / `KeyError`** — vỡ, không đỏ. Bài học mở rộng: luật cũ chỉ nói về *dữ liệu vào* hỏng, nhưng bản hỏng còn có thể trả **THIẾU KHOÁ** ở câu trả lời. Nên câu đúng là: **mọi phép bóc trong dòng khẳng định phải chịu được hình dạng mà BẢN HỎNG trả về**, cả vào lẫn ra. Cách chữa: `isinstance` + `.get()` trước, rồi mới so — và in luôn hình dạng thật ra thông báo (`các khoá ['canh_bao', 'cau', 'loi']`) để biết ngay đã thiếu gì.<br><br>**Gặp lại ngay hôm sau, lần này ở ca thử CÓ SẴN:** lùi `noi_dung` khỏi `/api/quy-tac` thì `thu_them_quy_tac.py` **CA 1** ném `KeyError` ở dòng `r['noi_dung'].get('thu')` — vỡ ngay ca đầu, nên CA 8 (ca thật sự canh chuyện đó) **không bao giờ chạy**. Bài học thêm: viết ca thử mới đúng chuẩn là chưa đủ — **lùi bản vá ra rồi xem NÓ VỠ Ở ĐÂU**, vì chỗ vỡ thường nằm trong một ca cũ chẳng liên quan |
 | 5 | **Bộ thử TREO thay vì đỏ** | Dạng KHÁC HẲN bốn cái trên: bốn cái đầu là *khẳng định sai chỗ*, cái này là *bộ thử không tự thoát được*. Lùi lỗi khoá-tái-nhập ra thì `thu_phien.py` treo cứng (`MayChuTam.__exit__` gọi `may.shutdown()`, hàm đó chờ mãi một luồng kẹt trong khoá) — ngồi đợi mãi vẫn chưa xong. **Treo còn tệ hơn vỡ**, vì nó chặn luôn mọi bộ thử chạy sau, và trên máy tự động thì nó ngốn hết thời gian rồi chết vì hết giờ, không ai biết mục nào hỏng |
@@ -1521,13 +1552,13 @@ Chưa viết một dòng mã nào. Ghi ở đây để bản thiết kế không
 
 ### Câu ĐỌC LẠI sinh từ đâu — và làm sao BẮT BUỘC mọi loại phải có
 
-Không viết tay 17 hàm sinh câu. Nguyên liệu đã có sẵn hết trong `TRUONG`:
+Không viết tay một hàm sinh câu cho mỗi loại. Nguyên liệu đã có sẵn hết trong `TRUONG`:
 mỗi trường đã khai `nhan` tiếng Việt (`"Chỉ được xếp vào các thứ"`) và `kieu`
 (`ds_thu`, `ds_tiet_buoi`, `loc`…). Ba mảnh:
 
 | Mảnh | Ai viết | Viết mấy lần |
 |---|---|---|
-| Mô tả bộ lọc — *"Vật lý của 12B1, 12B2 (thầy T.V.Quỳnh)"* | dùng chung | **1 lần** cho cả 17 loại |
+| Mô tả bộ lọc — *"Vật lý của 12B1, 12B2 (thầy T.V.Quỳnh)"* | dùng chung | **1 lần** cho MỌI loại |
 | Định dạng giá trị theo `kieu` — `[2,3]` → *"Thứ 2, Thứ 3"* | dùng chung | **1 lần mỗi `kieu`** (đếm: `len(QT.KIEU)`) |
 | Vị ngữ — *"CHỈ được xếp vào {thu}"* | mỗi loại | một **CHUỖI MẪU**, không phải một hàm |
 
@@ -1545,9 +1576,9 @@ chạy**, không phải "ca thử đỏ ở đâu đó".
 > viết loại mới chép ra rồi sửa.
 
 Ca thử canh **chất lượng**, không chỉ sự tồn tại — vì `MAU_CAU = 'x'` cũng qua
-được `@dang_ky`. Dựng câu từ chính `VI_DU` của mỗi loại (17/17 loại đã có sẵn
+được `@dang_ky`. Dựng câu từ chính `VI_DU` của mỗi loại (mọi loại đều đã có sẵn
 `VI_DU`, không phải thêm dữ liệu thử), rồi đòi: câu không rỗng · không còn `{`
-sót · **17 câu KHÁC NHAU ĐÔI MỘT** · và có nhắc lại giá trị lấy từ `VI_DU`.
+sót · **MỌI CÂU KHÁC NHAU ĐÔI MỘT** · và có nhắc lại giá trị lấy từ `VI_DU`.
 Mục "khác nhau đôi một" mới là mục bắt được câu vô nghĩa.
 
 ### So câu máy với ghi_chu người gõ — chỉ báo khi có BẰNG CHỨNG NGƯỢC
@@ -1606,7 +1637,7 @@ và chỉ mảnh thứ ba là việc của người thêm loại mới:
 
 | Mảnh | Viết mấy lần |
 |---|---|
-| `cau_bo_loc()` — mô tả bộ lọc | **1 lần** cho cả 17 loại |
+| `cau_bo_loc()` — mô tả bộ lọc | **1 lần** cho MỌI loại |
 | `_dinh_dang()` — theo `kieu` đã khai trong `TRUONG` | **1 lần mỗi kiểu** |
 | `MAU_CAU` — vị ngữ | một **chuỗi mẫu** mỗi loại |
 
@@ -1625,12 +1656,12 @@ khớp `TRUONG` → `import quy_tac` DỪNG. Không có đường lùi "tự gh�
 **LUÔN LUÔN** — từ khoá là gợi ý, không phải phán quyết.
 
 Đường HTTP: `POST /api/thu-quy-tac` với `{"doc_lai": true}`. **Không thêm đường
-mới** (vẫn 19). Nhánh rẽ đặt **trước** cả phép kiểm "đang xếp" lẫn `KHOA_THU`:
+mới** (số đường không đổi — xem bảng đường dẫn). Nhánh rẽ đặt **trước** cả phép kiểm "đang xếp" lẫn `KHOA_THU`:
 câu đọc lại chỉ ghép chuỗi (đo được **20 lượt / 0,01 giây** trên MÁY A;
 đo lại 22/8/2026: mọi quy tắc hết **0,11 ms**), bắt nó xếp hàng
 sau một lượt xếp thử 8 giây thì ô nhập đứng hình đúng lúc người dùng đang gõ.
 
-### Việc 3 — ĐÃ LÀM (21/8): nhãn tiếng Việt cho 17 loại
+### Việc 3 — ĐÃ LÀM (21/8): nhãn tiếng Việt cho MỌI loại
 
 > **Phân biệt `chi_xep_thu` ↔ `khac_ngay` KHÔNG nằm ở chữ "CHỈ" hay "KHÔNG".**
 > Nó nằm ở chỗ **có nêu tên NGÀY hay không**:
@@ -1658,7 +1689,7 @@ tiếng Việt**, tên kỹ thuật xuống dòng ngay dưới (`#ten-ky-thuat`,
 
 `tests/thu_truong.py` CA 7 canh cả hai, và canh thêm **chất lượng nhãn**: mỗi
 nhãn phải bật một chữ chỉ hướng (CHỈ / KHÔNG / PHẢI / NÊN / GHIM / MỖI / Chia),
-và 17 nhãn khác nhau đôi một.
+và mọi nhãn khác nhau đôi một.
 
 > **`danh_muc_loai()` dùng `getattr` cho `NHAN`, không `.NHAN` trần.** Cửa ép là
 > `@dang_ky`; đây là tầng **hiển thị**. Để nó ném `AttributeError` là đổi một
@@ -1679,7 +1710,7 @@ những tên khai trong bộ lọc mà **không có trong dữ liệu nhà trư�
 
 `/api/quy-tac` **chở sẵn phạm vi của từng quy tắc** (`lop` · `mon` · `gv` ·
 `so_cum` · `so_tiet`) để màn hình Quy tắc lọc được theo GV / môn / lớp. Đo trên
-`cauhinh.json` thật (MÁY A; đo lại 22/8: 2,45 ms): cả lượt — đọc tệp + dựng `BaiToan` + 17 lần tính phạm vi —
+`cauhinh.json` thật (MÁY A; đo lại 22/8: 2,45 ms): cả lượt — đọc tệp + dựng `BaiToan` + tính phạm vi cho mọi quy tắc —
 hết **2,67 ms** (3,7 ms cả vòng HTTP). Tính ở máy chủ vì *"quy tắc này chạm vào
 ai"* **là ngữ nghĩa của bộ lọc**; để JS tự bóc `noi_dung.loc` là dựng bản cài
 thứ hai, đúng kiểu lệch đã trả giá ở `khop_loc()` / `_cum_cua()`.
@@ -1701,7 +1732,7 @@ Quy tắc chính là để sửa chỗ hỏng đó.
 
 **Đi CHUNG một lượt gọi với câu đọc lại**, nhánh `{"doc_lai": true}` của
 `POST /api/thu-quy-tac` — hai thứ luôn hiện cùng nhau, tách ra là hai lượt mạng
-cho một lần gõ phím. Không thêm đường mới; vẫn **19 đường**.
+cho một lần gõ phím. Không thêm đường mới — xem **bảng đường dẫn, nguồn duy nhất**.
 
 **Không bao giờ ném.** Đây là thứ chạy trong lúc người dùng đang gõ **dở**:
 loại chưa chọn, khoá bắt buộc chưa điền, bộ lọc sai kiểu — không cái nào là sự
@@ -1722,7 +1753,7 @@ học `khop_loc()` / `_cum_cua()`.
 > **`them_quy_tac()` CHẶN khi `ghi_chu` trùng (sau `.strip()`) — đã ĐO, không
 > suy.** Nhân bản y nguyên một quy tắc **MỀM** rồi chấm điểm: `cham_diem()`
 > ghi `ct[q.ghi_chu] = x`, hai quy tắc cùng khoá thì cái sau **ĐÈ** cái trước.
-> Đo được **4 quy tắc mềm ra 3 dòng** trong bảng "Kiểm tra quy tắc" trên Excel,
+> Đo được (trước 21/8/2026) **4 quy tắc mềm ra 3 dòng** trong bảng "Kiểm tra quy tắc" trên Excel,
 > trong khi tổng điểm **vẫn cộng đủ cả hai**. Mất một dòng, không một chữ báo.
 >
 > Quy tắc **CỨNG** thì `hau_kiem()` gom vào **list** nên không mất dòng — nhưng
@@ -1924,9 +1955,9 @@ và nó đã `.gitignore`.
 
 ### Giá phải trả: một đường dẫn mới
 
-`POST /api/hieu-cau` đưa tổng số đường từ **19 lên 20**. Kèm theo bắt buộc:
+`POST /api/hieu-cau` đưa tổng số đường **lên thêm một** (đếm bằng lệnh ở bảng đường dẫn). Kèm theo bắt buộc:
 cập nhật **bảng đường dẫn nguồn-duy-nhất**, thêm vào `ca_a1c_moi_duong_deu_bi_gac`,
-và đường này **cần phiên + cần xác thực** — nó đọc tên 28 giáo viên và tên lớp
+và đường này **cần phiên + cần xác thực** — nó đọc tên MỌI giáo viên và tên lớp
 của trường.
 
 ---
@@ -1998,7 +2029,8 @@ duyệt nào*. Chưa có mật khẩu, chưa có tên người. Đăng nhập (2
 hạ tầng này, không dựng lại.
 
 > **Lỗi đã bịt, đo được trước khi sửa.** Thầy A thêm một quy tắc nháp (chưa Lưu),
-> cô B bấm Lưu → tệp đi từ **13 lên 14** quy tắc: quy tắc **chưa ai duyệt** của A
+> cô B bấm Lưu → tệp đi từ **13 lên 14** quy tắc (số đếm lúc dựng lại lỗi,
+trước 20/8/2026 — đây là ghi chép lịch sử, đừng so với tệp hôm nay): quy tắc **chưa ai duyệt** của A
 > vào thẳng `cauhinh.json`, còn A vẫn thấy nháp của mình là "chưa lưu". Im lặng
 > cả hai chiều. Không cần tới hai người — mở phần mềm trên máy bàn và trên điện
 > thoại đã là hai trình duyệt khác nhau.
@@ -2323,10 +2355,10 @@ Trên 10 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giả
 | 6 | `/api/toi-la-ai` | GET | **MỚI** | không | **không** | Trả đúng một khoá `{"dang_nhap": …}`, không kèm dữ liệu. Trang gọi lúc vừa tải để biết vẽ gì |
 | 7 | `/api/dang-nhap` | POST | **MỚI** | không | **không** | Gác cổng bằng chính nó thì không ai vào được |
 | 8 | `/api/dang-xuat` | POST | **MỚI** | không | **không** | Hết hạn rồi vẫn phải bấm được cho sạch cookie; luỹ đẳng |
-| 9 | `/api/trang-thai` | GET | có | **CÓ** | **CÓ** | Chở toàn bộ nhật ký + lưới TKB + lịch 28 giáo viên |
+| 9 | `/api/trang-thai` | GET | có | **CÓ** | **CÓ** | Chở toàn bộ nhật ký + lưới TKB + lịch mọi giáo viên |
 | 10 | `/api/quy-tac` | GET | có | **CÓ** | **CÓ** | Bộ ràng buộc nội bộ; cũng là nơi phát **dấu bản** |
 | 11 | `/api/loai-quy-tac` | GET | có | **CÓ** | **CÓ** | Không chứa dữ liệu trường — vẫn gác, vì mặc-định-cấm chỉ đáng tin khi không có ngoại lệ |
-| 12 | `/api/gia-tri` | GET | có | **CÓ** | **CÓ** | Danh sách 28 tên giáo viên |
+| 12 | `/api/gia-tri` | GET | có | **CÓ** | **CÓ** | Danh sách tên MỌI giáo viên |
 | 13 | `/api/tai-ve` | GET | có | **CÓ** | **CÓ** | Cả tệp Excel. Lỗi trả `text/plain` vì mở bằng `window.location` |
 | 14 | `/api/tai-web` | GET | có | **CÓ** | **CÓ** | Bản chưa qua mắt ban giám hiệu. Như trên |
 | 15 | `/api/xep` | POST | có | **CÓ** | **CÓ** | 60 giây CPU, ghi đè hai tệp kết quả |
@@ -2355,6 +2387,6 @@ không cần xác thực-để-vào.
 
 - Hardcode quy tắc nghiệp vụ vào `xep_tkb.py`.
 - Đổi định dạng / bố cục Excel xuất ra (nhà trường in ra ký trực tiếp).
-- Xoá hoặc đổi tên các hook của `QuyTac` (làm hỏng cả 17 loại quy tắc).
+- Xoá hoặc đổi tên các hook của `QuyTac` (làm hỏng MỌI loại quy tắc).
 - Báo "xong" khi chưa chạy sạch cả `tu_kiem_tra.py` lẫn `xep_tkb.py`.
 - Sửa `cauhinh.json` mà không sao lưu trước — đó là toàn bộ công sức khai báo dữ liệu.
