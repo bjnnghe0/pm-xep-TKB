@@ -1343,7 +1343,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-MƯỜI MỘT lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1358,6 +1358,7 @@ MƯỜI MỘT lần đã dính, cùng một gốc — mỗi lần một kiểu k
 | 9 | **Chốt canh TRẢ VỀ SỚM nên không bao giờ nhìn tới thứ nó canh** | `doc_tkb._duong_sheet()` `return` ngay khi khớp sheet đầu tiên, nên danh sách "các sheet khác" chỉ chứa những sheet đứng TRƯỚC nó — tức gần như luôn RỖNG. Sheet bị bỏ sót đúng là `THEO DÕI BÙ TBK`, sheet đứng sau `Khối 12` và là sheet **chứa lý do nghỉ**. Nếu Đợt 4 tin vào danh sách đó để lọc trước khi đăng thì nó đăng luôn thứ đáng lẽ phải chặn. Hàm vẫn trả đúng cái nó được hỏi (đường dẫn sheet), chỉ sai ở cái nó trả **kèm theo** — nên không ca thử nào về đường chính đỏ. Sửa ở `e312121` |
 | 10 | **Hai tệp thử khác nhau ở đúng chỗ khiến nhánh cần canh không bao giờ chạy tới** | Mục *"không cái nào bị đè"* của `thu_kho_tuan.py` **xanh cả khi đã bỏ hẳn vòng chống va chạm tên** — vì hai tệp thử có tên gốc khác nhau (`d.xlsx`, `e.xlsx`) nên tên đích vốn đã khác, vòng đó chưa bao giờ quay lấy một lần. Phải **ÉP** điều kiện va chạm: cùng tên gốc, cùng giây, và **truyền giây vào** (`khi=`) chứ không trông vào việc máy chạy đủ nhanh — ca thử phụ thuộc tốc độ máy là ca thử sẽ chớp đỏ trên máy của trường. Sửa ở `e312121` |
 | 11 | **Người viết tài liệu chống số cũ lại CHÉP SỐ CŨ vào chính commit đó** | Commit `c4d45c6` thêm ca thử mới và ghi bốn con số lùi-bản-vá vào phần "Trạng thái đã kiểm chứng". Bốn số đó **lấy từ trí nhớ** của một lần đo trên bản **khác** (113 mục), trong khi commit ấy là bản **100 mục**. Đo lại thì **một số sai** (97 chứ không phải 96). Trớ trêu ở chỗ: commit ngay trước đó vừa dựng cả mục *"Số đếm — ĐỪNG CHÉP, HÃY ĐẾM"*. **Luật viết ra không tự thi hành, kể cả với người vừa viết nó.** Đã đo lại rồi `--amend`. Không ca thử nào bắt được lớp lỗi này — số nằm trong văn xuôi thì không có gì canh, nên nó chỉ dựa vào một thói quen: **gõ lệnh trước, gõ số sau** |
+| 12 | **Ca thử lấy MỐC SO từ chính thứ nó đang canh** | `thu_sinh_dang.py` bản đầu viết `kiem(d['truong_o'] == list(SD.TRUONG_O))`. Vế trái là **đầu ra**, sinh ra TỪ `SD.TRUONG_O`; vế phải cũng là `SD.TRUONG_O`. **Nới hằng số đó thì HAI VẾ CÙNG DỊCH** — thêm `'tho'` và `'o_excel'` vào bộ trường công khai, ca thử vẫn **30/30, không một mục nào đỏ**, trong khi phạm vi ra Internet vừa rộng thêm hai trường. Sửa bằng cách **ghim literal** bộ trường đã duyệt vào chính ca thử. **Dấu nhận biết dứt khoát: lùi bản vá ra mà KHÔNG mục nào đỏ.** Nặng nhất khi canh thứ **không lùi lại được** — phạm vi công khai, việc ghi đĩa, an ninh: chỗ đó sai một lần là hết đường lùi. Sửa ở `0841c97` |
 
 > ### KIỂU HỎNG SỐ 2 ĐÃ DÍNH BỐN LẦN — đếm lại cho khỏi quên
 >
@@ -1430,6 +1431,12 @@ MƯỜI MỘT lần đã dính, cùng một gốc — mỗi lần một kiểu k
    vừa đo thì **đo lại trước khi ghi** — kể cả khi bạn "chắc chắn nhớ đúng",
    và nhất là khi con số đó nói về chính ca thử bạn vừa viết.
    (Nếp hỏng 11. Người viết ra luật này đã tự dính nó ở `c4d45c6`.)
+12. **MỐC SO của mục này lấy từ đâu?** Nếu nó lấy từ một hằng số / thuộc
+   tính / hàm của **chính mô-đun đang bị canh**, mà giá trị thực tế cũng sinh
+   ra từ đúng cái đó, thì đổi cái đó đi là **hai vế cùng dịch** và mục vẫn
+   xanh. Mốc phải độc lập: một **literal** viết thẳng trong ca thử, hoặc dựng
+   lại bằng một đường **khác hẳn**. (Mốc dựng từ `cauhinh.json` là chuyện
+   KHÁC và là chuyện ĐÚNG — xem mục 7.) (Nếp hỏng 12.)
 
 ---
 
