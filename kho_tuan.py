@@ -32,7 +32,7 @@
     không bao giờ được dùng làm khoá; nó chỉ là `nhan`, một chuỗi để đọc.
 
  ⚠ `luu_tru/` ĐÃ GITIGNORE — git KHÔNG phải bản sao lưu của kho này. Mất ổ
- là mất cả năm học. Lệnh chép sang ổ khác ghi ở `CHAY_CUNG_MAY.md` mục 9.
+ là mất cả năm học. Lệnh chép sang ổ khác ghi ở `CHAY_CUNG_MAY.md` mục 10.
 ==========================================================================
 """
 import datetime

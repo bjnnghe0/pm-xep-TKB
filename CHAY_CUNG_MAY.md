@@ -321,7 +321,66 @@ nó lên · và ghi được xuống đĩa.
 
 ---
 
-## 9. Kho TKB theo tuần — CHÉP SANG Ổ KHÁC, KHÔNG CÓ AI LÀM HỘ
+## 9. MỖI TUẦN KHOA GỬI TỆP MỚI — BỐN BƯỚC
+
+> **⚠ TỆP CÙNG TÊN "TUẦN 1" CÓ THỂ LÀ BẢN KHÁC. LUÔN SO TRƯỚC, ĐỪNG TIN TÊN
+> TỆP.** Tuần 1 đã dính đúng chỗ này: hai tệp cùng tên `KHOA KHCB-TKB Tuần 1
+> (24-8-26 - 29-8-26)`, chỉ khác cái đuôi `_1` và `-2`, mà **132 trên 150 ô
+> khác nhau** — bản sau bỏ mất 6 tiết chuyên đề Sử và đổi giáo viên. Nhìn tên
+> tệp thì không thấy gì cả.
+
+**Bước 1 — SO trước khi lưu.** Xem tệp mới đổi gì so với tuần trước:
+
+```bash
+cd "/media/adminnam/NAM MEO/projects/PM xep tkb"
+~/.venvs/xeptkb/bin/python luu_tuan.py so "<tệp mới.xlsx>" --tuan 2026-08-24
+```
+
+In dạng hẹp, cắt ở 20 ô. Thêm `--het` để xem hết, `--rong` để xem bảng.
+Nếu là tuần MỚI hoàn toàn thì bỏ bước này — chưa có gì để so.
+
+**Bước 2 — LƯU vào kho.** Mã tuần là **ngày THỨ HAI** của tuần đó:
+
+```bash
+~/.venvs/xeptkb/bin/python luu_tuan.py them "<tệp mới.xlsx>" \
+    --tuan 2026-08-31 --nguoi "<tên bạn>" --nhan "TUẦN 2" \
+    --ghi-chu "Khoa gửi ngày ..."
+```
+
+Lệch ngày thì nó **DỪNG** và bắt chọn — xem bước 4.
+
+**Bước 3 — ĐÁNH DẤU, kèm lý do.** Chưa đánh dấu thì bản đó **không đăng
+được**, và đó là chủ ý:
+
+```bash
+~/.venvs/xeptkb/bin/python luu_tuan.py danh-dau --tuan 2026-08-31 \
+    --ban 1 --trang-thai dung --ly-do "Khoa xác nhận ngày ..."
+```
+
+`--trang-thai` nhận `dung` · `sai` · `chua_ro`. `--ly-do` **bắt buộc** với
+`dung` và `sai`. Kiểm lại bằng:
+
+```bash
+~/.venvs/xeptkb/bin/python luu_tuan.py liet-ke
+~/.venvs/xeptkb/bin/python luu_tuan.py de-dang --tuan 2026-08-31
+```
+
+**Bước 4 — NGÓ BA THỨ BỘ ĐỌC HAY BẮT.** Cả ba đều hiện sẵn khi chạy `xem`
+hoặc `them`, không phải gõ thêm lệnh nào:
+
+| Bộ đọc kêu gì | Nghĩa là | Làm gì |
+|---|---|---|
+| `[LỆCH NGÀY]` | Ô A4 trong tệp nói một khoảng ngày khác `--tuan` | **Hỏi Khoa**, đừng đoán. Chốt rồi thì gõ lại kèm `--dong-y-lech`. Tuần 1: A4 ghi 23/8 mà 23/8 là **Chủ Nhật** |
+| `[SHEET KHÁC]` có `THEO DÕI BÙ TBK` | Tệp mang thêm sheet theo dõi bù, thường kèm **lý do nghỉ của học sinh** | Kho vẫn lưu nguyên tệp, nhưng **tuyệt đối không đăng**. Bộ sinh dữ liệu đăng chỉ lấy phần đã tách |
+| `[TÊN MÔN LẠ]` | Chuỗi môn chưa có trong `bang_ten_mon.json` | **Duyệt tay**. Phần mềm không bao giờ tự gộp — `GDKT-PL` và `GDKTPL` có thể là một môn, mà cũng có thể không |
+
+Cộng thêm một thứ nữa nó tự kêu: `[Ô TỔNG DÒNG 43 ĐẾM SAI]` — tệp làm tay
+của trường hay khai `COUNTA(D10:D42)` trong khi dữ liệu bắt đầu ở dòng **8**,
+làm bảng in ra thiếu 2–3 tiết. Xem mục tương ứng trong `CLAUDE.md`.
+
+---
+
+## 10. Kho TKB theo tuần — CHÉP SANG Ổ KHÁC, KHÔNG CÓ AI LÀM HỘ
 
 `luu_tru/` đã **gitignore**. Nghĩa là **git KHÔNG phải bản sao lưu của nó** —
 lịch sử TKB cả năm học chỉ nằm trên ổ `NAM MEO`. Mất ổ là mất sạch, và không
