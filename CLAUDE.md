@@ -426,7 +426,8 @@ ngoẵng: ô ghi chú `B45` từng giãn thành **11 dòng** và đẩy khối k
 
 ## Ràng buộc nghiệp vụ đang khai trong `cauhinh.json`
 
-**10 quy tắc cứng:** SHCN tiết cuối buổi **trừ lớp cô N.Uyên chủ nhiệm** ·
+**Các quy tắc cứng** (đếm bằng lệnh ở mục "Số đếm"; **11** lúc 22/8/2026):
+SHCN tiết cuối buổi **trừ lớp cô N.Uyên chủ nhiệm** ·
 SHCN lớp cô N.Uyên xếp tiết 6 hoặc 7 · Vật lý 12B1,12B2 chỉ Thứ 2/3 ·
 Sinh học 12B3,12B4 chỉ Thứ 2/3 · Sinh học 12B5,12B6 chỉ Thứ 2/3 ·
 Hoá 12B1–12B4 không Thứ 3,5 · Văn cô Đ.Duy không Thứ 2 · Sử cô N.Uyên không
@@ -546,7 +547,9 @@ bắn `Host: evil.com` vào từng đường qua HTTP thật:
 | Đọc | `/api/trang-thai` · `/api/quy-tac` · `/api/loai-quy-tac` · `/api/gia-tri` · `/api/tai-ve` · `/api/tai-web` | 400 | — |
 | **Ghi** | `/api/xep` · `/api/luu-quy-tac` · `/api/them-quy-tac` · `/api/xoa-quy-tac` · `/api/thu-quy-tac` | **400** | **400** |
 
-15/15 đường bị chặn, **0 đường lọt**, và `cauhinh.json` không bị đụng tới.
+**0 đường lọt**, và `cauhinh.json` không bị đụng tới. (Mẫu số là TỔNG SỐ ĐƯỜNG
+lúc đo — hồi đó 15, nay 19; đếm bằng lệnh ở mục "Số đếm". Điều đáng nhớ là
+số 0 ở vế sau, không phải mẫu số ở vế trước.)
 Chiều ngược lại cũng đo: `Host` + `Origin` đúng thì cổng không chặn oan đường nào.
 Ca thử `ca_a1c_moi_duong_deu_bi_gac` **bóc danh sách đường thẳng từ `web.py`** rồi
 so với tập đã biết, nên thêm đường mới là nó ĐỎ trước — buộc người thêm phải ngó
@@ -558,7 +561,10 @@ lại xem đã gác chưa.
 > gọi thẳng (`curl`, script) tự đặt `Origin` nào cũng được, nên bắt buộc phải có
 > `Origin` **không thêm được một chút an toàn nào** trước nó — chỉ thêm rủi ro từ
 > chối oan một khách hợp lệ. Khi có dòng `Origin` thì nó vẫn bị kiểm chặt (đo
-> được: cả 5 đường ghi trả 400 với `Origin` trang lạ).
+> được: cả năm đường GHI CẤU HÌNH — `/api/xep`, `/api/luu-quy-tac`,
+> `/api/them-quy-tac`, `/api/xoa-quy-tac`, `/api/thu-quy-tac` — đều trả 400
+> với `Origin` trang lạ. Gọi tên thay vì đếm: thêm một đường mới thì danh
+> sách này thiếu hẳn một cái tên, nhìn là thấy, chứ không âm thầm lệch một số).
 >
 > Hàng rào đối với khách gọi thẳng là **đăng nhập**, không phải `Origin`. Điều
 > này quan trọng hơn từ khi có Tailscale: trước kia "khách gọi thẳng" nghĩa là
@@ -1040,6 +1046,40 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 
 ---
 
+## Số đếm — ĐỪNG CHÉP, HÃY ĐẾM
+
+> **Luật, 22/8/2026:** *số nào một lệnh đếm được thì **XOÁ SỐ**, thay bằng chính
+> lệnh đó; số nào không đếm được thì **giữ, kèm ngày đo**.*
+>
+> Vì sao thành luật: đợt kiểm kê 21/8 tìm được **82 con số không kèm ngày**,
+> trong đó **11 con đã sai** mà không ca thử nào đỏ. Cập nhật 82 số chỉ mua
+> được vài tháng — sáu tháng nữa lại sai 82 số khác. Cái sửa được gốc là đừng
+> chép số vào văn xuôi nữa.
+>
+> Con số chép tay tệ nhất là con **lặp lại nhiều chỗ**: `17 loại` từng nằm ở
+> **13 chỗ**, `28 giáo viên` ở 4 chỗ, `150 ô` ở 4 chỗ, `~50 giây` ở 4 chỗ.
+
+| Muốn biết | Gõ |
+|---|---|
+| Số **loại quy tắc** đã đăng ký | `python3 -c "import quy_tac as Q; print(len(Q.DANH_MUC))"` |
+| Số **kiểu trường** (`QT.KIEU`) | `python3 -c "import quy_tac as Q; print(len(Q.KIEU))"` |
+| Số **quy tắc** trong tệp / đang bật | `python3 -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len(q), len([r for r in q if r.get('bat',True)]))"` |
+| Số quy tắc **cứng** đang bật | `python3 -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len([r for r in q if r.get('bat',True) and not r['loai'].startswith('uu_tien')]))"` |
+| Số **giáo viên** | `python3 -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print(len({m[1] for k,d in p.items() if not k.startswith('_') for m in d}))"` |
+| Số **ô** của cả khối (lớp × ngày × tiết) | `python3 -c "import json; c=json.load(open('cauhinh.json')); k=c['khung_gio']; print(len(c['lop'])*len(k['cac_thu'])*len(k['cac_tiet']))"` |
+| Số **tiết/tuần** mỗi lớp | `python3 -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print({k: sum(x for m in d for x in m if isinstance(x,int)) for k,d in p.items() if not k.startswith('_')})"` |
+| Số **cụm** | `python3 -c "import xep_tkb as X; print(len(X.BaiToan(X.doc_cau_hinh('cauhinh.json')).cac_cum))"` |
+| Số **đường dẫn** máy chủ | `python3 -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))) + 5)"` — 14 API + 5 tĩnh |
+| Số **ca** trong một bộ thử | `grep -cE '^def ca_' tests/<tên>.py` |
+| Số **công thức** trong mẫu Excel | `unzip -p mau_tkb.xlsx xl/worksheets/sheet1.xml \| grep -o '<f>' \| wc -l` |
+| Số **dòng hậu kiểm** | đọc dòng `Tổng: N/N quy tắc ĐẠT` của `python3 xep_tkb.py` |
+
+> **Số KHÔNG đếm được bằng một lệnh** — thời gian chạy, kết quả lùi-bản-vá, số
+> đo đua tranh, kết quả mô phỏng — thì **giữ, và phải kèm ngày đo**. Chúng là
+> ảnh chụp một lần đo, không phải thuộc tính của mã.
+
+---
+
 ## Trạng thái đã kiểm chứng (19/8/2026)
 
 - `python3 xep_tkb.py`: 396 phương án hợp lệ / 400 lần thử trong ~50s, điểm cao nhất
@@ -1063,7 +1103,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_web.py`: **66/66 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: 150 ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.
-- `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 11 ca. Lùi từng bản
+- `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 12 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản
   vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
   A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
   tiêu đề trùng → 166 (6× CA A1). Danh sách tên máy đo trên bộ 202 mục:
@@ -1079,7 +1119,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
   QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.
-- `python3 tests/thu_doc_lai.py`: **28/28 mục ĐẠT** (~5s), 6 ca. Lùi ra thì đỏ
+- `python3 tests/thu_doc_lai.py`: **44/44 mục ĐẠT** (~5s), 7 ca (đếm: `grep -cE "^def ca_"`). Lùi ra thì đỏ
   đúng phần của nó: `so_ghi_chu` luôn trả None → 25/28 · bỏ nhánh `doc_lai` ở
   `web.py` → 24/28 · cho hai loại dùng CHUNG một `MAU_CAU` → 27/28.
   > **Mục cuối suýt là một mục canh sai chỗ.** Bản đầu chỉ so CÂU ĐÃ DỰNG, và
@@ -1109,7 +1149,7 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
   danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**
-- `python3 tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 12 ca. Lùi từng bản vá
+- `python3 tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 13 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản vá
   ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
   bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
   đăng nhập đúng không xoá bộ đếm → 48/51 · gõ thêm lại dời mốc khoá → 50/51 ·
@@ -1126,7 +1166,9 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 - `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so 150 ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
   `node` — ca thử không đòi hỏi phải cài `node`.
-- 22 dòng hậu kiểm = 3 kiểm tra nền + 9 dòng gom tiết theo môn + 10 quy tắc cứng.
+- Dòng hậu kiểm = 3 kiểm tra nền + 1 dòng gom tiết mỗi môn + 1 dòng mỗi quy
+  tắc cứng. **Đừng chép tổng vào đây** — nó đổi theo `cauhinh.json` (đo
+  22/8/2026: `23/23`, trước đó tài liệu ghi `22` và đã sai).
   **Đừng ghim con số này vào ca thử** — thêm một quy tắc vào `cauhinh.json` là vỡ.
   Khẳng định `Tổng: N/N quy tắc ĐẠT` (hai số bằng nhau) thay vì so với số cụ thể.
 
@@ -1343,7 +1385,7 @@ mỗi trường đã khai `nhan` tiếng Việt (`"Chỉ được xếp vào cá
 | Mảnh | Ai viết | Viết mấy lần |
 |---|---|---|
 | Mô tả bộ lọc — *"Vật lý của 12B1, 12B2 (thầy T.V.Quỳnh)"* | dùng chung | **1 lần** cho cả 17 loại |
-| Định dạng giá trị theo `kieu` — `[2,3]` → *"Thứ 2, Thứ 3"* | dùng chung | **1 lần mỗi `kieu`** (13 kiểu) |
+| Định dạng giá trị theo `kieu` — `[2,3]` → *"Thứ 2, Thứ 3"* | dùng chung | **1 lần mỗi `kieu`** (đếm: `len(QT.KIEU)`) |
 | Vị ngữ — *"CHỈ được xếp vào {thu}"* | mỗi loại | một **CHUỖI MẪU**, không phải một hàm |
 
 `MAU_CAU` là **chuỗi**, không phải hàm — ít chỗ sai hơn hẳn, và
@@ -1678,7 +1720,7 @@ câu người gõ
 ### Bộ KIỂM TRA chạy trên MỌI bản nháp, không phân biệt nguồn
 
 Luật viết tay hay API đều qua đúng một cửa `kiem_ban_nhap()`. Bảy phép kiểm,
-**năm cái đã có sẵn**:
+và **bảng dưới nói cái nào đã có sẵn** — đọc bảng, đừng đếm lại:
 
 | # | Kiểm | Có sẵn? |
 |---|---|---|
@@ -1951,7 +1993,9 @@ là đếm tất cả mọi người vào chung một ô.
 Ba hằng số ở `tai_khoan.py`: `SO_LAN_SAI_TOI_DA` / `GIAY_KHOA` / `GIAY_QUEN`.
 Đổi ngưỡng là đổi **một dòng**, và `tests/thu_chong_do.py` đọc thẳng ba hằng đó
 nên không phải sửa ca thử theo — đã thử: nâng 5 → 10 thì bộ thử tự chạy theo,
-vẫn 55/55.
+bộ thử tự chạy theo, không phải sửa ca thử.
+(Trước đây chỗ này ghi `55/55` còn mục "Trạng thái" ghi `58/58` — hai con số
+cho cùng một bộ thử, chép ở hai thời điểm. Nay không chép số nữa.)
 
 ### Sổ khoá tạm nằm trong TỆP, và đó là lý do chính
 
@@ -2107,14 +2151,14 @@ Trên 10 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giả
 Đếm bằng cách bắn thật vào máy chủ và xem đường nào KHÔNG trả 404 kèm câu
 "Không có trang này" — không suy từ mã nguồn:
 
-| Nhóm | Số đường |
+| Nhóm | Đếm bằng |
 |---|---|
-| Tĩnh (GET) | **5** |
-| API GET | **6** |
-| API POST | **5** |
-| **Đang có** | **16** |
-| Sẽ thêm ở Đợt 2 | 3 |
-| **Sau Đợt 2** | **19** |
+| Tĩnh (GET) | `/` · `/index.html` · `/web/index.html` · `/web/style.css` · `/web/app.js` — **gọi tên, không đếm** |
+| API | `python3 -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))))"` |
+
+**Đo 22/8/2026: 14 API + 5 tĩnh = 19 đường.** Ba đường đăng nhập
+(`/api/toi-la-ai`, `/api/dang-nhap`, `/api/dang-xuat`) **đã làm xong** —
+Đợt 2 đóng 21/8/2026, nên bảng cũ xếp chúng vào *"sẽ thêm"* là đã cũ.
 
 > **Chỗ đã đếm sót:** `/web/index.html` phục vụ được (200) vì `_tinh()` nhận cả
 > `/web/<tệp>` cho mọi tên trong `TINH`, mà `index.html` nằm trong đó. Nó không
