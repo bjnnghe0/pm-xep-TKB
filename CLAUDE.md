@@ -1128,6 +1128,18 @@ nói vì sao thì sáu tháng nữa không ai dám tin cái dấu đó, và sẽ
 
 > **KHÔNG XOÁ BẢN SAI.** Nó là bằng chứng, và là ca thử thật duy nhất đang có.
 
+**Khoá tuần vẫn là ngày THỨ HAI** — Khoa chốt 22/8/2026. Tuần `2026-08-24`
+có `tu_ngay` sửa thành `2026-08-24` bằng `kho_tuan.sua_tuan()`, còn chuỗi A4
+nguyên văn `TUẦN 1 (23/8/2026-29/8/2026)` **giữ nguyên** trong
+`tach/<bản>.json` khoá `tuan_A4.tho`. Hai chỗ, hai vai trò: phiếu ghi *điều
+nhà trường chốt*, bản tách ghi *điều tệp thật sự nói*.
+
+> **⚠ Chốt đó KHÔNG được biến thành luật tự đoán.** `doc_tkb` vẫn phải DỪNG và
+> bắt người chọn mỗi khi A4 lệch với `--tuan` — `luu_tuan.py them` vẫn đòi
+> `--dong-y-lech`. Lần này biết đáp án là nhờ **hỏi người**, không nhờ suy;
+> tuần sau lệch kiểu khác thì vẫn phải hỏi lại. Biến một câu trả lời của Khoa
+> thành một quy tắc suy diễn là đúng cái bẫy mà cả dự án này viết ra để tránh.
+
 ---
 
 ### MÁY A — mọi số hiệu năng trong tài liệu này đo trên đây
