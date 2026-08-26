@@ -225,12 +225,19 @@ def du_lieu_dang(goc, ma_tuan):
     ra['khai_nguon'] = _cau_khai_nguon(tach.get('ngay_truong_sua'),
                                        ban.get('sha256'))
 
-    # ⚠ `tieu_de` là NGOẠI LỆ DUY NHẤT, và là ngoại lệ KHAI RA chứ không
-    # phải bỏ sót. Nó KHÔNG nằm trong phiếu — nó là ô A3 của chính tệp nhà
-    # trường phát, tức chữ tự do của TRƯỜNG, không phải của người vận hành
-    # kho. Người dùng đã chốt 26/8/2026 rằng trang công khai hiện NGUYÊN VĂN
-    # những gì trường phát (tên môn, tên GV), và ô A3 cùng hạng với chúng.
-    # Muốn ép khuôn cả nó thì phải hỏi lại — đó là đổi một quyết định cũ.
+    # ⚠ `tieu_de` KHÔNG ĐI QUA CỬA KHUÔN, và đó là QUYẾT ĐỊNH, không phải
+    # bỏ sót. Người dùng đã xét đúng chỗ này và BÁC việc ép khuôn nó —
+    # 26/8/2026, nguyên văn: *"tieu_de là ô A3 nguyên văn của trường, cùng
+    # hạng với tên môn và tên GV. Ép khuôn là SỬA CHỮ CỦA TRƯỜNG."*
+    #
+    # Ranh giới chia hai nhóm, và nó là ranh giới về NGUỒN chứ không phải
+    # về hình dạng chuỗi:
+    #   · CHỮ CỦA NGƯỜI VẬN HÀNH KHO (nhan, nam_hoc, hoc_ky, ly_do,
+    #     ghi_chu) -> ÉP KHUÔN. Ta làm ra nó, ta chịu trách nhiệm về nó.
+    #   · CHỮ CỦA TRƯỜNG (ô A3, tên môn, tên GV trong từng ô) -> NGUYÊN
+    #     VĂN. Trang công khai là bản điện tử của đúng tờ đang treo ở
+    #     trường; sửa chữ của trường là làm bản trên mạng khác bản in.
+    # Xem CLAUDE.md mục "Hai trang công khai, hai NGUỒN CHỮ".
     ra['tieu_de'] = tach.get('tieu_de')
 
     ra['lop'] = lop

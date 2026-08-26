@@ -1261,6 +1261,28 @@ thế nào"*. Gộp hai chữ làm một là làm mất đúng cái phân biệt
 > vào trang. Ghi trước ở đây để lúc ấy khỏi phải nghĩ lại, và để người khác
 > không tự đặt một câu chữ khác.
 
+##### Chữ nào ÉP KHUÔN, chữ nào để NGUYÊN VĂN — chia theo NGUỒN
+
+Từ 26/8/2026 `sinh_dang.py` có một **cửa khuôn**: mọi trường cấp tuần phải
+khớp một biểu thức chính quy đã khai (`KHUON_TUAN`) thì mới ra công khai,
+sai khuôn thì **từ chối đăng cả bản**. Câu hỏi kế tiếp là *cái gì đi qua
+cửa đó* — và ranh giới **KHÔNG** phải hình dạng chuỗi, mà là **NGUỒN**:
+
+| Nhóm | Gồm | Xử lý | Vì sao |
+|---|---|---|---|
+| Chữ của **người vận hành kho** | `nhan` · `nam_hoc` · `hoc_ky` · `ly_do` · `ghi_chu` | **ÉP KHUÔN** (hoặc chặn hẳn) | Ta làm ra nó thì ta chịu trách nhiệm về nó. Đây là chỗ chữ tự do sinh ra |
+| Chữ của **nhà trường** | **ô A3 (`tieu_de`)** · tên môn · tên viết tắt GV trong từng ô | **NGUYÊN VĂN** | Trang công khai là bản điện tử của đúng tờ đang treo ở trường. Sửa chữ của trường là làm bản trên mạng khác bản in |
+
+> **Người dùng đã xét riêng ô A3 và BÁC việc ép khuôn nó** — 26/8/2026,
+> nguyên văn: *"`tieu_de` là ô A3 nguyên văn của trường, cùng hạng với tên
+> môn và tên GV. Ép khuôn là **sửa chữ của trường**."*
+>
+> Đây **không** phải một lỗ hổng còn sót: ô A3 đúng là chữ tự do, và nó đúng
+> là ra công khai. Nhưng nó nằm ở **nhóm nguyên văn**, cùng chỗ với hai
+> quyết định đã chốt trước đó về tên môn và tên GV. Ai đọc mã thấy nó không
+> qua cửa khuôn rồi định "bịt nốt cho đủ bộ" thì đang đổi một quyết định,
+> không phải vá một chỗ quên.
+
 #### Ghim bộ số — `phan_cong_tuan1.json`
 
 Ba bảng đối chiếu chỉ nói về **hôm nay**. Thứ canh được **tuần sau** là một
