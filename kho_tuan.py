@@ -395,6 +395,83 @@ def danh_dau_ban(goc, ma_tuan, chi_so, trang_thai, ly_do=''):
     return ra
 
 
+def khuyet_tat_cua(ban):
+    """Danh sách khuyết tật ĐÃ BIẾT của một bản. TOÀN PHẦN: thiếu -> []."""
+    if not isinstance(ban, dict):
+        return []
+    ds = ban.get('khuyet_tat')
+    return [x for x in ds if isinstance(x, dict)] if isinstance(ds, list) else []
+
+
+def ghi_khuyet_tat(goc, ma_tuan, chi_so, mo_ta, nguoi, o_excel=None, khi=None):
+    """Ghi nhận một KHUYẾT TẬT ĐÃ BIẾT của một bản. `chi_so` đếm từ 1.
+
+       KHUYẾT TẬT ≠ TRẠNG THÁI. `trang_thai` trả lời "bản này dùng được
+       không"; khuyết tật trả lời "chỗ nào trong bản này ghi sai, mà ta đã
+       biết và cố ý KHÔNG sửa". Một bản vẫn có thể `dung` mà mang khuyết
+       tật — tuần 2026-08-24 bản 18/8 đúng như vậy.
+
+       VÌ SAO KHÔNG SỬA TỆP. Bản 18/8 ghi 12B1 ba ô cùng chữ "Địa lí", một
+       trong ba thực ra là chuyên đề, mà KHÔNG BIẾT ô nào. Đoán là bịa. Ghi
+       lại chỗ hỏng rồi để nguyên thì sáu tháng sau còn đọc được; sửa hộ
+       một ô chọn bừa thì không ai biết ta đã bịa.
+
+       VÌ SAO KHÔNG CHỮA BẰNG BẢNG TÊN. Bảng tên chỉ nhận cặp đúng ở MỌI ô.
+       Đo 26/8/2026: bản đó có 13 ô mang đúng chuỗi "Địa lí", nên một mục
+       gộp để chữa 1 ô sẽ đổi cả 13.
+
+       ⚠ CHỈ ĐỤNG `phieu.json` — tệp gốc trong `ban/` và bản tách trong
+       `tach/` KHÔNG bị sửa một byte. Và NỐI THÊM chứ không bao giờ gán đè:
+       một bản có thể có nhiều khuyết tật, và cái cũ là bằng chứng.
+
+       KHÔNG BAO GIỜ NÉM.
+    """
+    ra = {'ok': False, 'cau': '', 'ban': None, 'khuyet_tat': None}
+    if not (mo_ta or '').strip():
+        ra['cau'] = ('Phải ghi MÔ TẢ khuyết tật. Một cái dấu không nói rõ '
+                     'hỏng chỗ nào thì sáu tháng nữa không ai dùng được.')
+        return ra
+    if not (nguoi or '').strip():
+        ra['cau'] = ('Phải ghi TÊN NGƯỜI xác nhận. Không phép đo nào chứng '
+                     'minh được "ô nào mới đúng là chuyên đề" — chỉ có người '
+                     'đi hỏi trường. Thiếu tên thì cái ghi nhận này không có '
+                     'gì chống lưng.')
+        return ra
+    p, loi = doc_phieu_ky(goc, ma_tuan)
+    if loi:
+        ra['cau'] = loi + '\n      KHÔNG ghi đè lên phiếu hỏng.'
+        return ra
+    if p is None:
+        ra['cau'] = f'Kho chưa có tuần {ma_tuan}.'
+        return ra
+    ds = p.get('ban') or []
+    if not isinstance(chi_so, int) or not (1 <= chi_so <= len(ds)):
+        ra['cau'] = (f'Số thứ tự bản phải từ 1 đến {len(ds)}, '
+                     f'nhận được {chi_so!r}.')
+        return ra
+
+    khi = khi or datetime.datetime.now().astimezone()
+    muc = {'mo_ta': mo_ta.strip(), 'nguoi': nguoi.strip(),
+           'ngay': khi.date().isoformat(),
+           'o_excel': [str(x) for x in (o_excel or [])]}
+    b = ds[chi_so - 1]
+    cu = khuyet_tat_cua(b)
+    b['khuyet_tat'] = cu + [muc]                      # NỐI THÊM, không gán đè
+    try:
+        GB.ghi_nguyen_tu(duong_phieu(goc, ma_tuan),
+                         json.dumps(p, ensure_ascii=False, indent=1) + '\n',
+                         ben=True)
+    except OSError as e:
+        ra['cau'] = f'Không ghi được phiếu: {e}'
+        return ra
+    ra['ok'] = True
+    ra['ban'] = b
+    ra['khuyet_tat'] = muc
+    ra['cau'] = (f'Bản {chi_so} ({b.get("tep")}) : ghi nhận khuyết tật thứ '
+                 f'{len(cu) + 1}. Tệp gốc và bản tách KHÔNG bị đụng.')
+    return ra
+
+
 def sua_tuan(goc, ma_tuan, **doi):
     """Sửa khai báo cấp TUẦN (tu_ngay, den_ngay, nhan, nam_hoc, hoc_ky,
        ghi_chu). KHÔNG đụng danh sách bản. KHÔNG BAO GIỜ NÉM."""

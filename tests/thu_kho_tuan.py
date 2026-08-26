@@ -22,6 +22,7 @@
    CA 7  Bản "sai" KHÔNG BAO GIỜ ra được đường đăng, dù gõ đúng mã tuần
    CA 8  So một tệp với một bản đã lưu — chỉ đọc, đếm đúng số ô khác
    CA 9  Lệnh `so` in VỪA MÀN HÌNH ĐIỆN THOẠI: hẹp, cắt ở 20 ô
+   CA 10 Khuyết tật ĐÃ BIẾT: NỐI THÊM, không đè; không đụng tệp gốc
 ==========================================================================
 """
 import io
@@ -636,6 +637,96 @@ def ca_9_lenh_so_in_vua_dien_thoai(tm):
 
 
 # ==========================================================================
+def _doc_tach(goc, ma_tuan, ban):
+    """Nội dung thô của bản tách, hoặc None. Chịu được mọi hình dạng hỏng —
+       dòng khẳng định không bao giờ được ném (kiểu hỏng số 2)."""
+    if not isinstance(ban, dict) or not ban.get('tach'):
+        return None
+    dd = os.path.join(K.thu_muc_tuan(goc, ma_tuan), ban['tach'])
+    try:
+        with io.open(dd, 'rb') as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def ca_10_khuyet_tat_noi_them_khong_de(tm):
+    print('\nCA 10 — khuyết tật đã biết: NỐI THÊM, không bao giờ gán đè')
+    print('-' * 74)
+    goc = os.path.join(tm, 'kho10')
+    MA = '2026-02-02'
+    t1 = dung_xlsx(os.path.join(tm, 'm1.xlsx'), o_mau(so_tiet=3))
+    # Truyền `tach=` vào: bản đầu tôi bỏ trống nên `ban['tach']` là None và
+    # ca thử VỠ ở dòng bóc khoá đó thay vì báo đỏ — đúng kiểu hỏng số 2.
+    a = K.them_ban(goc, MA, t1, 'người thử', tach=D.doc(t1))
+    kiem(a.get('ok') is True and isinstance(a.get('ban'), dict),
+         'Lưu một bản (kèm bản tách) để có chỗ ghi khuyết tật')
+    if not (a.get('ok') and isinstance(a.get('ban'), dict)):
+        return
+    dd_ban = K.duong_ban(goc, MA, a['ban'])
+    bam_truoc = K.bam_tep(dd_ban)
+    tach_truoc = _doc_tach(goc, MA, a['ban'])
+    kiem(tach_truoc is not None, 'và bản tách có mặt trên đĩa để so về sau')
+
+    kiem(K.khuyet_tat_cua(a['ban']) == [],
+         'Bản mới chưa có khuyết tật nào')
+    kiem(K.khuyet_tat_cua(None) == [] and K.khuyet_tat_cua({}) == [],
+         'khuyet_tat_cua() TOÀN PHẦN: None và dict rỗng -> [], không ném')
+
+    # --- hai khoá BẮT BUỘC ---
+    kiem(K.ghi_khuyet_tat(goc, MA, 1, '   ', 'người thử')['ok'] is False,
+         'Thiếu mô tả -> từ chối, không ném')
+    kiem(K.ghi_khuyet_tat(goc, MA, 1, 'có chữ', '  ')['ok'] is False,
+         'Thiếu tên người xác nhận -> từ chối, không ném')
+    kiem(K.ghi_khuyet_tat(goc, MA, 99, 'có chữ', 'người thử')['ok'] is False,
+         'Số thứ tự ngoài khoảng -> từ chối, không ném')
+
+    # --- NỐI THÊM: hai lần ghi phải ra HAI mục, mục cũ còn nguyên ---
+    r1 = K.ghi_khuyet_tat(goc, MA, 1, 'chỗ hỏng thứ nhất', 'người thử',
+                          o_excel=['D11'])
+    r2 = K.ghi_khuyet_tat(goc, MA, 1, 'chỗ hỏng thứ hai', 'người khác')
+    kiem(r1.get('ok') is True and r2.get('ok') is True,
+         'Ghi được hai khuyết tật')
+    p = K.doc_phieu(goc, MA) or {}
+    cac_ban = p.get('ban') or [{}]
+    ds = K.khuyet_tat_cua(cac_ban[0])
+    kiem(len(ds) == 2,
+         f'Ghi hai lần ra HAI mục, không đè — {len(ds)} mục')
+    mo = [x.get('mo_ta') for x in ds]
+    kiem(len(set(mo)) == 2 and all(isinstance(x, str) and x for x in mo),
+         f'Mục cũ còn nguyên, không bị mục mới nuốt — {mo}')
+    kiem((ds[0].get('o_excel') or []) == ['D11'],
+         f'Ô Excel đi theo đúng mục của nó — {ds[0].get("o_excel")}')
+    kiem(all((x.get('ngay') or '').count('-') == 2 for x in ds),
+         'Mỗi mục tự mang NGÀY — không phải một ngày chung cho cả phiếu')
+
+    # --- CHỈ đụng phiếu ---
+    b = cac_ban[0]
+    kiem(K.bam_tep(dd_ban) == bam_truoc,
+         'Tệp GỐC trong ban/ không bị đụng một byte')
+    kiem(tach_truoc is not None and _doc_tach(goc, MA, b) == tach_truoc,
+         'Bản TÁCH trong tach/ không bị đụng một byte')
+    kiem(b.get('sha256') == bam_truoc and b.get('trang_thai') is not None,
+         'sha256 và trang_thai của bản không đổi')
+
+    # --- khuyết tật KHÔNG phải trạng thái: bản vẫn ra được đường đăng ---
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử: bản này dùng được')
+    de, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(len(de) == 1 and not tu_choi,
+         'Bản mang khuyết tật vẫn ĐĂNG ĐƯỢC — khuyết tật != trạng thái')
+
+    # --- phiếu hỏng thì DỪNG, không ghi đè ---
+    dd_phieu = K.duong_phieu(goc, MA)
+    io.open(dd_phieu + '.giu', 'w', encoding='utf-8').write(
+        io.open(dd_phieu, encoding='utf-8').read())
+    io.open(dd_phieu, 'w', encoding='utf-8').write('{ hỏng')
+    r = K.ghi_khuyet_tat(goc, MA, 1, 'x', 'y')
+    kiem(r['ok'] is False and 'hỏng' in (r['cau'] or ''),
+         'Phiếu hỏng -> DỪNG, không ghi đè lên nó')
+    kiem(io.open(dd_phieu, encoding='utf-8').read() == '{ hỏng',
+         'Và phiếu hỏng còn NGUYÊN, không bị ghi đè')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -652,6 +743,7 @@ def main():
         ca_7_ban_sai_khong_ra_duoc_duong_dang(tm)
         ca_8_so_tep_voi_ban_da_luu(tm)
         ca_9_lenh_so_in_vua_dien_thoai(tm)
+        ca_10_khuyet_tat_noi_them_khong_de(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

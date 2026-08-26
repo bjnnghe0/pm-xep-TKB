@@ -110,6 +110,26 @@ def ca_1_hanh_vi(tm):
          'HAI bản "dung" -> KHÔNG đoán bản nào, từ chối sinh')
 
 
+def ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm):
+    print('\nCA 1b — khuyết tật của bản KHÔNG rò ra dữ liệu công khai')
+    print('-' * 74)
+    goc, MA = os.path.join(tm, 'kho1b'), '2026-03-02'
+    _dung_tuan(goc, MA, 'dung', 'ca thử: bản này dùng được', 3, tm)
+    r = K.ghi_khuyet_tat(goc, MA, 1,
+                         'CHỮ TỰ DO KHÔNG ĐƯỢC RA CÔNG KHAI', 'người thử')
+    kiem(r.get('ok') is True, 'Ghi được một khuyết tật mang chữ tự do')
+    d, tu_choi = SD.du_lieu_dang(goc, MA)
+    kiem(d is not None and not tu_choi,
+         f'Bản vẫn đăng được sau khi ghi khuyết tật — {tu_choi}')
+    if d is None:
+        return
+    tho = json.dumps(d, ensure_ascii=False)
+    kiem('khuyet_tat' not in tho,
+         "Dữ liệu đăng KHÔNG chứa khoá 'khuyet_tat'")
+    kiem('CHỮ TỰ DO KHÔNG ĐƯỢC RA CÔNG KHAI' not in tho,
+         'và không chứa NỘI DUNG khuyết tật — chữ tự do phải dừng ở phiếu')
+
+
 def ca_2_kien_truc_khong_co_loi_vong():
     print('\nCA 2 — KIẾN TRÚC: không có đường nào khác dẫn tới dữ liệu')
     print('-' * 74)
@@ -216,6 +236,40 @@ def ca_2_kien_truc_khong_co_loi_vong():
     tho = [c for c in ma if c.strip() in ('docs', 'docs/', './docs')]
     kiem(not tho, f'Không có hằng chuỗi trỏ vào docs/ — {tho}')
 
+    # --- (i) KHÔNG áp BẢNG TÊN lúc đăng ---
+    #
+    # Sức ép làm việc này là có thật: trang công khai lấy tên từ
+    # `cauhinh.json` nên hiện `T.T.Hiền`, còn bản tách trong kho ghi
+    # `T.Hiền` — người nối Đợt 4 sẽ thấy "cùng một cô hai tên" và sẽ chữa
+    # bằng cách gọi `bang_ten.chuan()` ngay trong vòng lặp bóc ô. Đo
+    # 26/8/2026: thêm một dòng như vậy thì bộ thử này vẫn 32/32, KHÔNG một
+    # mục nào đỏ — tức trước mục này không có gì canh.
+    #
+    # Vì sao phải chặn: khoa có H.Hiền (Địa lí) VÀ T.T.Hiền (Sinh học). Gộp
+    # sai một lần là gán tiết của cô này cho cô kia trước mặt phụ huynh, và
+    # git thì nhớ vĩnh viễn. Trang công khai là bản điện tử của đúng tờ đang
+    # treo ở trường: trường phát ra sao thì đăng vậy, không tự bịa nhãn.
+    #
+    # Mốc so là literal viết ở đây, CỐ Ý — lấy từ `bang_ten.py` là hai vế
+    # cùng dịch (nếp hỏng 12), y như chuyện `TRUONG_O` ở mục (g).
+    CAM_TEN = {'bang_ten', 'chuan', 'gop', 'da_duyet', 'ten_la', 'BT'}
+    nhac = set(goi)
+    for n in ast.walk(cay):
+        if isinstance(n, ast.Name):
+            nhac.add(n.id)
+        elif isinstance(n, ast.Attribute):
+            nhac.add(n.attr)
+        elif isinstance(n, ast.Import):
+            nhac |= {a.name.split('.')[0] for a in n.names}
+            nhac |= {a.asname for a in n.names if a.asname}
+        elif isinstance(n, ast.ImportFrom):
+            if n.module:
+                nhac.add(n.module.split('.')[0])
+    dinh = sorted(CAM_TEN & nhac)
+    kiem(not dinh,
+         'KHÔNG áp bảng tên lúc đăng — trường phát ra sao thì đăng vậy. '
+         f'Thấy {dinh}')
+
 
 def ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm):
     print('\nCA 3 — gọi thẳng vào ruột, KHÔNG qua cửa: phải không lấy được gì')
@@ -304,6 +358,7 @@ def main():
     tm = tempfile.mkdtemp(prefix='thu_sinh_dang_')
     try:
         ca_1_hanh_vi(tm)
+        ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm)
         ca_2_kien_truc_khong_co_loi_vong()
         ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm)
         ca_4_khong_ghi_vao_docs(tm)

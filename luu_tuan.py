@@ -10,6 +10,8 @@
    python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \\
                        --trang-thai sai --ly-do "..."
    python3 luu_tuan.py de-dang  --tuan 2026-08-24
+   python3 luu_tuan.py khuyet-tat --tuan 2026-08-24 --ban 1 \\
+                       --mo-ta "..." --nguoi "..." [--o D11 --o D18]
    python3 luu_tuan.py so       <tệp.xlsx> --tuan 2026-08-24 [--ban N]
                                 # mặc định in HẸP cho điện thoại;
                                 # --rong = bảng 84 cột, --het = in hết
@@ -132,6 +134,19 @@ def _in_bao_cao(r, lech_bang=None, bang_mon=None):
             ng, ngay = bang_mon.ai_duyet(x)
             print(f'      {x!r} -> {bang_mon.chuan(x)!r}   ({ng} · {ngay})')
     return True
+
+
+def _in_khuyet_tat(ban, thut='      '):
+    """In khuyết tật ĐÃ BIẾT của một bản. Không có thì không in gì."""
+    ds = K.khuyet_tat_cua(ban)
+    if not ds:
+        return
+    print(f'{thut}[KHUYẾT TẬT ĐÃ BIẾT] {len(ds)} chỗ — bản này vẫn dùng '
+          'được, nhưng:')
+    for x in ds:
+        o = ', '.join(x.get('o_excel') or []) or '(không ghi ô)'
+        print(f'{thut}   · {x.get("mo_ta")}')
+        print(f'{thut}     ô {o} · {x.get("nguoi")} xác nhận {x.get("ngay")}')
 
 
 def _lech_ngay(r, ma_tuan):
@@ -301,6 +316,15 @@ def main(argv=None):
     p.add_argument('--ly-do', default='',
                    help='BẮT BUỘC khi trạng thái là dung hoặc sai')
 
+    p = sub.add_parser('khuyet-tat',
+                       help='ghi nhận một chỗ ghi SAI đã biết của một bản')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ban', type=int, required=True, help='số thứ tự, đếm từ 1')
+    p.add_argument('--mo-ta', required=True, help='hỏng chỗ nào, vì sao biết')
+    p.add_argument('--nguoi', required=True, help='ai xác nhận')
+    p.add_argument('--o', action='append', default=[],
+                   help='ô Excel liên quan, gõ nhiều lần: --o D11 --o D18')
+
     p = sub.add_parser('de-dang', help='bản nào của tuần này ĐĂNG ĐƯỢC')
     p.add_argument('--tuan', required=True)
 
@@ -332,6 +356,13 @@ def main(argv=None):
         print(('[XONG] ' if r['ok'] else '[DỪNG] ') + r['cau'])
         return 0 if r['ok'] else 1
 
+    if a.lenh == 'khuyet-tat':
+        r = K.ghi_khuyet_tat(goc, a.tuan, a.ban, a.mo_ta, a.nguoi, a.o)
+        print(('[XONG] ' if r['ok'] else '[DỪNG] ') + r['cau'])
+        if r['ok']:
+            _in_khuyet_tat(r['ban'], '   ')
+        return 0 if r['ok'] else 1
+
     if a.lenh == 'de-dang':
         ds, tu_choi = K.ban_de_dang(goc, a.tuan)
         if tu_choi:
@@ -341,6 +372,7 @@ def main(argv=None):
         for b in ds:
             print(f'   {b.get("tep")}')
             print(f'      lý do đánh dấu "dung": {b.get("ly_do")}')
+            _in_khuyet_tat(b)
         return 0
 
     if a.lenh == 'dang-thu':
@@ -360,8 +392,10 @@ def main(argv=None):
             p2 = x['phieu'] or {}
             tt = x.get('theo_trang_thai') or {}
             mo = ' '.join(f'{k}={v}' for k, v in sorted(tt.items())) or '-'
+            kt = sum(len(K.khuyet_tat_cua(b)) for b in (p2.get('ban') or []))
             print(f'   {x["ma_tuan"]}  {x["so_ban"]} bản  [{mo}]  '
                   f'{(p2.get("nhan") or "")!r}'
+                  + (f'  [{kt} khuyết tật]' if kt else '')
                   + (f'   [PHIẾU HỎNG] {x["loi"]}' if x['loi'] else ''))
             if p2.get('ghi_chu'):
                 print(f'      ghi chú tuần: {p2["ghi_chu"]}')
