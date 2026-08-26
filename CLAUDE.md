@@ -48,6 +48,7 @@ python3 luu_tuan.py liet-ke              # các tuần đang có trong kho
 python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \
         --trang-thai sai --ly-do "..."   # bản này dùng được hay không
 python3 luu_tuan.py de-dang  --tuan 2026-08-24   # bản nào ĐĂNG ĐƯỢC
+python3 bang_ten.py                      # xem hai bảng tên đã duyệt
 python3 luu_tuan.py so <tệp.xlsx> --tuan 2026-08-24   # so với bản đã lưu
         # mặc định in HẸP (<= 60 cột) cho điện thoại, cắt ở 20 ô
         # --rong = bảng 84 cột · --het = in hết
@@ -107,7 +108,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng** |
 | `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
 | `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
-| `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp** |
+| `bang_ten.py` | **MỘT bản cài duy nhất** của việc TRA BẢNG TÊN. `Bang.chuan()` là `gop.get(s, s)` — **so chuỗi đúng y hệt**, không `.strip()`/`.lower()`/bỏ dấu/gần giống. Không đọc `cauhinh.json` | Áp cho **đối chiếu** và **báo cáo**, **KHÔNG BAO GIỜ** áp cho **đăng** và **KHÔNG** cho bộ đọc. Nạp một lần ở điểm vào, truyền `Bang` xuống |
+| `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp**. Mỗi mục `gop` **bắt buộc** có `nguoi_duyet` + `ngay` |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 10 |
 | `tests/thu_sinh_dang.py` | 4 ca. **CA 2 canh KIẾN TRÚC bằng cây cú pháp**: `sinh_dang.py` không được gọi `doc_phieu*`, không bóc khoá `'ban'`, và mọi hàm công khai phải bắt đầu bằng `(goc, ma_tuan)`. CA 3 thử gọi thẳng vào ruột với bản SAI làm đối số | **Chạy khi sửa `sinh_dang.py` hoặc `ban_de_dang()`** |
 | `tests/thu_kho_tuan.py` | 6 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |

@@ -5,16 +5,35 @@
   "thầy cô duyệt, không phải dữ liệu lưu trữ. Mất theo ổ nghĩa là phải",
   "ngồi duyệt lại từng chuỗi bằng tay.",
   "",
-  "biet = những chuỗi ĐÃ được duyệt. Chuỗi ngoài danh sách này sẽ hiện",
-  "       ra ở mục 'tên môn lạ' khi nạp tuần, để thầy cô ngó rồi quyết.",
+  "biet = những chuỗi ĐÃ được duyệt là tên chuẩn. Chuỗi ngoài danh sách",
+  "       này và ngoài 'gop' sẽ hiện ra ở mục 'tên môn lạ' khi nạp tuần,",
+  "       để thầy cô ngó rồi quyết.",
   "",
-  "gop  = cặp 'chuỗi lạ' -> 'tên chuẩn', CHỈ thêm bằng tay sau khi đã",
-  "       chắc hai chuỗi đó THẬT SỰ là một môn. Bộ đọc doc_tkb.py KHÔNG",
-  "       đọc mục này — nó chỉ là sổ ghi để bước hiển thị dùng sau.",
-  "       Đo trên hai tệp tuần 1 thật của trường (22/8/2026): 19 chuỗi",
-  "       môn khác nhau cho khoảng 12 môn. Năm chuỗi chưa có trong",
-  "       cauhinh.json: 'GDKTPL', 'Chuyên đề Ngữ Văn', 'Chuyên đề sử',",
-  "       'Chuyên đề địa lí', 'chuyên đề Địa lí'. CHƯA gộp cái nào."
+  "gop  = cặp 'chuỗi lạ' -> tên chuẩn, CHỈ thêm bằng tay sau khi đã chắc",
+  "       hai chuỗi đó THẬT SỰ là một môn. Mỗi mục là một object và BẮT",
+  "       BUỘC có 'nguoi_duyet' + 'ngay': không phép đo nào chứng minh",
+  "       được hai chuỗi là một môn, chỉ có chữ ký người duyệt. Thiếu một",
+  "       trong hai khoá thì bang_ten.nap() coi cả bảng là HỎNG.",
+  "",
+  "AI ĐỌC TỆP NÀY: bang_ten.py — dùng cho ĐỐI CHIẾU và BÁO CÁO.",
+  "AI KHÔNG ĐỌC:   doc_tkb.py (bộ đọc chỉ nhận 'biet', không nhận 'gop';",
+  "                nới nó là đổi nội dung bản tách ghi vĩnh viễn vào kho",
+  "                trong khi dấu bộ đọc không đổi một ký tự)",
+  "                sinh_dang.py (trang công khai là bản điện tử của đúng",
+  "                tờ đang treo ở trường — trường phát ra sao thì đăng vậy)",
+  "",
+  "⚠ BẢNG NÀY CHỈ NHẬN CẶP ĐÚNG Ở MỌI Ô. Sai lệch của MỘT Ô thì KHÔNG",
+  "  BAO GIỜ chữa ở đây — nó là khuyết tật của một bản, ghi bằng",
+  "  kho_tuan.ghi_khuyet_tat(). Đo trên bản 18/8 của tuần 2026-08-24",
+  "  (26/8/2026): tệp có 13 ô mang đúng chuỗi 'Địa lí', nên thêm một mục",
+  "  '\"Địa lí\" -> \"Chuyên đề Địa lí\"' để chữa 1 ô ghi thiếu nhãn sẽ đổi",
+  "  cả 13 ô, sáu lớp sai một lượt, trong im lặng.",
+  "",
+  "Đo trên hai tệp tuần 1 thật của trường (22/8/2026): 19 chuỗi môn khác",
+  "nhau cho khoảng 12 môn. Năm chuỗi chưa có trong cauhinh.json đã được",
+  "Anh Lân duyệt gộp ngày 26/8/2026 — xem 'gop' bên dưới.",
+  "",
+  "Xem lại bảng bằng:  python3 bang_ten.py"
  ],
  "biet": [
   "Chuyên đề Lịch sử",
@@ -32,5 +51,36 @@
   "Vật lý",
   "Địa lí"
  ],
- "gop": {}
+ "gop": {
+  "Chuyên đề Ngữ Văn": {
+   "chuan": "Chuyên đề Ngữ văn",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "chỉ khác chữ V hoa"
+  },
+  "Chuyên đề sử": {
+   "chuan": "Chuyên đề Lịch sử",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "viết tắt 'sử' cho 'Lịch sử'"
+  },
+  "Chuyên đề địa lí": {
+   "chuan": "Chuyên đề Địa lí",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "chỉ khác chữ Đ hoa"
+  },
+  "chuyên đề Địa lí": {
+   "chuan": "Chuyên đề Địa lí",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "chỉ khác chữ C hoa"
+  },
+  "GDKTPL": {
+   "chuan": "GDKT-PL",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "thiếu dấu gạch ngang"
+  }
+ }
 }

@@ -28,6 +28,7 @@ import json
 import os
 import sys
 
+import bang_ten as BT
 import doc_tkb as D
 import kho_tuan as K
 import sinh_dang as SD
@@ -39,21 +40,25 @@ GOC = os.path.dirname(os.path.abspath(__file__))
 TRAN_O = 20
 
 
-def _bang_ten_mon():
-    """Trả (tập chuỗi đã duyệt, câu lỗi|None). Thiếu tệp -> tập rỗng."""
-    dd = os.path.join(GOC, 'bang_ten_mon.json')
-    if not os.path.exists(dd):
-        return set(), None
-    try:
-        with io.open(dd, encoding='utf-8-sig') as f:
-            b = json.load(f)
-    except Exception as e:                              # noqa: BLE001
-        return set(), f'bang_ten_mon.json hỏng: {type(e).__name__}: {e}'
-    ds = b.get('biet') if isinstance(b, dict) else None
-    return (set(ds) if isinstance(ds, list) else set()), None
+def _keu_bang(*cac_bang):
+    """In lỗi bảng tên ra màn hình. Trả True nếu có bảng nào hỏng.
+
+       KÊU TO chứ không nuốt: `doc_tkb.doc()` tắt hẳn phần "tên môn lạ" khi
+       `ten_mon_biet` rỗng, nên một bảng hỏng làm bản báo cáo hiện "0 chuỗi
+       lạ" — trông y hệt "đã kiểm và sạch". Đúng bẫy `n_uyen == 0`, lần này
+       ở phía thầy cô.
+    """
+    hong = False
+    for b in cac_bang:
+        for x in b.loi:
+            print(f'[CẢNH BÁO] {x}')
+            hong = True
+    if hong:
+        print('           Coi như chưa có tên nào được duyệt.')
+    return hong
 
 
-def _in_bao_cao(r, lech_bang=None):
+def _in_bao_cao(r, lech_bang=None, bang_mon=None):
     """In mọi thứ người dùng cần ngó. Trả True nếu tệp đọc được."""
     if r['loi']:
         print('\n[KHÔNG ĐỌC ĐƯỢC TỆP]')
@@ -95,13 +100,37 @@ def _in_bao_cao(r, lech_bang=None):
         for x in r['lech_dem']:
             print(f'      {x}')
 
-    if r['ten_mon_la']:
-        print(f'\n   [TÊN MÔN LẠ] {len(r["ten_mon_la"])} chuỗi chưa có trong '
-              'bang_ten_mon.json — phần mềm KHÔNG tự gộp:')
-        for x in r['ten_mon_la']:
+    # HAI KHỐI, KHÔNG PHẢI MỘT. Bộ đọc chỉ biết khoá "biet", nên mọi chuỗi
+    # đã có luật gộp vẫn nằm trong `ten_mon_la` — và đó là ĐÚNG: bản tách ghi
+    # vào kho phải đóng băng đúng những chuỗi tệp đã viết. Việc phân loại
+    # "chưa ai xét" / "đã có người quyết" là việc của tầng báo cáo này.
+    gop = bang_mon.gop if bang_mon else {}
+    chua_ai_xet = [x for x in r['ten_mon_la'] if x not in gop]
+    da_co_luat = [x for x in r['ten_mon_la'] if x in gop]
+
+    if bang_mon is not None and not bang_mon.biet:
+        print('\n   [KHÔNG KIỂM ĐƯỢC TÊN MÔN] bang_ten_mon.json rỗng hoặc '
+              'hỏng,')
+        print('      nên bộ đọc KHÔNG soi tên môn lần này. "0 chuỗi lạ" dưới '
+              'đây')
+        print('      nghĩa là CHƯA KIỂM, không phải là SẠCH.')
+
+    if chua_ai_xet:
+        print(f'\n   [TÊN MÔN LẠ — CHƯA AI DUYỆT] {len(chua_ai_xet)} chuỗi '
+              'chưa có trong bang_ten_mon.json — phần mềm KHÔNG tự gộp:')
+        for x in chua_ai_xet:
             print(f'      {x!r}')
         print('      Duyệt tay: thêm vào "biet" (tên đúng) hoặc "gop"')
         print('      (chuỗi lạ -> tên chuẩn) trong bang_ten_mon.json.')
+
+    if da_co_luat:
+        print(f'\n   [TÊN MÔN LẠ — ĐÃ CÓ LUẬT GỘP] {len(da_co_luat)} chuỗi. '
+              'Tệp gốc')
+        print('      giữ nguyên chữ nhà trường gõ; việc gộp CHỈ áp lúc đối '
+              'chiếu:')
+        for x in da_co_luat:
+            ng, ngay = bang_mon.ai_duyet(x)
+            print(f'      {x!r} -> {bang_mon.chuan(x)!r}   ({ng} · {ngay})')
     return True
 
 
@@ -115,7 +144,7 @@ def _lech_ngay(r, ma_tuan):
             'Đúng cái nào thì gõ lại với --tuan <ngày đúng> --dong-y-lech.']
 
 
-def _so(goc, a):
+def _so(goc, a, bang_mon):
     """So tệp `a.tep` với một bản trong kho. CHỈ ĐỌC, không ghi một byte nào."""
     ban, loi = K.chon_ban(goc, a.tuan, a.ban)
     if loi:
@@ -127,7 +156,8 @@ def _so(goc, a):
               'không có trên đĩa.')
         return 1
 
-    biet, _ = _bang_ten_mon()
+    # CHỈ `biet`, KHÔNG kèm `gop` — xem khối chữ đầu bang_ten.py.
+    biet = bang_mon.biet
     A = D.doc(kho, ten_mon_biet=biet)          # TRÁI  = bản trong kho
     B = D.doc(a.tep, ten_mon_biet=biet)        # PHẢI  = tệp đang cầm
     for ten, r in (('bản trong kho', A), ('tệp đang so', B)):
@@ -293,6 +323,9 @@ def main(argv=None):
     sub.add_parser('liet-ke', help='các tuần đang có trong kho')
     a = ap.parse_args(argv)
     goc = a.kho or K.goc_mac_dinh()
+    # Nạp ĐÚNG MỘT LẦN ở điểm vào rồi truyền đối tượng Bang xuống. Để mỗi nơi
+    # tự nạp là cách bản cài thứ hai ra đời — xem khop_loc() / _cum_cua().
+    bang_mon, bang_gv = BT.nap(GOC)
 
     if a.lenh == 'danh-dau':
         r = K.danh_dau_ban(goc, a.tuan, a.ban, a.trang_thai, a.ly_do)
@@ -314,7 +347,8 @@ def main(argv=None):
         return _dang_thu(goc, a)
 
     if a.lenh == 'so':
-        return _so(goc, a)
+        _keu_bang(bang_mon)
+        return _so(goc, a, bang_mon)
 
     if a.lenh == 'liet-ke':
         ds = K.liet_ke(goc)
@@ -333,14 +367,14 @@ def main(argv=None):
                 print(f'      ghi chú tuần: {p2["ghi_chu"]}')
         return 0
 
-    biet, loi_bang = _bang_ten_mon()
-    if loi_bang:
-        print(f'[CẢNH BÁO] {loi_bang}')
-        print('           Coi như chưa có tên môn nào được duyệt.')
-
-    r = D.doc(a.tep, ten_mon_biet=biet)
+    _keu_bang(bang_mon)
+    # CHỈ `biet`. Dict `r` dưới đây bị ghi vĩnh viễn vào luu_tru/<tuần>/tach/
+    # ở nhánh `them`, mà dau_bo_doc() chỉ băm MÃ NGUỒN doc_tkb.py chứ không
+    # băm đối số — nới chỗ này là đổi nội dung bản tách trong khi dấu bộ đọc
+    # không đổi một ký tự.
+    r = D.doc(a.tep, ten_mon_biet=bang_mon.biet)
     lech = _lech_ngay(r, a.tuan)
-    if not _in_bao_cao(r, lech):
+    if not _in_bao_cao(r, lech, bang_mon):
         return 1
 
     if a.lenh == 'xem':
