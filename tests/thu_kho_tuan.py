@@ -1090,16 +1090,43 @@ def ca_14_ghim_hai_danh_sach_trang(tm):
 
     # --- (b) MAU_BAN ----------------------------------------------------
     # Danh sách trắng KÝ TỰ được giữ trong tên tệp bản lưu.
-    # ⚠ `os.path.basename()` chạy TRƯỚC nó trong `_ten_ban()` và mới là lớp
-    # chắn thứ nhất chống đi ra khỏi thư mục. MAU_BAN là LỚP CHẮN THỨ HAI,
-    # không phải lớp duy nhất — nới nó ra thì hôm nay chưa thủng, nhưng
-    # ngày nào đó ai bỏ `basename()` đi là thủng ngay mà không mục nào đỏ.
-    # Ghim để việc nới nó phải là một hành động có người ký tên.
     kiem(K.MAU_BAN.pattern == r'[^0-9A-Za-zÀ-ỹ._-]+',
          f'MAU_BAN ĐÚNG BẰNG khuôn đã duyệt — {K.MAU_BAN.pattern!r}')
     xau = K._ten_ban('2026-01-01T00-00-00', '../../../etc/kho ác.xlsx')
     kiem('/' not in xau and '..' not in xau,
          f'và tên tệp dựng ra không mang / hay .. — {xau!r}')
+
+    # ⚠ SỰ THẬT ĐO ĐƯỢC 26/8/2026, KHÁC VỚI ĐIỀU TÔI ĐÃ VIẾT LẦN TRƯỚC.
+    # Tôi ghi "basename() là lớp chắn thứ nhất, MAU_BAN là lớp thứ hai, hôm
+    # nay chưa thủng" — câu đó chưa ai đo. Đo rồi thì:
+    #
+    #  · MAU_BAN MỘT MÌNH ĐÃ CHẶN ĐƯỢC. Nó xoá MỌI dấu phân cách (cả `/`
+    #    lẫn `\`, đều nằm ngoài lớp cho phép). `..` sống sót thành hai dấu
+    #    chấm trong tên tệp, nhưng KHÔNG CÒN dấu phân cách thì không ra
+    #    khỏi thư mục được.
+    #  · Và có một cảnh mà MAU_BAN là LỚP DUY NHẤT, không phải lớp thứ hai:
+    #    đường kiểu Windows `..\..\windows\x.xlsx`. Trên Linux
+    #    `os.path.basename()` KHÔNG coi `\` là dấu phân cách nên nó trả về
+    #    NGUYÊN CHUỖI — một mình MAU_BAN làm hết việc.
+    #
+    # Vòng dưới đo lại điều đó mỗi lần chạy, để câu trên không thành một
+    # lời khẳng định chép tay nữa.
+    khong_chan = []
+    for t in ('../../../etc/passwd.xlsx', '/etc/shadow.xlsx',
+              'a/../../b.xlsx', '..\\..\\windows\\x.xlsx',
+              '....//....//x.xlsx'):
+        mot_minh = K.MAU_BAN.sub('_', t)          # KHÔNG qua basename()
+        if '/' in mot_minh or '\\' in mot_minh:
+            khong_chan.append((t, mot_minh))
+    kiem(not khong_chan,
+         f'MAU_BAN MỘT MÌNH (bỏ basename ra) xoá sạch dấu phân cách — '
+         f'chưa chặn: {khong_chan}')
+
+    win = '..\\..\\windows\\x.xlsx'
+    kiem(os.path.basename(win) == win,
+         f'ĐỐI CHỨNG: với đường kiểu Windows, basename() trên Linux KHÔNG '
+         f'cắt gì — {os.path.basename(win)!r}. Ở cảnh đó MAU_BAN là lớp '
+         f'DUY NHẤT, không phải lớp thứ hai')
 
 
 def main():
