@@ -1231,6 +1231,36 @@ Nên: ghi lại chỗ hỏng, để nguyên tệp. `luu_tuan.py de-dang` in khuy
 > thì đăng vậy, không tự bịa nhãn. `khuyet_tat` là chữ tự do và **không bao
 > giờ** ra tới dữ liệu đăng — `thu_sinh_dang.py` CA 1b canh đúng chuyện đó.
 
+#### Hai trang công khai, hai NGUỒN CHỮ — mỗi trang phải tự khai nguồn
+
+**Chốt 26/8/2026 (người dùng):** trang công khai lấy tên môn / tên GV
+**NGUYÊN VĂN TỪ TỆP TRƯỜNG**. Không áp bảng tên lúc đăng. Bản cài hiện tại
+đang làm đúng — đây là ghi lại một quyết định, không phải một việc phải làm.
+
+Hệ quả **không phải lỗi**, nhưng phải ghi ra chứ đừng để người đọc tự đoán:
+
+| Trang | Chữ lấy từ đâu | Dòng trang đó phải tự khai |
+|---|---|---|
+| TKB do **phần mềm xếp** (`docs/index.html`, sinh từ `cauhinh.json`) | tên **chuẩn** thầy cô khai trong hệ thống | *"theo khai báo trong hệ thống"* |
+| TKB **kho tuần** (sinh từ bản tách của tệp trường) | **nguyên văn** chuỗi trong tệp nhà trường phát | *"nguyên văn bản trường phát ngày …"* |
+
+Vì vậy cùng một cô có thể hiện `T.T.Hiền` ở trang này và `T.Hiền` ở trang
+kia. **Đó là ĐÚNG.** Hai trang trả lời hai câu khác nhau: một cái nói *"hệ
+thống đang khai thế nào"*, một cái nói *"tờ giấy nhà trường phát hôm ấy ghi
+thế nào"*. Gộp hai chữ làm một là làm mất đúng cái phân biệt ấy.
+
+> **Người nối Đợt 4 sẽ thấy chỗ lệch này và sẽ muốn "chữa" bằng bảng gộp.
+> ĐỪNG.** Bảng tên áp cho **đối chiếu** và **báo cáo**, KHÔNG BAO GIỜ áp cho
+> **đăng** — xem khối chữ đầu `bang_ten.py`. Hàng rào là
+> `thu_sinh_dang.py` CA 2 mục (i): ai áp bảng tên trong `sinh_dang.py` thì
+> nó ĐỎ. Giới hạn đã biết của hàng rào ấy (nó chặn đường THẲNG, không chặn
+> đường VÒNG) ghi ở **nếp hỏng 15** và ở mục Việc treo kèm ngòi nổ.
+
+> **CHƯA viết một chữ nào vào `docs/`.** Hai dòng "khai nguồn" ở bảng trên
+> mới là **thiết kế**; lúc nào thật sự sinh trang kho tuần thì mới đặt chúng
+> vào trang. Ghi trước ở đây để lúc ấy khỏi phải nghĩ lại, và để người khác
+> không tự đặt một câu chữ khác.
+
 #### Ghim bộ số — `phan_cong_tuan1.json`
 
 Ba bảng đối chiếu chỉ nói về **hôm nay**. Thứ canh được **tuần sau** là một
@@ -1777,16 +1807,16 @@ MƯỜI SÁU lần đã dính, cùng một gốc — mỗi lần một kiểu kh
     giống hệt. Chưa làm vì nó cần dựng một kho thử có chuỗi lạ trong bản
     tách, và mục hiện có đã chặn được đường mà người ta thật sự sẽ đi.
     Xem nếp hỏng 15.
-
-[ ] HỎI ANH LÂN: trang công khai lấy tên môn / tên GV từ đâu — từ
-    cauhinh.json (tên chuẩn) hay từ tệp trường (nguyên văn)? Hiện đang
-    lấy NGUYÊN VĂN TỪ TỆP, và đó là quyết định có chủ ý: trang là bản
-    điện tử của đúng tờ đang treo ở trường. Nhưng hệ quả phải biết:
-    docs/index.html sinh từ cauhinh.json thì hiện "T.T.Hiền", còn bản
-    tách trong kho ghi "T.Hiền" — cùng một cô, hai tên, tuỳ trang nào.
-    Người nối Đợt 4 sẽ thấy chỗ đó và sẽ muốn "chữa" bằng bảng gộp.
-    Cùng hạng quyết định với TRUONG_O: phạm vi công khai, phải hỏi người.
-    (thu_sinh_dang.py CA 2 mục (i) đang chặn cứng, đỏ nếu ai áp bảng.)
+    NGÒI NỔ — bịt TRƯỚC KHI có NGƯỜI GỌI THỨ HAI vào sinh_dang.py.
+    Còn đúng MỘT người gọi thì lưới tên định danh còn đủ: người gọi duy
+    nhất đó nằm trong tầm mắt, đọc một lượt là biết nó có áp bảng tên
+    hay không. THÊM NGƯỜI THỨ HAI LÀ HẾT ĐỦ — lúc đó "đường vòng" không
+    còn là chuyện giả định nữa mà là chỗ người ta sẽ thật sự đi, và cái
+    lưới hiện tại sẽ XANH trong khi tên giáo viên ra công khai đã bị gộp.
+    Đi liền với mục "Đường đăng THỨ HAI đi qua ban_de_dang()" bên dưới:
+    hai mục đó cùng một ngòi nổ, đừng làm lẻ một cái.
+    (Người dùng chốt 26/8/2026: GIỮ TRONG VIỆC TREO, chưa dựng kho thử
+     riêng lúc này.)
 
 [ ] `luu_tuan._so()` có nên áp bảng tên khi so từng ô không? HOÃN, không
     làm bây giờ, và đây là số đo để lần sau khỏi đo lại (đo 26/8/2026,
@@ -1876,6 +1906,18 @@ MƯỜI SÁU lần đã dính, cùng một gốc — mỗi lần một kiểu kh
 ### Đã đóng — ĐỪNG mở lại
 
 ```
+[x] "Trang công khai lấy tên môn / tên GV từ đâu — cauhinh.json hay tệp
+     trường?"
+    TRẢ LỜI 26/8/2026, người dùng chốt: LẤY NGUYÊN VĂN TỪ TỆP TRƯỜNG.
+    KHÔNG áp bảng tên lúc đăng. Bản cài hiện tại đang làm đúng — GIỮ
+    NGUYÊN, không sửa một dòng nào.
+    => Hệ quả KHÔNG phải lỗi, và phải ghi ra chứ đừng để người đọc tự
+       đoán: HAI TRANG KHÁC NGUỒN THÌ ĐƯỢC PHÉP KHÁC CHỮ. Cách nói cho
+       người đọc biết mỗi trang lấy chữ từ đâu: xem mục "Hai trang công
+       khai, hai NGUỒN CHỮ" ở phần kho tuần.
+    => thu_sinh_dang.py CA 2 mục (i) là hàng rào của quyết định này —
+       ai áp bảng tên lúc đăng thì nó ĐỎ. Đừng gỡ nó ra.
+
 [x] "Làm cho tailscale serve tự sống lại sau khởi động"
     ĐÓNG 21/8/2026: KHÔNG PHẢI VIỆC. Đã đo — nó vốn đã tự sống lại.
     Khởi động lại máy thật, không gõ lệnh nào, rồi vào từ điện thoại 4G
