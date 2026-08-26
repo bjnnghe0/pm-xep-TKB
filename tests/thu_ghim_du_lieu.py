@@ -54,6 +54,13 @@ from tien_ich_web import GOC_TM      # noqa: E402
 KQ = []
 DAU_NGOAI_LE = 'ghim-co-y'
 
+# Trần của cửa thoát hiểm. ĐẾM **HẰNG ĐƯỢC THA**, KHÔNG đếm NÚT được tha —
+# xem nếp hỏng 16 trong CLAUDE.md. Bản đầu đếm nút, và đo được 26/8/2026:
+# nới MỘT dòng "ghim-co-y" CÓ SẴN từ `c.nhom == 'Sử'` thành
+# `c.nhom in [bảy tên môn]` làm 1 hằng thành 7 mà bộ đếm ĐỨNG YÊN — trần
+# vẫn đúng, cửa vẫn mở. Một cái bao chở được vô hạn ruột.
+TRAN_HANG_THA = 3
+
 
 def kiem(dieu_kien, mo_ta):
     KQ.append((bool(dieu_kien), mo_ta))
@@ -131,21 +138,29 @@ def _doan(nguon, nut):
 
 
 def soi(dd, khoa, gia_tri):
-    """Trả (danh sách vi phạm, số dòng dùng ngoại lệ, số phép so đã soi)."""
+    """Trả (vi phạm, SỐ HẰNG được tha, số phép so đã soi, số NÚT khai tha).
+
+       ⚠ Phần tử thứ hai đếm **HẰNG**, không đếm **NÚT**. Một dòng khai
+       `ghim-co-y` ghim được bao nhiêu tên cũng được — `x in ['12B1', …,
+       '12B6']` vẫn là MỘT nút mà tha SÁU tên lớp. Đếm nút thì cái trần
+       không chặn gì (nếp hỏng 16), nên nút bị tha vẫn phải ĐI QUA ĐÚNG
+       BỘ DÒ như mọi nút khác — chỉ khác chỗ đổ kết quả.
+    """
     with io.open(dd, encoding='utf-8') as f:
         nguon = f.read()
     dong = nguon.split('\n')
     cay = ast.parse(nguon, filename=dd)
     rel = os.path.relpath(dd, GOC_TM)
-    vi_pham, ngoai_le, da_soi = [], 0, 0
+    vi_pham, hang_tha, da_soi, nut_tha = [], 0, 0, 0
 
     for nut in ast.walk(cay):
         if not isinstance(nut, ast.Compare):
             continue
         da_soi += 1
-        if DAU_NGOAI_LE in dong[nut.lineno - 1]:
-            ngoai_le += 1
-            continue
+        # KHÔNG `continue` ở đây. Nút được tha vẫn soi hết, chỉ đổi chỗ đổ.
+        tha = DAU_NGOAI_LE in dong[nut.lineno - 1]
+        if tha:
+            nut_tha += 1
         ve = [nut.left] + list(nut.comparators)
         for i, a in enumerate(ve):
             for b in ve[i + 1:]:
@@ -172,7 +187,9 @@ def soi(dd, khoa, gia_tri):
                             and not isinstance(y.value, bool)):
                         cham = [k for k in khoa
                                 if k in (_doan(nguon, x) or '')]
-                        if cham:
+                        if cham and tha:
+                            hang_tha += 1
+                        elif cham:
                             vi_pham.append(
                                 (rel, nut.lineno, 'D1',
                                  f'{_doan(nguon, nut)}   <- chạm '
@@ -180,14 +197,18 @@ def soi(dd, khoa, gia_tri):
                     # D2 — vế y là chuỗi viết cứng trùng dữ liệu nhà trường.
                     # Nhận cả DANH SÁCH hằng: == ['12B1', '12B2', ...] cũng là
                     # ghim tên lớp, mà lại ghim luôn cả SỐ LƯỢNG lớp.
-                    for c in _cac_chuoi_cung(y):
-                        if c in gia_tri:
-                            vi_pham.append(
-                                (rel, nut.lineno, 'D2',
-                                 f'{_doan(nguon, nut)}   <- so bằng với '
-                                 f'"{c}" lấy thẳng từ cauhinh.json'))
-                            break
-    return vi_pham, ngoai_le, da_soi
+                    trung = [c for c in _cac_chuoi_cung(y) if c in gia_tri]
+                    if trung and tha:
+                        # ĐẾM HẾT, KHÔNG `break`. Đây chính là chỗ nếp hỏng
+                        # 16 nằm: `break` sau tên đầu tiên biến một danh
+                        # sách 50 tên lớp thành đúng MỘT đơn vị bị đếm.
+                        hang_tha += len(trung)
+                    elif trung:
+                        vi_pham.append(
+                            (rel, nut.lineno, 'D2',
+                             f'{_doan(nguon, nut)}   <- so bằng với '
+                             f'"{trung[0]}" lấy thẳng từ cauhinh.json'))
+    return vi_pham, hang_tha, da_soi, nut_tha
 
 
 def cac_tep_ca_thu():
@@ -264,6 +285,45 @@ def ca_1_hai_chieu(gt):
     kiem(not bat_nham,
          f'BỎ QUA đúng {len(can_bo_qua)} dạng hợp lệ — bắt nhầm: {bat_nham}')
 
+    # ------------------------------------------------------------------
+    # BỘ ĐẾM NGOẠI LỆ ĐẾM **HẰNG**, KHÔNG ĐẾM **NÚT** — nếp hỏng 16.
+    #
+    # Không mục nào khác canh được chuyện này: bản đếm-nút và bản đếm-hằng
+    # cho CÙNG một con số trên mã hôm nay (mỗi ngoại lệ đang tha đúng một
+    # hằng), nên CA 2 xanh y hệt ở cả hai bản. Chỉ phép thử "thêm ruột vào
+    # một cái bao CÓ SẴN" mới tách được chúng ra.
+    nhieu = sorted(gt & {'12B1', '12B2', '12B3', '12B4', '12B5', '12B6'})
+    kiem(len(nhieu) > 2,
+         f'Điều kiện tiên quyết: dựng được một danh sách {len(nhieu)} tên '
+         f'thật để nhét vào MỘT nút')
+    if len(nhieu) > 2:
+        ds = ', '.join(repr(x) for x in nhieu)
+        h1, n1 = _dem_tha(f"kiem(x == {nhieu[0]!r}, 'y')  # {DAU_NGOAI_LE}", gt)
+        hN, nN = _dem_tha(f"kiem(x in [{ds}], 'y')  # {DAU_NGOAI_LE}", gt)
+        kiem((h1, n1) == (1, 1),
+             f'Một ngoại lệ tha MỘT tên -> đếm (1 hằng, 1 nút), đo ({h1}, {n1})')
+        kiem((hN, nN) == (len(nhieu), 1),
+             f'CÙNG MỘT NÚT tha {len(nhieu)} tên -> đếm ({len(nhieu)} hằng, '
+             f'1 nút), đo ({hN}, {nN}) — số HẰNG phải nhảy theo, số NÚT thì không')
+        h0, n0 = _dem_tha(f"kiem(ma == 200, 'y')  # {DAU_NGOAI_LE}", gt)
+        kiem((h0, n0) == (0, 1),
+             f'Ngoại lệ khai mà KHÔNG ghim gì -> tốn 0 hằng, đo ({h0}, {n0}) — '
+             f'ngân sách chỉ tiêu vào chỗ thật sự ghim')
+
+
+def _dem_tha(ma, gt):
+    """(số hằng được tha, số nút khai tha) của một mẩu mã. Dùng cho CA 1."""
+    import tempfile
+    with tempfile.NamedTemporaryFile('w', suffix='.py', encoding='utf-8',
+                                     delete=False) as f:
+        f.write(ma + '\n')
+        t = f.name
+    try:
+        _, h, _, n = soi(t, KHOA_DU_LIEU, gt)
+        return h, n
+    finally:
+        os.unlink(t)
+
 
 def _soi_chuoi(ma, gt):
     """Chạy bộ dò trên một mẩu mã trong bộ nhớ. Dùng cho CA 1."""
@@ -286,15 +346,17 @@ def ca_2_quet_that(gt):
     kiem(any(t.endswith('thu_ghim_du_lieu.py') for t in tep),
          'Và CHÍNH TỆP NÀY cũng bị soi — không tự loại trừ mình')
 
-    vi_pham, ngoai_le, da_soi = [], 0, 0
+    vi_pham, hang_tha, da_soi, nut_tha = [], 0, 0, 0
     for d in tep:
-        v, n, s = soi(d, KHOA_DU_LIEU, gt)
+        v, h, s, n = soi(d, KHOA_DU_LIEU, gt)
         vi_pham += v
-        ngoai_le += n
+        hang_tha += h
         da_soi += s
+        nut_tha += n
     kiem(da_soi >= 300,
          f'Đã đi qua {da_soi} phép so sánh — bộ dò thật sự có chạy')
-    print(f'  ... {ngoai_le} dòng khai "{DAU_NGOAI_LE}"')
+    print(f'  ... {nut_tha} nút khai "{DAU_NGOAI_LE}", '
+          f'tha {hang_tha} HẰNG')
 
     # MỘT mục cho toàn bộ vi phạm: kiem() trong vòng lặp làm số mục trong
     # "Tổng: N/N" nhảy theo số lỗi, và CLAUDE.md không ghim được con số nào.
@@ -304,9 +366,12 @@ def ca_2_quet_that(gt):
          (':\n        ' + '\n        '.join(
              f'{t}:{d} [{k}] {c}' for t, d, k, c in vi_pham[:15])
           if vi_pham else ''))
-    kiem(ngoai_le <= 3,
-         f'Và số ngoại lệ "{DAU_NGOAI_LE}" còn ít ({ngoai_le}) — mục này để '
-         f'cửa thoát hiểm không lặng lẽ phình thành cửa chính')
+    # ĐẾM HẰNG, KHÔNG ĐẾM NÚT. Nút là cái BAO, hằng là cái RUỘT — và thứ
+    # gây hại nằm trong ruột. Xem nếp hỏng 16.
+    kiem(hang_tha <= TRAN_HANG_THA,
+         f'Cửa thoát hiểm "{DAU_NGOAI_LE}" đang tha {hang_tha} HẰNG '
+         f'(trần {TRAN_HANG_THA}), rải trên {nut_tha} nút — đếm HẰNG chứ '
+         f'không đếm NÚT, vì một nút tha được bao nhiêu hằng cũng được')
 
 
 # ==========================================================================
