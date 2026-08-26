@@ -114,12 +114,20 @@ def ca_2_khop_tung_o(bt, pa, xlsx, d):
 def ca_3_du_lop_du_gv(bt, d):
     print('\nCA 3 — đủ lớp, đủ giáo viên, đúng số tiết')
     print('-' * 74)
-    kiem(d['lop'] == list(bt.lop) and len(d['lop']) == len(bt.lop),
-         f'Đủ {len(bt.lop)} lớp — {d["lop"]}')
-    kiem(all(d['gvcn'].get(l) for l in d['lop']), 'Lớp nào cũng có tên GVCN')
+    # `.get()` khắp nơi, KHÔNG bóc thẳng `d['...']`. Bản hỏng mà ca thử này
+    # phải chịu được là bản THIẾU KHOÁ — đã dính 26/8/2026: bản vá "bỏ khoá
+    # `gvcn` khỏi du_lieu()" làm dòng `d['gvcn'].get(l)` ném KeyError, ca
+    # thử VỠ, và CA 3b (ca thật sự canh bộ khoá) không bao giờ chạy tới.
+    # Kiểu hỏng số 2, lần thứ năm.
+    lop = d.get('lop')
+    kiem(lop == list(bt.lop) and len(lop or []) == len(bt.lop),
+         f'Đủ {len(bt.lop)} lớp — {lop}')
+    gvcn = d.get('gvcn')
+    kiem(isinstance(gvcn, dict) and all(gvcn.get(l) for l in (lop or [])),
+         f'Lớp nào cũng có tên GVCN — {type(gvcn).__name__}')
 
     that = sorted({c.gv for c in bt.cac_cum if not c.la_trong})
-    kiem(d['gv'] == that, f'Đủ {len(that)} giáo viên, đúng danh sách')
+    kiem(d.get('gv') == that, f'Đủ {len(that)} giáo viên, đúng danh sách')
 
     dem_that = {}
     for c in bt.cac_cum:
@@ -138,6 +146,44 @@ def ca_3_du_lop_du_gv(bt, d):
     kiem(set(dem_lop.values()) == {24}, f'Mỗi lớp đúng 24 tiết — {dem_lop}')
     kiem(d['tuan'] == bt.cfg['thong_tin']['tuan'] and d['xuat_luc'],
          f'Có tên tuần và thời điểm xuất — "{d["tuan"]}", xuất {d["xuat_luc"]}')
+
+
+# ==========================================================================
+# BỘ KHOÁ CÔNG KHAI CỦA TRANG TĨNH — GHIM LITERAL, VIẾT TAY
+# ==========================================================================
+# Đây là trang **ĐANG SỐNG THẬT** ở https://bjnnghe0.github.io/pm-xep-TKB/,
+# nhà trường đã duyệt 19/8/2026 đúng bộ này. KHÔNG bỏ khoá nào — ghim để
+# sau không ai THÊM được mà bộ thử im.
+#
+# ⚠ `gvcn` là HỌ TÊN ĐẦY ĐỦ giáo viên chủ nhiệm. Đó là quyết định có chủ ý
+# (trang là bản điện tử của đúng tờ đang treo ở trường, tờ đó vốn ghi họ
+# tên đầy đủ), KHÔNG phải chỗ sót. Xem CLAUDE.md mục "Riêng tư".
+#
+# NGHỊCH LÝ ĐÃ SỬA Ở ĐÂY: `sinh_dang.TRUONG_O` — đường đăng CHƯA dùng thật
+# — đã ghim literal từ 22/8; còn `xuat_html.du_lieu()` — đường đăng ĐANG
+# DÙNG THẬT — thì tới 26/8 vẫn không ai ghim. Đo được: thêm hai khoá vào
+# `du_lieu()` thì thu_xuat_html 32/32 và thu_web 66/66, KHÔNG mục nào đỏ.
+# Cái mới làm thì còn nhớ, cái chạy lâu thì không ai soi.
+KHOA_CONG_KHAI_DA_DUYET = (
+    'tieu_de', 'tuan', 'xuat_luc', 'buoi', 'cac_thu', 'cac_tiet',
+    'lop', 'gvcn', 'gv', 'o')
+
+
+def ca_3b_ghim_bo_khoa_cong_khai(d):
+    print('\nCA 3b — bộ khoá ra CÔNG KHAI đúng bằng bộ nhà trường đã duyệt')
+    print('-' * 74)
+    co = tuple(sorted(d))
+    duyet = tuple(sorted(KHOA_CONG_KHAI_DA_DUYET))
+    kiem(co == duyet,
+         f'Trang tĩnh phát ĐÚNG {len(duyet)} khoá đã duyệt — thừa '
+         f'{sorted(set(co) - set(duyet))}, thiếu {sorted(set(duyet) - set(co))}')
+    # Hai khoá đáng gọi tên riêng, vì chúng là chỗ người sau sẽ đụng vào.
+    kiem('gvcn' in d and isinstance(d['gvcn'], dict) and d['gvcn'],
+         f'`gvcn` (HỌ TÊN ĐẦY ĐỦ GVCN) VẪN CÒN — nhà trường đã duyệt, '
+         f'đừng bỏ: {len(d.get("gvcn") or {})} lớp')
+    kiem('gvcn_vt' not in d,
+         '`gvcn_vt` (tên viết tắt GVCN) CHƯA ra công khai — đổi sang nó là '
+         'đổi một quyết định đã chốt, phải hỏi lại nhà trường')
 
 
 def ca_4_ba_che_do_va_dia_chi(trang, js):
@@ -179,6 +225,7 @@ if __name__ == '__main__':
         ca_1_tu_chua(trang, js)
         ca_2_khop_tung_o(bt, pa, xlsx, d)
         ca_3_du_lop_du_gv(bt, d)
+        ca_3b_ghim_bo_khoa_cong_khai(d)
         ca_4_ba_che_do_va_dia_chi(trang, js)
         ca_5_cu_phap_js(tm, js)
     print('=' * 74)

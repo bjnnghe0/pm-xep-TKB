@@ -1814,6 +1814,14 @@ HAI MƯƠI lần đã dính, cùng một gốc — mỗi lần một kiểu khá
    `cd` vào; mặc định của họ là bản thật. Đây là nếp hỏng duy nhất trong
    bảng **không ca thử nào bắt được** — nó nằm ở lớp giữa mã và người.
    (Nếp hỏng 20.)
+21. **ĐƯỜNG ĐANG CHẠY THẬT đã ghim chưa?** Cái mới làm thì còn nhớ, cái
+   chạy lâu thì không ai soi. Bằng chứng, đo 26/8/2026:
+   `sinh_dang.TRUONG_O` — đường đăng **CHƯA dùng thật** — đã ghim literal
+   từ 22/8; còn `xuat_html.du_lieu()` — đường đăng **ĐANG SỐNG THẬT** ở
+   `bjnnghe0.github.io/pm-xep-TKB/`, có `gvcn` là **họ tên đầy đủ GVCN** —
+   thì tới 26/8 vẫn không ai ghim: thêm hai khoá vào nó cho
+   **32/32 và 66/66, không mục nào đỏ**. Khi rà, hỏi *"cái nào đang có
+   người dùng"* TRƯỚC, đừng hỏi *"cái nào tôi vừa sửa"*.
 
 ---
 

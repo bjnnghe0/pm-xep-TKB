@@ -298,8 +298,22 @@ def ca_1d_khong_chu_tu_do_nao_qua_cua(tm):
     # GIỮ NGUYÊN: trường có KHUÔN (thử riêng ở phần B), hai đường dẫn tệp
     # (tiêm vào là hỏng chỗ tìm tệp, thử nhầm thứ), và ba giá trị MÁY SINH
     # vốn ĐƯỢC PHÉP ra ngoài.
-    giu = set(SD.KHUON_TUAN) | {'tep', 'tach', 'sha256', 'gio_luu', 'bo_doc',
-                                'trang_thai'}
+    #
+    # ⚠ GHIM LITERAL, KHÔNG viết `set(SD.KHUON_TUAN)`. Bản đầu viết vậy và
+    # đó là nếp hỏng 12 nguyên bản: mốc so lấy từ CHÍNH hằng đang bị canh.
+    # Đo 26/8/2026 trên bản vá "thêm 'ghi_chu' vào KHUON_TUAN": tập tiêm tụt
+    # từ 7 dấu xuống 6 (`ghi_chu` tự rơi ra khỏi tập tiêm), mục hành vi vẫn
+    # in `[ĐẠT] — rò: []`, trong khi `du_lieu_dang()` THẬT SỰ đăng
+    # `ghi_chu = 'CHỮ TỰ DO CÓ TÊN CÔ X'`. Chỉ mục nêu ĐÍCH DANH `ghi_chu`
+    # ở phần C là đỏ — tức lưới bắt được một CÁI TÊN, không bắt được LỚP.
+    KHUON_DA_DUYET = ('ma_tuan', 'nhan', 'tu_ngay', 'den_ngay', 'nam_hoc',
+                      'hoc_ky')
+    kiem(tuple(sorted(SD.KHUON_TUAN)) == tuple(sorted(KHUON_DA_DUYET)),
+         f'KHUON_TUAN ĐÚNG BẰNG bộ đã duyệt — thừa '
+         f'{sorted(set(SD.KHUON_TUAN) - set(KHUON_DA_DUYET))}, thiếu '
+         f'{sorted(set(KHUON_DA_DUYET) - set(SD.KHUON_TUAN))}')
+    giu = set(KHUON_DA_DUYET) | {'tep', 'tach', 'sha256', 'gio_luu', 'bo_doc',
+                                 'trang_thai'}
     dau = {}
     _tiem_dau(p, giu, dau)
     with io.open(dd, 'w', encoding='utf-8') as f:
