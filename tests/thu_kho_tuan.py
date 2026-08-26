@@ -1160,9 +1160,20 @@ def ca_14_ghim_hai_danh_sach_trang(tm):
     # MAU_BAN là danh sách trắng KÝ TỰ; nó không cắt được độ dài, và
     # `_ten_ban()` còn CỘNG THÊM 20 ký tự dấu thời gian ở đầu. Nên một
     # tên nguồn HỢP LỆ 240 byte cho ra tên đích 260 byte > 255 byte mà
-    # hệ tệp cho phép. Đo 26/8/2026 trên MÁY A (PC_NAME_MAX = 255):
-    #     nguồn 200 byte -> đích 220 -> them_ban ok=True
-    #     nguồn 240 byte -> đích 260 -> them_ban ok=False
+    # hệ tệp cho phép.
+    #
+    # ⚠ NGƯỠNG PHỤ THUỘC HỆ TỆP, VÀ KHÁC NHAU BA LẦN VỚI TÊN TIẾNG VIỆT.
+    # Đo 26/8/2026, MÁY A, cùng một phép dò nhị phân:
+    #     ext4  (/tmp)          255 BYTE  -> tên có dấu tối đa  85 ký tự
+    #     ntfs3 (luu_tru/)      255 KÝ TỰ -> tên có dấu tối đa 255 ký tự
+    # Kho THẬT nằm trên **ntfs3**, còn bộ thử này chạy trong `/tmp` tức
+    # **ext4** — hai nền khác nhau, đừng lấy số của nền này nói về nền kia.
+    # Đo `them_ban` NGAY TRÊN `luu_tru/` với tên kiểu Khoa hay đặt (có
+    # dấu): nguồn 235 ký tự -> đích 255 -> ok=True; nguồn 236 -> đích 256
+    # -> ok=False. Ngưỡng thật của kho là **236 KÝ TỰ**, không phải byte.
+    #
+    # Vì vậy mục dưới dùng tên THUẦN ASCII: nó vượt ngưỡng trên CẢ HAI
+    # nền, nên ca thử cho cùng kết quả dù chạy ở đâu.
     # Mục này KHÔNG đòi MAU_BAN chặn — nó đòi kho HỎNG CHO TỬ TẾ.
     kiem(len(K._ten_ban('2026-01-01T00-00-00', 'T' * 240 + '.xlsx')) > 255,
          'ĐỐI CHỨNG: tên nguồn dài hợp lệ + 20 ký tự dấu thời gian vượt '

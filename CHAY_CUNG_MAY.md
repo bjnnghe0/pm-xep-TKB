@@ -339,14 +339,26 @@ nó lên · và ghi được xuống đĩa.
 > ```
 > Chữ tiếng Việt có dấu thì **giữ nguyên** — `Tuần` vẫn là `Tuần`.
 >
-> **Một cảnh DUY NHẤT bị từ chối: tên QUÁ DÀI.** Tên tệp nguồn từ khoảng
-> **236 byte trở lên** cộng 20 ký tự dấu thời gian là vượt giới hạn 255
-> byte của hệ tệp. Lúc đó `luu_tuan.py them` **từ chối gọn, nói đúng lý
-> do, và KHÔNG ghi một byte nào vào kho**:
+> **Một cảnh DUY NHẤT bị từ chối: tên QUÁ DÀI.** Tên tệp nguồn từ
+> **236 KÝ TỰ trở lên** cộng 20 ký tự dấu thời gian là vượt giới hạn
+> **255 ký tự** của ổ NTFS3 chỗ kho nằm. Lúc đó `luu_tuan.py them`
+> **từ chối gọn, nói đúng lý do, và KHÔNG ghi một byte nào vào kho**:
 > ```
 > [DỪNG] Không chép được tệp vào kho: [Errno 36] File name too long: ...
 > ```
 > Chữa: đổi tên tệp cho ngắn lại rồi nạp lại. Không mất gì, không hỏng gì.
+>
+> **KÝ TỰ chứ không phải BYTE — và chỗ này hai ổ khác nhau BA LẦN.** Đo
+> 26/8/2026 trên MÁY A, cùng một phép dò nhị phân, với tên toàn chữ có dấu:
+>
+> | Ổ | Đếm theo | Tên CÓ DẤU dài tối đa |
+> |---|---|---|
+> | `ntfs3` — chỗ `luu_tru/` nằm | **KÝ TỰ** (255) | **255 ký tự** (765 byte UTF-8) |
+> | `ext4` — `/tmp`, chỗ bộ thử chạy | **BYTE** (255) | **85 ký tự** |
+>
+> Tên `KHOA KHCB-TKB Tuần 1 (24-8-26 - 29-8-26)` là 40 ký tự / 42 byte —
+> còn rất xa ngưỡng, cả hai ổ. Ghi bảng này ra chỉ để ai đọc con số 236
+> đừng đem nó sang một ổ khác rồi tưởng vẫn đúng.
 
 
 
