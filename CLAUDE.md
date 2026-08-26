@@ -1850,6 +1850,63 @@ HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiể
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
 
+[ ] CA THỬ DÒ CHUỖI JS/HTML — MƯỜI HAI MỤC, chạy thật thì bắt thêm
+    được gì. LIỆT KÊ 26/8/2026, CHƯA VIẾT LẠI CÁI NÀO (người dùng chọn
+    từng cái).
+
+    Bối cảnh: `thu_them_quy_tac.py` CA 6c là mục ĐẦU TIÊN chạy mã thật —
+    ghép lưới đỡ DOM + chính `web/app.js` rồi cho `node` chạy. Nó bắt
+    được thứ CA 6b (dò chuỗi) không bao giờ thấy: mô tả của loại CŨ nằm
+    lại dưới một khung không còn chọn gì. Dưới đây là mọi mục còn đang
+    dò chuỗi, và điều CHẠY THẬT sẽ thêm được.
+
+    thu_them_quy_tac.py
+      1. CA 6  kích thước CSS (đọc style.css)
+         chạy thật: đo bề rộng/chiều cao THẬT của thẻ ở 360px — bắt được
+         CHỮ TRÀN KHUNG, thứ CA 6 tự khai là không bắt được.
+      2. CA 6b dãy thẻ chọn loại (8 phép dò)
+         chạy thật: bấm gập/mở rồi đếm thẻ hiện ra; bấm chọn rồi đọc
+         `loaiChon`. Nay chỉ khẳng định "mã có nhắc tới nhomMo.add".
+      3. CA 7  khung cảnh báo sau Lưu (ba mảnh trong HTML)
+         chạy thật: gọi hàm hiện cảnh báo với cả BA nhánh (co_loi_giai /
+         vet_can / hết giờ) rồi đọc chữ hiện ra — nay chỉ kiểm id có mặt.
+      4. CA 8  nhân bản (nút "Tạo giống" + hàm nhanBan)
+         chạy thật: gọi `nhanBan(r)` rồi đọc `o-ghi-chu.value` — kiểm
+         được hậu tố " — bản sao" VÀ vị trí con trỏ. Nay chỉ kiểm tên hàm.
+      5. CA 9  lọc quy tắc
+         chạy thật: nạp 17 quy tắc giả rồi lọc theo GV/môn/lớp, đếm thẻ
+         còn lại. Nay chỉ kiểm "JS không nhắc noi_dung.loc".
+      6. CA 10 sửa nháp (suaQuyTac + lớp nút)
+         chạy thật: gọi `suaQuyTac(r)` rồi khẳng định XOÁ trước ĐIỀN sau
+         — đúng thứ tự mà CLAUDE.md ràng buộc, nay không ai kiểm.
+      7. CA 11 bốn trạng thái + bàn phím
+         chạy thật: ép `goi()` ném rồi đọc chữ hiện ra, phân biệt "mạng
+         hỏng" với "câu trả lời hỏng". Nay chỉ đếm hai nhánh trong mã.
+    thu_dau_ban.py
+      8. CA 6  giao diện đủ mạnh (5 phép dò)
+         chạy thật: giả lập máy chủ trả 409 rồi khẳng định nút "Tải lại
+         danh sách" HIỆN RA. Nay chỉ kiểm app.js có chuỗi '409'.
+    thu_doc_lai.py
+      9. CA 6  nhánh doc_lai + hoãn theo phím gõ
+         chạy thật: gõ liên tiếp rồi đếm SỐ LƯỢT gọi mạng — kiểm được
+         cái hoãn 300ms thật sự hoãn. Nay chỉ kiểm mã có chữ hoãn.
+     10. CA 7  chỗ hiện phạm vi
+         chạy thật: đọc chữ hiện ra khi phạm vi = 0 lớp.
+    thu_web.py
+     11. CA 4  utf-8 + nhãn tiếng Việt
+         chạy thật: gần như không thêm gì — đây là mục KIỂM TỆP, không
+         phải kiểm hành vi. Để nguyên là đúng.
+    thu_xuat_html.py
+     12. mục `node --check` cú pháp JS
+         chạy thật: đã là chạy thật rồi (gọi node). Nhưng nó viết theo
+         cách SAI của nếp hỏng 21 — vắng node thì `kiem(True, ...)`.
+         Đây là mục đáng sửa TRƯỚC, và rẻ nhất: đổi sang `bo_qua()`.
+
+    GIÁ PHẢI TRẢ, ghi ra để khỏi phải đo lại: mỗi mục chạy thật cần một
+    lưới đỡ DOM, và lưới đỡ ấy KHÔNG PHẢI trình duyệt — nó không có bố
+    cục, không có pixel. Nên chạy thật KHÔNG thay được mục "xem bằng
+    mắt"; nó chỉ thay được phần LOGIC. Xem danh sách 23 mục xem-bằng-mắt.
+
 [ ] RÀ NẾP HỎNG 16 — bốn chỗ khác cùng hình dạng. LIỆT KÊ 26/8/2026,
     CHƯA SỬA CÁI NÀO (người dùng dặn: liệt kê, đừng sửa).
 
