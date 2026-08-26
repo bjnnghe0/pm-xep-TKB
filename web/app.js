@@ -474,11 +474,10 @@ async function suaQuyTac(r) {
   if (!tl.ok) { baoLoi(kq.loi || 'Không sửa được: xoá bản nháp cũ thất bại.'); return; }
   quyTac = kq.quy_tac.map((x) => ({ ...x }));
   veQuyTac();
-  if (![...$('o-loai').options].some((o) => o.value === luu.loai)) {
+  if (!datLoai(luu.loai)) {
     baoLoi('Loại "' + luu.loai + '" không còn trong danh mục.');
     return;
   }
-  $('o-loai').value = luu.loai;
   $('o-ghi-chu').value = luu.ghi_chu || '';   // giữ NGUYÊN câu, không thêm hậu tố
   veTruong(luu.noi_dung || {});
   henDocLai();
@@ -505,13 +504,11 @@ function nhanBan(r) {
   if (!r) return;
   baoLoi('');
   $('ket-qua-thu').classList.add('an');
-  const co = [...$('o-loai').options].some((o) => o.value === r.loai);
-  if (!co) {
+  if (!datLoai(r.loai)) {
     baoLoi('Không nhân bản được: loại "' + r.loai + '" không còn trong danh '
          + 'mục. Có thể cauhinh.json khai một loại mà bản phần mềm này chưa có.');
     return;
   }
-  $('o-loai').value = r.loai;
   $('o-ghi-chu').value = (r.ghi_chu || '') + ' — bản sao';
   veTruong(r.noi_dung || {});
   henDocLai();
@@ -540,16 +537,8 @@ async function napDanhMuc() {
   } catch (e) { return; }
   if (!dm || !gt) return;
   DM = dm; GT = gt;
-  $('o-loai').innerHTML = DM.nhom.map((n) =>
-    `<optgroup label="${ma(n.nhom)}">`
-    // Ô chọn hiện NHÃN TIẾNG VIỆT, không hiện tên kỹ thuật. Tên kỹ thuật
-    // xuống dòng #ten-ky-thuat ngay dưới — thầy cô còn đối chiếu cauhinh.json
-    // bằng Notepad, nên không được giấu hẳn nó đi.
-    + n.loai.map((l) =>
-        `<option value="${ma(l.ten)}">${ma(l.nhan || l.ten)}</option>`).join('')
-    + '</optgroup>').join('');
+  veDsLoai();
   if (quyTac.length) veQuyTac();   // giờ mới biết nhóm + nhãn
-  $('o-loai').onchange = () => { veTruong(); henDocLai(); };
   $('o-ghi-chu').oninput = henDocLai;
   // Bắt Ở KHUNG CHA, không gắn vào từng ô: veTruong() vẽ lại toàn bộ ô nhập
   // mỗi lần đổi loại, nên gắn vào từng ô là gắn xong lại mất.
@@ -559,9 +548,90 @@ async function napDanhMuc() {
   henDocLai();
 }
 
+// ---------------------------------------------------------------------------
+// Đợt 3 việc 4 — DÃY THẺ CHỌN thay <select>
+//
+// Vì sao bỏ <select>: <option> không xuống dòng được, và bộ chọn của hệ điều
+// hành trên điện thoại cắt chuỗi sớm. Nhãn ở đây CỐ Ý có hai vế, vế sau dấu
+// gạch mới là vế phân biệt — "CHỈ được xếp vào những thứ đã chọn — mọi thứ
+// khác đều cấm" so với "Hai nhóm KHÔNG được rơi vào cùng một ngày — mỗi nhóm
+// vẫn xếp thứ nào cũng được". Cắt ở dấu gạch là mất đúng vế mang thông tin,
+// và cạm bẫy QT 14/15/16 (thầy cô chọn chi_xep_thu khi định nói khac_ngay)
+// quay lại nguyên vẹn.
+//
+// Bốn nhóm GẬP/MỞ, mặc định gập hết: 17 thẻ trải ra là ~4,6 màn hình điện
+// thoại. Thẻ HAI DÒNG — nhãn (vế đầu) + tên kỹ thuật; vế sau dấu gạch dồn
+// xuống #mo-ta-loai ngay dưới, KHÔNG mất chữ nào, chỉ dời chỗ.
+//
+// KHÔNG gắn phím tắt toàn trang: radio cùng `name` đã đi được bằng phím mũi
+// tên sẵn trong trình duyệt. thu_them_quy_tac.py CA 11 cấm
+// document.addEventListener('keydown').
+// ---------------------------------------------------------------------------
+let loaiChon = '';        // tên kỹ thuật của loại đang chọn, '' = chưa chọn
+const nhomMo = new Set(); // tên nhóm đang MỞ
+
+function veDsLoai() {
+  if (!DM || !DM.nhom) return;
+  $('ds-nhom-loai').innerHTML = DM.nhom.map((n) => {
+    const mo = nhomMo.has(n.nhom);
+    const the = n.loai.map((l) => {
+      const nhan = (l.nhan || l.ten).split(' — ')[0];
+      const chon = l.ten === loaiChon;
+      return `<label class="the-loai-chon${chon ? ' dang-chon' : ''}">`
+        + `<input type="radio" name="loai-qt" value="${ma(l.ten)}"`
+        + `${chon ? ' checked' : ''}>`
+        + '<span class="dau-cham"></span><span class="chu">'
+        + `<span class="nhan-loai">${ma(nhan)}</span>`
+        + `<code class="ma-loai">${ma(l.ten)}</code></span></label>`;
+    }).join('');
+    return `<div class="nhom-loai"><button type="button" class="nut-nhom"`
+      + ` data-nhom="${ma(n.nhom)}" aria-expanded="${mo}">`
+      + `<span class="mui">${mo ? '▾' : '▸'}</span>`
+      + `<span class="ten-nhom">${ma(n.nhom)}</span>`
+      + `<span class="nhom-dem">${n.loai.length}</span></button>`
+      + (mo ? `<div class="the-loai-ds">${the}</div>` : '') + '</div>';
+  }).join('');
+
+  $('ds-nhom-loai').querySelectorAll('.nut-nhom').forEach((b) => {
+    b.onclick = () => {
+      const t = b.dataset.nhom;
+      if (nhomMo.has(t)) nhomMo.delete(t); else nhomMo.add(t);
+      veDsLoai();
+    };
+  });
+  $('ds-nhom-loai').querySelectorAll('input[name="loai-qt"]').forEach((o) => {
+    o.onchange = () => {
+      if (!o.checked) return;
+      loaiChon = o.value;
+      veDsLoai();
+      veTruong();
+      henDocLai();
+    };
+  });
+}
+
+// Đặt loại từ mã (nút Sửa / Tạo giống). Trả false nếu loại không còn trong
+// danh mục. MỞ SẴN nhóm chứa nó — "mặc định gập hết" mà không mở thì loại
+// đang chọn VÔ HÌNH, đúng chỗ thua đã nêu lúc trình bố cục.
+function datLoai(t) {
+  if (!coLoai(t)) return false;
+  loaiChon = t;
+  for (const n of DM.nhom) {
+    if (n.loai.some((l) => l.ten === t)) nhomMo.add(n.nhom);
+  }
+  veDsLoai();
+  return true;
+}
+
+function coLoai(t) {
+  if (!DM || !DM.nhom) return false;
+  return DM.nhom.some((n) => n.loai.some((l) => l.ten === t));
+}
+
 function loaiDangChon() {
-  const t = $('o-loai').value;
-  for (const n of DM.nhom) for (const l of n.loai) if (l.ten === t) return l;
+  for (const n of DM.nhom) for (const l of n.loai) {
+    if (l.ten === loaiChon) return l;
+  }
   return null;
 }
 
@@ -664,7 +734,16 @@ function veLoc(khoa, gt, cho_tru) {
 // đang nhân bản. MỘT hàm vẽ, không phải hai — hai bản vẽ là hai bản sẽ lệch.
 function veTruong(nguon) {
   const l = loaiDangChon();
-  if (!l) return;
+  // CHƯA CHỌN LOẠI là trạng thái THẬT từ khi bỏ <select>: <select> luôn tự
+  // chọn phần tử đầu, dãy thẻ thì không chọn gì cho tới khi người dùng bấm.
+  // Phải DỌN SẠCH, đừng để mô tả của loại cũ nằm lại bên dưới một khung
+  // không còn chọn gì — đó là kiểu sai im lặng cả dự án này chống.
+  if (!l) {
+    $('o-truong').innerHTML = '';
+    $('mo-ta-loai').textContent = '';
+    $('ten-ky-thuat').textContent = '';
+    return;
+  }
   const vi = nguon || l.vi_du;
   $('mo-ta-loai').textContent = l.mo_ta;
   $('ten-ky-thuat').textContent = 'tên trong cauhinh.json:  "loai": "' + l.ten + '"';
@@ -795,6 +874,7 @@ async function docLai() {
 
 function docForm() {
   const l = loaiDangChon();
+  if (!l) return null;        // chưa chọn loại — người gọi tự báo
   const r = { loai: l.ten, ghi_chu: $('o-ghi-chu').value.trim() };
   l.truong.forEach((tr) => {
     const hop = $('o-truong').querySelector(`[data-truong="${tr.ten}"]`);
@@ -860,7 +940,12 @@ $('nut-them').onclick = async () => {
          + 'nên không được để trống.');
     return;
   }
-  const tl = await goiCu('/api/them-quy-tac', { quy_tac: docForm() });
+  const r = docForm();
+  if (!r) {
+    baoLoi('Chưa chọn "Loại quy tắc". Mở một nhóm rồi bấm vào loại cần dùng.');
+    return;
+  }
+  const tl = await goiCu('/api/them-quy-tac', { quy_tac: r });
   const kq = await tl.json();
   if (!tl.ok) { baoLoi(kq.loi || 'Không thêm được.'); return; }
   quyTac = kq.quy_tac.map((r) => ({ ...r }));
@@ -872,10 +957,15 @@ $('nut-them').onclick = async () => {
 $('nut-thu').onclick = async () => {
   baoLoi('');
   const n = $('nut-thu');
+  const rt = docForm();
+  if (!rt) {
+    baoLoi('Chưa chọn "Loại quy tắc". Mở một nhóm rồi bấm vào loại cần dùng.');
+    return;
+  }
   n.disabled = true; n.textContent = 'Đang thử...';
   try {
     const tl = await goiCu('/api/thu-quy-tac',
-      { quy_tac: docForm(),
+      { quy_tac: rt,
         tat: quyTac.filter((r) => !r.bat).map((r) => r.i) });
     const kq = await tl.json();
     if (!tl.ok) { baoLoi(kq.loi || 'Không thử được.'); return; }

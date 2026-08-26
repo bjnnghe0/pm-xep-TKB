@@ -146,10 +146,19 @@
 
   <h2>Thêm quy tắc mới</h2>
   <div class="hop">
+    <!-- Đợt 3 việc 4 — DÃY THẺ CHỌN thay cho <select>.
+         <option> KHÔNG xuống dòng được, và bộ chọn của hệ điều hành trên
+         điện thoại cắt chuỗi sớm; mà nhãn ở đây CỐ Ý có hai vế, vế sau dấu
+         gạch mới là vế phân biệt (chi_xep_thu với khac_ngay). Cắt ở dấu
+         gạch là mất đúng vế mang thông tin, và cạm bẫy QT 14/15/16 quay lại.
+         Bốn nhóm GẬP/MỞ, mặc định gập hết: 17 thẻ trải ra là ~4,6 màn hình
+         điện thoại. Mọi id nằm SẴN ở đây, không dựng bằng innerHTML —
+         thu_web.py CA 4 đòi vậy. -->
+    <fieldset id="hop-loai" class="hop-loai">
+      <legend>Loại quy tắc</legend>
+      <div id="ds-nhom-loai"></div>
+    </fieldset>
     <div class="dong-nhap">
-      <label>Loại quy tắc
-        <select id="o-loai"></select>
-      </label>
       <label style="flex:1 1 320px">Nội dung quy tắc <b>(bắt buộc)</b>
         <input id="o-ghi-chu" type="text"
                placeholder="câu này hiện trên bảng đối chiếu">

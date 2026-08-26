@@ -261,6 +261,76 @@ def ca_5_doi_chieu_danh_muc(B):
          'Bỏ loại giả ra thì API cũng hết ngay')
 
 
+def ca_6b_day_the_chon_loai():
+    print('\nCA 6b — dãy THẺ CHỌN LOẠI thay <select> (ĐỌC MÃ NGUỒN)')
+    print('-' * 74)
+    js = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
+    html = io.open(os.path.join(GOC_TM, 'web', 'index.html'),
+                   encoding='utf-8').read()
+    css = io.open(os.path.join(GOC_TM, 'web', 'style.css'),
+                  encoding='utf-8').read()
+    js_sach = re.sub(r'//[^\n]*', '', re.sub(r'/\*.*?\*/', '', js, flags=re.S))
+    css_sach = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+
+    # (a) `o-loai` phải bỏ SẠCH — bỏ nửa vời thì còn một đường chết trỏ vào
+    #     một id không tồn tại, và thu_web CA 4 chỉ bắt được chiều ngược lại.
+    kiem('o-loai' not in js_sach and 'o-loai' not in html,
+         "Không còn dấu vết `o-loai` nào trong app.js lẫn index.html")
+    # Bốn `<select>` CÒN LẠI là thanh LỌC (`loc-*`) — danh sách ngắn, cố
+    # định, không có nhãn hai vế, nên `<select>` ở đó là đúng chỗ. Khẳng
+    # định trên ID chứ không dò chuỗi '<select': chuỗi ấy còn nằm trong
+    # chính dòng chú thích giải thích vì sao bỏ nó (nếp hỏng 4).
+    con = re.findall(r'<select id="([^"]+)"', html)
+    kiem(con and all(i.startswith('loc-') for i in con),
+         f'`<select>` chỉ còn ở thanh LỌC, không còn ở form quy tắc — {con}')
+
+    # (b) Khung dãy thẻ nằm SẴN trong HTML, không dựng bằng innerHTML.
+    for i in ('hop-loai', 'ds-nhom-loai'):
+        kiem(f'id="{i}"' in html, f'id="{i}" nằm SẴN trong index.html')
+
+    # (c) RADIO PHẢI GIẤU KIỂU `.nut-o input`. Đây là cái bẫy của CA 6: nó
+    #     soi mọi selector có chữ "input" và chỉ tha 'checkbox', nên khai
+    #     min-height cho radio (kiểu input[type="checkbox"]) là ĐỎ ngay.
+    m = re.search(r'\.the-loai-chon input\s*\{([^{}]*)\}', css_sach)
+    kiem(bool(m), 'Có khai `.the-loai-chon input` để giấu radio')
+    if m:
+        kiem('min-height' not in m.group(1) and 'font-size' not in m.group(1),
+             f'và nó KHÔNG khai min-height/font-size — {m.group(1).strip()!r}')
+
+    # (d) KHÔNG chiếm phím tắt toàn trang. Radio cùng `name` đã đi được bằng
+    #     phím mũi tên sẵn trong trình duyệt, không tốn dòng mã nào.
+    kiem("document.addEventListener('keydown'" not in js_sach
+         and 'document.onkeydown' not in js_sach,
+         'Không gắn phím tắt keydown toàn trang')
+    kiem("name=\"loai-qt\"" in js_sach or "name=\'loai-qt\'" in js_sach,
+         'Radio cùng một `name` — để phím mũi tên đi được sẵn')
+
+    # (e) Bấm Sửa / Tạo giống phải MỞ nhóm chứa loại đó. "Mặc định gập hết"
+    #     mà không mở thì loại đang chọn VÔ HÌNH.
+    # Soi TRONG THÂN HÀM, không dò cả tệp. `nhomMo.add` cũng nằm ở nút
+    # gập/mở nhóm, nên phép dò cả tệp XANH cả khi datLoai() không mở gì —
+    # đã đo 26/8/2026: bỏ hẳn vòng mở nhóm khỏi datLoai() cho 127/127,
+    # không mục nào đỏ. Nếp hỏng 15: canh tên định danh, không canh chỗ nó
+    # thật sự nằm.
+    than_dl = re.search(r'function datLoai\([^)]*\)\s*\{(.*?)\n\}',
+                        js_sach, re.S)
+    kiem(bool(than_dl), 'Đọc được thân hàm datLoai()')
+    kiem(bool(than_dl) and 'nhomMo.add' in than_dl.group(1),
+         'và CHÍNH THÂN NÓ mở sẵn nhóm chứa loại được đặt — '
+         '"mặc định gập hết" mà không mở thì loại đang chọn VÔ HÌNH')
+    kiem(js_sach.count('datLoai(') >= 3,
+         f'và cả Sửa lẫn Tạo giống đều đi qua nó — '
+         f'{js_sach.count("datLoai(")} chỗ gọi')
+
+    # (f) CHƯA CHỌN LOẠI là trạng thái THẬT từ khi bỏ <select> (select luôn
+    #     tự chọn phần tử đầu). docForm() phải trả null chứ không được ném.
+    kiem('if (!l) return null;' in js_sach,
+         'docForm() trả null khi chưa chọn loại, KHÔNG ném')
+    kiem(js_sach.count('Chưa chọn "Loại quy tắc"') >= 2,
+         f'và cả nút Thêm lẫn nút Thử đều nói rõ — '
+         f'{js_sach.count(chr(34) + "Chưa chọn" + chr(34)) if False else js_sach.count("Chưa chọn")} chỗ')
+
+
 def ca_6_kich_thuoc_css():
     print('\nCA 6 — kích thước ô nhập (ĐỌC CSS, không đo trên trình duyệt)')
     print('-' * 74)
@@ -273,7 +343,10 @@ def ca_6_kich_thuoc_css():
             for m in re.finditer(r'([^{}]+)\{([^{}]*)\}', css)]
 
     BAM = ('input', 'select', 'textarea', 'button', '.tab', '.nut-o',
-           '.nut-xoa', '.cong-tac', '.ds-chon .dong', '.tim')
+           '.nut-xoa', '.cong-tac', '.ds-chon .dong', '.tim',
+           # Đợt 3 việc 4 — dãy thẻ chọn loại thay <select>. Cả hai đều
+           # BẤM ĐƯỢC nên phải chịu đúng ngưỡng chạm.
+           '.nut-nhom', '.the-loai-chon')
     xau = []
     for sel, than in khoi:
         if 'checkbox' in sel or not any(b in sel for b in BAM):
@@ -291,7 +364,10 @@ def ca_6_kich_thuoc_css():
     # cỡ nhỏ hơn để nhét vừa bảng, đó là đánh đổi khác. Danh sách này là những
     # dòng chữ trên màn hình Quy tắc — thứ thầy cô đọc để hiểu quy tắc làm gì.
     THE = ('.the-chu', '.the-loai', '.the-so', '.nhom-ten', '.nhom-dem',
-           '.trong-rong')
+           '.trong-rong',
+           # Hai dòng chữ của MỖI THẺ CHỌN LOẠI — thứ thầy cô đọc để biết
+           # loại này làm gì, và để đối chiếu cauhinh.json bằng Notepad.
+           '.the-loai-chon .nhan-loai', '.the-loai-chon .ma-loai')
     thieu, nho = [], []
     for ten in THE:
         m = re.search(re.escape(ten) + r'\s*\{([^{}]*)\}', css)
@@ -790,6 +866,7 @@ if __name__ == '__main__':
         finally:
             may.shutdown()
         ca_6_kich_thuoc_css()
+        ca_6b_day_the_chon_loai()
         ca_11_bon_trang_thai()
         ca_7_kiem_nhanh_sau_luu(tm)
     print('=' * 74)

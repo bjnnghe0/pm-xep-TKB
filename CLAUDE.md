@@ -2257,6 +2257,24 @@ học `khop_loc()` / `_cum_cua()`.
 | 3 | **Huy hiệu** Bắt buộc/Ưu tiên, dòng phạm vi, **Sửa**/Tạo giống/Xoá | Ba nút cùng hàng trên điện thoại; ba màu huy hiệu có phân biệt được không |
 | 4 | **Bốn trạng thái** tải · rỗng · lỗi · xong, và **bàn phím** | Viền lấy nét có thấy rõ trên nền thẻ không |
 
+> **Ô chọn "Loại quy tắc" KHÔNG còn là `<select>` — 26/8/2026.** Nay là một
+> **dãy THẺ chọn** (radio), gom theo bốn nhóm của `NHOM_LOAI`, mỗi nhóm
+> **gập/mở được, mặc định gập hết**; mỗi thẻ **hai dòng** — vế đầu của `NHAN`
+> và tên kỹ thuật. Vế sau dấu gạch dồn xuống `#mo-ta-loai`, **không mất chữ
+> nào, chỉ dời chỗ**.
+>
+> Vì sao bỏ `<select>`: `<option>` không xuống dòng được, và bộ chọn của hệ
+> điều hành trên điện thoại cắt chuỗi sớm — mà vế sau dấu gạch **chính là vế
+> phân biệt** `chi_xep_thu` với `khac_ngay`. Cắt ở đó là cạm bẫy QT 14/15/16
+> quay lại. 17 thẻ trải hết là **~4,6 màn hình điện thoại**; gập hết còn
+> **~0,4 màn**, mở nhóm to nhất **~1,5 màn**.
+>
+> **Trạng thái MỚI phải nhớ: CHƯA CHỌN LOẠI.** `<select>` luôn tự chọn phần
+> tử đầu; dãy thẻ thì không chọn gì cho tới khi người dùng bấm. `docForm()`
+> trả `None` chứ không ném, `veTruong()` dọn sạch hai dòng mô tả, và cả nút
+> Thêm lẫn nút Thử đều nói rõ *"Chưa chọn Loại quy tắc"*.
+> `tests/thu_them_quy_tac.py` CA 6b canh cả sáu điều trên.
+
 > **`CA 6` và `CA 11` đọc CSS và mã nguồn, KHÔNG dựng trình duyệt.** Chúng bắt
 > được việc khai sai cỡ và việc **bỏ hẳn** một nhánh; chúng **không** bắt được
 > lỗi bố cục. Bốn dòng cuối bảng trên là việc phải mở trình duyệt xem bằng mắt.
