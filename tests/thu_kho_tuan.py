@@ -944,6 +944,118 @@ def ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm):
          f'{sorted(set(DA_DUYET) - set(D.THE_DOC_PROPS))}')
 
 
+def ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm):
+    print('\nCA 13 — ĐỌC LẠI: không thêm bản, không đổi quyết định của người')
+    print('-' * 74)
+    goc, MA = os.path.join(tm, 'kho13'), '2026-07-06'
+    NGAY = '2026-08-18T17:06:19Z'
+
+    # Bản lưu bằng bộ đọc "đời cũ": tệp KHÔNG có docProps, nên bản tách
+    # không có `ngay_truong_sua` — đúng cảnh của bản tuần 1 trong kho thật.
+    t = dung_xlsx(os.path.join(tm, 'doc-lai.xlsx'), o_mau(so_tiet=4))
+    K.them_ban(goc, MA, t, 'người thử', tach=D.doc(t))
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử: bản này dùng được')
+    K.ghi_khuyet_tat(goc, MA, 1, 'khuyết tật của ca thử', 'người thử')
+
+    # Ép dấu bộ đọc của bản này về ĐỜI CŨ. Không có bước này thì bản thử
+    # mang sẵn dấu của bộ đọc HIỆN TẠI, `bo_doc` trước và sau bằng nhau, và
+    # mục "dấu bộ đọc đã đổi theo" ĐỎ vì kỳ vọng sai chứ không vì mã sai —
+    # ca thử mất khả năng phân biệt đúng chỗ nó cần phân biệt nhất.
+    dd_phieu = os.path.join(K.thu_muc_tuan(goc, MA), 'phieu.json')
+    with io.open(dd_phieu, encoding='utf-8') as f:
+        _p = json.load(f)
+    _p['ban'][0]['bo_doc'] = {'phien_ban': '0', 'bam_ma': 'doi-cu'}
+    with io.open(dd_phieu, 'w', encoding='utf-8') as f:
+        json.dump(_p, f, ensure_ascii=False)
+
+    p0, _ = K.doc_phieu_ky(goc, MA)
+    b0 = dict((p0.get('ban') or [])[0])
+    kiem((b0.get('bo_doc') or {}).get('phien_ban') != D.PHIEN_BAN,
+         f'Điều kiện tiên quyết: bản mang dấu bộ đọc ĐỜI CŨ — '
+         f'{(b0.get("bo_doc") or {}).get("phien_ban")!r} vs nay {D.PHIEN_BAN!r}')
+    tm_t = K.thu_muc_tuan(goc, MA)
+    tach_cu = b0.get('tach')
+    kiem(bool(tach_cu) and os.path.exists(os.path.join(tm_t, tach_cu)),
+         f'Điều kiện tiên quyết: bản có sẵn một tệp tách — {tach_cu}')
+    with io.open(os.path.join(tm_t, tach_cu), encoding='utf-8') as f:
+        noi_dung_cu = f.read()
+    ban_truoc = sorted(os.listdir(os.path.join(tm_t, 'ban')))
+
+    # Nay tệp gốc CÓ ngày — mô phỏng bộ đọc mới đọc ra thứ bộ đọc cũ không
+    # thấy. Vá thẳng vào tệp trong kho: đúng cảnh "cùng tệp gốc, bộ đọc mới".
+    _them_doc_props(os.path.join(tm_t, b0['tep']),
+                    **{'dcterms:modified': NGAY})
+    t2 = D.doc(os.path.join(tm_t, b0['tep']))
+    kiem(t2.get('ngay_truong_sua') == NGAY,
+         f'Bộ đọc mới đọc ra ngày mà bản tách cũ không có — '
+         f'{t2.get("ngay_truong_sua")!r}')
+
+    r = K.doc_lai_ban(goc, MA, 1, t2)
+    kiem(r.get('ok') is True, f'Đọc lại được — {r.get("cau")}')
+    if not r.get('ok'):
+        return
+    p1, _ = K.doc_phieu_ky(goc, MA)
+    b1 = (p1.get('ban') or [])[0]
+
+    # (1) KHÔNG thêm bản mới — cả trong phiếu lẫn trong thư mục ban/.
+    kiem(len(p1.get('ban') or []) == len(p0.get('ban') or []),
+         f'Số bản trong phiếu KHÔNG đổi — {len(p1.get("ban") or [])}')
+    kiem(sorted(os.listdir(os.path.join(tm_t, 'ban'))) == ban_truoc,
+         'Thư mục ban/ KHÔNG có tệp nào mới')
+    kiem(b1.get('sha256') == b0.get('sha256') and b1.get('tep') == b0.get('tep'),
+         'Vẫn đúng tệp gốc đó — sha256 và đường dẫn không đổi')
+
+    # (2) KHÔNG đè bản tách cũ — nó là bằng chứng bộ đọc đời đó đọc ra gì.
+    kiem(os.path.exists(os.path.join(tm_t, tach_cu)),
+         f'Bản tách CŨ vẫn còn trên đĩa — {tach_cu}')
+    with io.open(os.path.join(tm_t, tach_cu), encoding='utf-8') as f:
+        kiem(f.read() == noi_dung_cu,
+             'và nội dung nó KHÔNG đổi một ký tự')
+    kiem(b1.get('tach') != tach_cu,
+         f'Phiếu trỏ sang bản tách MỚI — {b1.get("tach")}')
+    with io.open(os.path.join(tm_t, b1['tach']), encoding='utf-8') as f:
+        kiem(json.load(f).get('ngay_truong_sua') == NGAY,
+             'và bản tách mới CÓ ngày trường sửa')
+
+    # (3) KHÔNG đụng trang_thai / ly_do — quyết định của NGƯỜI.
+    #     Mốc so là GIÁ TRỊ CHỤP TRƯỚC, không phải "khác rỗng" (nếp hỏng 13).
+    kiem(b1.get('trang_thai') == b0.get('trang_thai'),
+         f'trang_thai KHÔNG đổi — vẫn {b1.get("trang_thai")!r}')
+    kiem(b1.get('ly_do') == b0.get('ly_do'),
+         'ly_do KHÔNG đổi')
+
+    # (4) KHÔNG đụng những khoá nói về LẦN LƯU, và không nuốt khuyết tật.
+    lech = [k for k in ('nguoi_luu', 'ghi_chu', 'ten_goc', 'gio_luu',
+                        'khuyet_tat')
+            if b0.get(k) != b1.get(k)]
+    kiem(not lech, f'Các khoá của LẦN LƯU không đổi — lệch: {lech}')
+
+    # (5) Bản vẫn ĐĂNG ĐƯỢC, và dấu bộ đọc đã đổi.
+    ds, tu_choi = K.ban_de_dang(goc, MA)
+    kiem(len(ds or []) == 1 and not tu_choi,
+         f'Bản vẫn ra được đường đăng — {tu_choi}')
+    kiem(b1.get('bo_doc') != b0.get('bo_doc'),
+         'Dấu bộ đọc ĐÃ đổi theo')
+
+    # (6) Đọc lại LẦN NỮA cũng không đè tệp tách vừa sinh.
+    r2 = K.doc_lai_ban(goc, MA, 1, t2)
+    p2, _ = K.doc_phieu_ky(goc, MA)
+    b2 = (p2.get('ban') or [])[0]
+    kiem(r2.get('ok') is True and b2.get('tach') != b1.get('tach'),
+         f'Đọc lại lần hai sinh tệp KHÁC, không đè — {b2.get("tach")}')
+    kiem(os.path.exists(os.path.join(tm_t, b1['tach'])),
+         'và tệp của lần một vẫn còn')
+
+    # (7) Số thứ tự bậy thì TỪ CHỐI, không ném.
+    for xau in (0, 99, 'một', None):
+        rr = K.doc_lai_ban(goc, MA, xau, t2)
+        if rr.get('ok'):
+            kiem(False, f'Số thứ tự {xau!r} đáng lẽ phải bị từ chối')
+            break
+    else:
+        kiem(True, 'Số thứ tự bậy -> từ chối gọn, không ném')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -963,6 +1075,7 @@ def main():
         ca_10_khuyet_tat_noi_them_khong_de(tm)
         ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm)
         ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm)
+        ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

@@ -472,6 +472,123 @@ def ghi_khuyet_tat(goc, ma_tuan, chi_so, mo_ta, nguoi, o_excel=None, khi=None):
     return ra
 
 
+def doc_lai_ban(goc, ma_tuan, chi_so, tach, khi=None):
+    """ĐỌC LẠI một bản đã lưu bằng bộ đọc MỚI. KHÔNG BAO GIỜ NÉM.
+
+       Cùng TỆP GỐC, bộ đọc mới, sinh BẢN TÁCH MỚI. Dùng khi `doc_tkb.py`
+       bump `PHIEN_BAN` và những bản lưu trước đó thiếu khoá mới — bản tuần
+       1 lưu bằng bộ đọc phiên bản 1 nên không có `ngay_truong_sua`, và
+       dòng khai nguồn của trang phải in "KHÔNG RÕ ngày trường sửa".
+
+       ┌──────────────────────────────────────────────────────────────────┐
+       │ BỐN ĐIỀU HÀM NÀY KHÔNG LÀM — và đó là cả định nghĩa của nó:      │
+       │                                                                  │
+       │  1. KHÔNG thêm bản mới vào `ban/`. Tệp gốc không đổi thì SHA-256  │
+       │     không đổi, và `them_ban()` vẫn phải từ chối trùng — luật ấy  │
+       │     GIỮ NGUYÊN, đường này đi vòng qua chỗ khác chứ không phá nó. │
+       │  2. KHÔNG đè bản tách cũ. Nó là bằng chứng bộ đọc ĐỜI ĐÓ đọc ra  │
+       │     cái gì; đè đi là mất đúng thứ `dau_bo_doc()` sinh ra để giữ. │
+       │  3. KHÔNG đụng `trang_thai` và `ly_do`. Đọc lại là việc KỸ       │
+       │     THUẬT; "bản này dùng được hay không" là một QUYẾT ĐỊNH của   │
+       │     người, và một lệnh kỹ thuật không được phép sửa quyết định.  │
+       │  4. KHÔNG đụng `nguoi_luu`, `ghi_chu`, `ten_goc`, `sha256`,      │
+       │     `gio_luu` — chúng nói về LẦN LƯU, mà lần lưu thì không       │
+       │     xảy ra lại.                                                  │
+       └──────────────────────────────────────────────────────────────────┘
+
+       Đổi đúng HAI khoá: `tach` (trỏ sang tệp mới) và `bo_doc` (dấu bộ đọc
+       mới). `tests/thu_kho_tuan.py` CA 13 canh cả bốn điều trên.
+
+       `tach` là dict do `doc_tkb.doc()` trả về — mô-đun này không tự đọc
+       tệp, đúng như `them_ban()`.
+    """
+    ra = {'ok': False, 'cau': '', 'canh_bao': [], 'ban': None, 'tach_cu': None}
+
+    if not isinstance(tach, dict):
+        ra['cau'] = ('Phải truyền vào dict do doc_tkb.doc() trả về. '
+                     'kho_tuan KHÔNG tự đọc tệp .xlsx.')
+        return ra
+
+    phieu, loi = doc_phieu_ky(goc, ma_tuan)
+    if loi:
+        ra['cau'] = loi + '\n      KHÔNG ghi đè lên phiếu hỏng.'
+        return ra
+    if phieu is None:
+        ra['cau'] = f'Kho chưa có tuần {ma_tuan}.'
+        return ra
+
+    ds = phieu.get('ban') or []
+    if not isinstance(chi_so, int) or not 1 <= chi_so <= len(ds):
+        ra['cau'] = (f'Số thứ tự bản phải từ 1 tới {len(ds)}, '
+                     f'đang là {chi_so!r}.')
+        return ra
+    ban = ds[chi_so - 1]
+    if not isinstance(ban, dict):
+        ra['cau'] = f'Bản {chi_so} trong phiếu sai cấu trúc.'
+        return ra
+
+    tm = thu_muc_tuan(goc, ma_tuan)
+    goc_tep = ban.get('tep')
+    if not goc_tep or not os.path.exists(os.path.join(tm, goc_tep)):
+        ra['cau'] = (f'Bản {chi_so} không có tệp gốc trong kho '
+                     f'({goc_tep!r}) — không đọc lại được.')
+        return ra
+
+    khi = khi or datetime.datetime.now().astimezone()
+    tm_tach = os.path.join(tm, 'tach')
+    try:
+        os.makedirs(tm_tach, exist_ok=True)
+    except OSError as e:
+        ra['cau'] = f'Không tạo được thư mục tách: {e}'
+        return ra
+
+    # Tên bản tách mới: gốc + dấu bộ đọc. KHÔNG BAO GIỜ ĐÈ — cùng vòng
+    # chống va chạm như `them_ban()`, vì đọc lại HAI LẦN bằng cùng một bộ
+    # đọc là chuyện có thật (chạy thử rồi chạy thật).
+    bd = (tach.get('bo_doc') or {}).get('phien_ban') or '?'
+    nen = os.path.splitext(os.path.basename(goc_tep))[0]
+    ten = f'{nen}__doc{bd}.json'
+    k = 1
+    while os.path.exists(os.path.join(tm_tach, ten)):
+        k += 1
+        ten = f'{nen}__doc{bd}-{k}.json'
+        if k > 500:
+            ra['cau'] = 'Quá nhiều bản tách trùng tên — dừng.'
+            return ra
+    try:
+        GB.ghi_nguyen_tu(os.path.join(tm_tach, ten),
+                         json.dumps(tach, ensure_ascii=False, indent=1),
+                         ben=True)
+    except OSError as e:
+        ra['cau'] = f'Không ghi được bản tách mới: {e}'
+        return ra
+
+    ra['tach_cu'] = ban.get('tach')
+    ban['tach'] = f'tach/{ten}'
+    ban['bo_doc'] = tach.get('bo_doc')
+    ban['doc_lai'] = (ban.get('doc_lai') or []) + [
+        {'khi': khi.isoformat(timespec='seconds'),
+         'tach_cu': ra['tach_cu'], 'tach_moi': ban['tach'],
+         'bo_doc': tach.get('bo_doc')}]
+
+    try:
+        GB.ghi_nguyen_tu(duong_phieu(goc, ma_tuan),
+                         json.dumps(phieu, ensure_ascii=False, indent=1) + '\n',
+                         ben=True)
+    except OSError as e:
+        ra['cau'] = (f'Đã ghi bản tách mới nhưng KHÔNG ghi được phiếu: {e}\n'
+                     '      Phiếu vẫn trỏ vào bản tách cũ.')
+        return ra
+
+    ra['ok'] = True
+    ra['ban'] = ban
+    ra['cau'] = (f'Đã đọc lại bản {chi_so} bằng bộ đọc {bd}.\n'
+                 f'      Bản tách mới : tach/{ten}\n'
+                 f'      Bản tách cũ  : {ra["tach_cu"]} (GIỮ NGUYÊN)\n'
+                 f'      trang_thai   : {ban.get("trang_thai")!r} (KHÔNG đổi)')
+    return ra
+
+
 def sua_tuan(goc, ma_tuan, **doi):
     """Sửa khai báo cấp TUẦN (tu_ngay, den_ngay, nhan, nam_hoc, hoc_ky,
        ghi_chu). KHÔNG đụng danh sách bản. KHÔNG BAO GIỜ NÉM."""

@@ -372,6 +372,13 @@ def main(argv=None):
     p.add_argument('--o', action='append', default=[],
                    help='ô Excel liên quan, gõ nhiều lần: --o D11 --o D18')
 
+    p = sub.add_parser('doc-lai',
+                       help='đọc lại bản đã lưu bằng bộ đọc MỚI '
+                            '(không thêm bản, không đổi trạng thái)')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ban', type=int,
+                   help='số thứ tự, đếm từ 1. Bỏ trống = đọc lại MỌI bản')
+
     p = sub.add_parser('de-dang', help='bản nào của tuần này ĐĂNG ĐƯỢC')
     p.add_argument('--tuan', required=True)
 
@@ -417,6 +424,40 @@ def main(argv=None):
         if r['ok']:
             _in_khuyet_tat(r['ban'], '   ')
         return 0 if r['ok'] else 1
+
+    if a.lenh == 'doc-lai':
+        import doc_tkb as D
+        p, loi = K.doc_phieu_ky(goc, a.tuan)
+        if loi or p is None:
+            print('[DỪNG] ' + (loi or f'Kho chưa có tuần {a.tuan}.'))
+            return 1
+        so = len(p.get('ban') or [])
+        cac = [a.ban] if a.ban else list(range(1, so + 1))
+        print(f'Bộ đọc hiện tại: phiên bản {D.PHIEN_BAN} · '
+              f'mã {D.dau_bo_doc().get("bam_ma")}')
+        hong = 0
+        for i in cac:
+            b = (p.get('ban') or [])[i - 1] if 1 <= i <= so else None
+            if not isinstance(b, dict) or not b.get('tep'):
+                print(f'[DỪNG] Bản {i} không có tệp gốc.')
+                hong += 1
+                continue
+            tep = os.path.join(K.thu_muc_tuan(goc, a.tuan), b['tep'])
+            t = D.doc(tep)
+            if t.get('loi'):
+                print(f'[DỪNG] Bản {i} đọc không được: {t["loi"]}')
+                hong += 1
+                continue
+            r = K.doc_lai_ban(goc, a.tuan, i, t)
+            print(('[XONG] ' if r['ok'] else '[DỪNG] ') + r['cau'])
+            if r['ok']:
+                print(f'      ngay_truong_sua: '
+                      f'{t.get("ngay_truong_sua")!r}')
+            else:
+                hong += 1
+            # Phiếu vừa đổi -> đọc lại cho vòng sau nhìn đúng trạng thái.
+            p, _ = K.doc_phieu_ky(goc, a.tuan)
+        return 1 if hong else 0
 
     if a.lenh == 'de-dang':
         ds, tu_choi = K.ban_de_dang(goc, a.tuan)
