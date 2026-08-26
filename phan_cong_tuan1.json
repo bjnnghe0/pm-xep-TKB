@@ -1,0 +1,486 @@
+{
+ "_doc_truoc": [
+  "BỘ SỐ PHÂN CÔNG TUẦN 1 ĐÃ ĐỐI CHIẾU — MỘT QUYẾT ĐỊNH, KHÔNG PHẢI SỐ CHÉP.",
+  "",
+  "Tệp này CÓ COMMIT. Nó là MỐC SO của tests/thu_phan_cong_tuan1.py, và ca",
+  "thử đó bắt được chuyện tuần sau ai đó sửa cauhinh.json mà không ai biết.",
+  "",
+  "'doc_tu_tep' KHÔNG lấy từ cauhinh.json — nó đọc ra từ bản TKB thật của",
+  "trường (xem 'nguon'), rồi áp hai bảng tên đã duyệt (xem 'gop_da_dung').",
+  "cauhinh.json là CÁI TA MONG LÀ ĐÚNG; bản tách là CÁI ĐÃ THẬT SỰ DIỄN RA.",
+  "Hai vế độc lập nhau — đó là cả điểm của tệp này.",
+  "",
+  "KHI TỆP NÀY VÀ cauhinh.json BẤT ĐỒNG THÌ AI SAI? Câu trả lời KHÔNG BAO",
+  "GIỜ là 'tệp cũ rồi, cập nhật cho khớp'. Phải có người đi xem và quyết,",
+  "rồi ghi lại kèm ngày + tên + lý do. Vì vậy KHÔNG có cờ --sinh-lai nào",
+  "tự ghi đè tệp này; sinh lại là việc của người, làm tay.",
+  "",
+  "'ngoai_le' = chỗ bản của trường ghi SAI mà ta đã biết, kèm con số ĐÚNG.",
+  "Ca thử dựng kỳ vọng bằng doc_tu_tep RỒI ĐÈ các sửa trong ngoai_le —",
+  "KHÔNG bỏ qua khoá nào. Bỏ qua là mở một lỗ: sửa cauhinh.json đúng chỗ",
+  "được tha thì không mục nào đỏ.",
+  "",
+  "Sinh lại (chạy tay, đối chiếu từng dòng trước khi thay tệp):",
+  "  python3 luu_tuan.py doi-chieu --tuan 2026-08-24",
+  "  rồi đọc doi_chieu.tu_ban_tach() trên bản tách của tuần đó."
+ ],
+ "ma_tuan": "2026-08-24",
+ "nguon": {
+  "ban": "ban/2026-08-22T11-32-21_KHOA_KHCB-TKB_Tuần_1_24-8-26_-_29-8-26__1.xlsx",
+  "sha256": "b8a2f1aff4f59fe0a5a89d57ca6d7a7316388ae8996bd91f4508bc6052af1fcd",
+  "gio_luu": "2026-08-22T11:32:21+07:00",
+  "bo_doc": {
+   "phien_ban": "1",
+   "bam_ma": "52ab2a9bb064c868"
+  },
+  "nguoi_luu": "adminnam"
+ },
+ "duyet": {
+  "nguoi": "Anh Lân",
+  "ngay": "2026-08-26",
+  "ly_do": "Đối chiếu 26-8-2026: sau khi áp hai bảng tên, ba bảng chỉ còn đúng một khuyết tật 12B1 Địa lí. Anh Lân chốt cauhinh.json ĐÚNG TOÀN BỘ, không sửa dòng nào."
+ },
+ "gop_da_dung": {
+  "mon": {
+   "Chuyên đề Ngữ Văn": "Chuyên đề Ngữ văn",
+   "Chuyên đề sử": "Chuyên đề Lịch sử",
+   "Chuyên đề địa lí": "Chuyên đề Địa lí",
+   "chuyên đề Địa lí": "Chuyên đề Địa lí",
+   "GDKTPL": "GDKT-PL"
+  },
+  "gv": {
+   "T.Hằng": "T.Thu.Hằng",
+   "T.Hiền": "T.T.Hiền",
+   "T.Hương": "T.T.Hương"
+  }
+ },
+ "doc_tu_tep": {
+  "12B1": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Xuân",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "H.Trang",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "M.Hạnh",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "L.Anh",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Yến",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "L.Anh",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Xuân",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "H.Trang",
+    3
+   ],
+   [
+    "SHCN",
+    "L.Anh",
+    1
+   ],
+   [
+    "Toán học",
+    "M.Hạnh",
+    3
+   ],
+   [
+    "Vật lý",
+    "T.V.Quỳnh",
+    2
+   ],
+   [
+    "Địa lí",
+    "N.Dung",
+    3
+   ]
+  ],
+  "12B2": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Uyên",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "H.Phương",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "M.Tuấn",
+    1
+   ],
+   [
+    "Chuyên đề Địa lí",
+    "H.Hiền",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "K.Hưng",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Yến",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "Đ.Hải",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Uyên",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "H.Phương",
+    3
+   ],
+   [
+    "SHCN",
+    "H.Hiền",
+    1
+   ],
+   [
+    "Toán học",
+    "M.Tuấn",
+    3
+   ],
+   [
+    "Vật lý",
+    "T.V.Quỳnh",
+    2
+   ],
+   [
+    "Địa lí",
+    "H.Hiền",
+    2
+   ]
+  ],
+  "12B3": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Uyên",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "Đ.Duy",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "H.An",
+    1
+   ],
+   [
+    "Chuyên đề Địa lí",
+    "N.Dung",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "T.Trinh",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Yến",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "V.Q.Huấn",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Uyên",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "Đ.Duy",
+    3
+   ],
+   [
+    "SHCN",
+    "H.An",
+    1
+   ],
+   [
+    "Sinh học",
+    "T.Thu.Hằng",
+    2
+   ],
+   [
+    "Toán học",
+    "H.An",
+    3
+   ],
+   [
+    "Địa lí",
+    "N.Dung",
+    2
+   ]
+  ],
+  "12B4": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Xuân",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "H.Phương",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "M.Hùng",
+    1
+   ],
+   [
+    "Chuyên đề Địa lí",
+    "H.Hoàng",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "T.T.Hương",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Yến",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "V.Trọng",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Xuân",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "H.Phương",
+    3
+   ],
+   [
+    "SHCN",
+    "H.Hoàng",
+    1
+   ],
+   [
+    "Sinh học",
+    "T.Thu.Hằng",
+    2
+   ],
+   [
+    "Toán học",
+    "M.Hùng",
+    3
+   ],
+   [
+    "Địa lí",
+    "H.Hoàng",
+    2
+   ]
+  ],
+  "12B5": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Xuân",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "H.Trang",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "T.Loan",
+    1
+   ],
+   [
+    "Chuyên đề Địa lí",
+    "H.Hiền",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "T.T.Hương",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Quân",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "H.Nam",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Xuân",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "H.Trang",
+    3
+   ],
+   [
+    "SHCN",
+    "H.Trang",
+    1
+   ],
+   [
+    "Sinh học",
+    "T.T.Hiền",
+    2
+   ],
+   [
+    "Toán học",
+    "T.Loan",
+    3
+   ],
+   [
+    "Địa lí",
+    "H.Hiền",
+    2
+   ]
+  ],
+  "12B6": [
+   [
+    "Chuyên đề Lịch sử",
+    "N.Uyên",
+    1
+   ],
+   [
+    "Chuyên đề Ngữ văn",
+    "Đ.Duy",
+    1
+   ],
+   [
+    "Chuyên đề Toán",
+    "T.Loan",
+    1
+   ],
+   [
+    "Chuyên đề Địa lí",
+    "H.Hoàng",
+    1
+   ],
+   [
+    "GDKT-PL",
+    "T.Hà",
+    2
+   ],
+   [
+    "Hoá học",
+    "H.Quân",
+    2
+   ],
+   [
+    "HĐTN&HN",
+    "X.Thọ",
+    3
+   ],
+   [
+    "Lịch sử",
+    "N.Uyên",
+    2
+   ],
+   [
+    "Ngữ văn",
+    "Đ.Duy",
+    3
+   ],
+   [
+    "SHCN",
+    "N.Uyên",
+    1
+   ],
+   [
+    "Sinh học",
+    "T.T.Hiền",
+    2
+   ],
+   [
+    "Toán học",
+    "T.Loan",
+    3
+   ],
+   [
+    "Địa lí",
+    "H.Hoàng",
+    2
+   ]
+  ]
+ },
+ "ngoai_le": [
+  {
+   "ma": "12B1-dia-li-thieu-nhan",
+   "mo_ta": "Bản của trường ghi 12B1 ba ô cùng chữ 'Địa lí' (D11, D18, D19); một trong ba thực tế là Chuyên đề Địa lí, không rõ ô nào. KHÔNG sửa tệp, KHÔNG đoán — xem khuyet_tat của bản đó trong luu_tru/2026-08-24/phieu.json.",
+   "o_excel": [
+    "D11",
+    "D18",
+    "D19"
+   ],
+   "sua": [
+    {
+     "lop": "12B1",
+     "mon": "Địa lí",
+     "gv": "N.Dung",
+     "trong_tep": 3,
+     "dung_la": 2
+    },
+    {
+     "lop": "12B1",
+     "mon": "Chuyên đề Địa lí",
+     "gv": "N.Dung",
+     "trong_tep": 0,
+     "dung_la": 1
+    }
+   ],
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ly_do": "Anh Lân xác nhận 26-8-2026: thực tế 2 Địa lí + 1 chuyên đề. Tệp ghi thiếu nhãn. cauhinh.json khai 2+1 là đúng."
+  }
+ ]
+}

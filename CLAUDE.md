@@ -42,6 +42,7 @@ python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần s�
 python3 tests/thu_kho_tuan.py           # kho TKB theo tuần + bộ đọc .xlsx
 python3 tests/thu_sinh_dang.py          # BẮT BUỘC khi sửa sinh_dang.py
 python3 tests/thu_bang_ten.py           # BẮT BUỘC khi sửa bang_ten.py hoặc hai bảng tên
+python3 tests/thu_phan_cong_tuan1.py    # BẮT BUỘC khi sửa phan_cong trong cauhinh.json
 
 python3 luu_tuan.py xem <tệp.xlsx>       # đọc thử một tuần, KHÔNG ghi gì
 python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
@@ -114,6 +115,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `doi_chieu.py` | So `phan_cong` của `cauhinh.json` với bản tách của một tuần, **có áp bảng tên**. Khoá `(lớp, môn)` — khác `_so()` khoá `(lớp, thứ, tiết)`. Hàm thuần, **chỉ trả dict** | `tu_ban_tach()` là **bản cài duy nhất** của phép "bản tách → đếm tiết theo khoá". Bảng (c) chỉ hỏi cặp có ở **cả hai** bên; cặp lệch-một-bên là việc của bảng (b) |
 | `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `khuyet-tat` · `de-dang` · `so` · `doi-chieu` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten.py` | **MỘT bản cài duy nhất** của việc TRA BẢNG TÊN. `Bang.chuan()` là `gop.get(s, s)` — **so chuỗi đúng y hệt**, không `.strip()`/`.lower()`/bỏ dấu/gần giống. Không đọc `cauhinh.json` | Áp cho **đối chiếu** và **báo cáo**, **KHÔNG BAO GIỜ** áp cho **đăng** và **KHÔNG** cho bộ đọc. Nạp một lần ở điểm vào, truyền `Bang` xuống |
+| `phan_cong_tuan1.json` | **Bộ số phân công tuần 1 ĐÃ ĐỐI CHIẾU** — đọc ra từ bản TKB thật của trường (không phải từ `cauhinh.json`), kèm xuất xứ, chữ ký người duyệt, bảng gộp đã dùng, và **đúng một** ngoại lệ. **CÓ COMMIT** | Là MỐC SO, một **quyết định**. Khi nó và `cauhinh.json` bất đồng thì **phải có người đi xem và quyết** — không bao giờ "cập nhật cho khớp". Không có cờ `--sinh-lai` |
+| `tests/thu_phan_cong_tuan1.py` | 5 ca. Bắt chuyện **tuần sau ai đó sửa `cauhinh.json` mà không ai biết**. Hai trục: `(lớp, môn)` có ngoại lệ, `(lớp, GV)` **không ngoại lệ nào**. CA 4 tự soi mình để không dựng lại vế B | **Chạy khi sửa `phan_cong` trong `cauhinh.json`.** Chạy được trên máy vừa `git clone` — chỉ cần hai tệp `.json` |
 | `bang_ten_mon.json` · `bang_ten_gv.json` | Chuỗi tên môn / tên viết tắt GV **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp**. Mỗi mục `gop` **bắt buộc** có `nguoi_duyet` + `ngay`. `biet` của bảng GV **cố ý để rỗng** — danh sách tên GV đã biết là `cauhinh.json`, chép sang là dựng bản thứ hai |
 | `tests/thu_bang_ten.py` | 6 ca. Mục canh chính là **BẢNG BẪY TỔNG HỢP**: sinh mọi biến thể của mọi tên thật, trỏ tới **đích giả**, rồi đòi tên thật đi qua nguyên vẹn. CA 4 canh cặp **H.Hiền ~ T.T.Hiền** không bao giờ ra cùng một người | **Chạy khi sửa `bang_ten.py` hoặc hai bảng tên** |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 10 |
@@ -1178,6 +1181,36 @@ Nên: ghi lại chỗ hỏng, để nguyên tệp. `luu_tuan.py de-dang` in khuy
 > **Ra công khai thì hiện ĐÚNG NHƯ TỆP — ba ô "Địa lí".** Trường phát ra sao
 > thì đăng vậy, không tự bịa nhãn. `khuyet_tat` là chữ tự do và **không bao
 > giờ** ra tới dữ liệu đăng — `thu_sinh_dang.py` CA 1b canh đúng chuyện đó.
+
+#### Ghim bộ số — `phan_cong_tuan1.json`
+
+Ba bảng đối chiếu chỉ nói về **hôm nay**. Thứ canh được **tuần sau** là một
+mốc đóng băng: `phan_cong_tuan1.json` + `tests/thu_phan_cong_tuan1.py`.
+
+> **Hai vế phải ĐỘC LẬP, nếu không nó không canh gì cả.** Vế A là
+> `cauhinh.json` (thứ đang bị canh); vế B là mốc, **đọc ra từ bản TKB thật**
+> chứ không từ vế A. Vì vậy ca thử đó **không** `import doc_tkb` /
+> `bang_ten` / `kho_tuan` / `sinh_dang` / `doi_chieu` và **không** đọc
+> `luu_tru/` — dựng lại vế B lúc chạy là để nới bảng gộp **dịch được cả hai
+> vế** (nếp hỏng 12). CA 4 tự soi chính nó bằng cây cú pháp.
+>
+> Hệ quả tốt: ca thử chạy được trên máy vừa `git clone`, chỉ cần hai tệp
+> `.json` — `luu_tru/` đã gitignore.
+
+**Kỳ vọng dựng bằng cách ĐÈ, không phải bằng cách BỎ QUA.** Mốc ghi con số
+**đọc thô** từ tệp trường, `ngoai_le` ghi con số **đúng**; ca thử lấy thô rồi
+đè bằng đúng. Bỏ qua khoá là mở một lỗ — sửa `cauhinh.json` đúng chỗ được tha
+thì không mục nào đỏ. Đo được: "chữa" 12B1 cho khớp số thô của tệp làm ca thử
+**ĐỎ 19/21**, đúng như phải vậy.
+
+`TRAN_NGOAI_LE = 1` ghim literal trong ca thử — **đúng chứ không phạm luật
+"đừng ghim hằng số"**, cùng lẽ với `TRUONG_O`: nó là một *quyết định về mức
+tha thứ*, không phải dữ liệu nhà trường. Ai muốn khai thêm ngoại lệ thì phải
+sửa dòng đó và giải thích vì sao.
+
+> **Khi mục này ĐỎ, ĐỪNG SỬA SỐ CHO KHỚP.** Nó nói `cauhinh.json` đã đổi so
+> với mốc. Đổi có chủ ý thì cập nhật mốc kèm ngày + người + lý do — đúng nếp
+> `danh-dau --ly-do`.
 
 #### Đối chiếu `cauhinh.json` với bản thật — bốn bảng
 
