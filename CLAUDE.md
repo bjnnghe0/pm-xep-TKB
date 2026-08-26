@@ -111,9 +111,9 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_lenh_chay.py` | Ghim: không tệp nào (trừ `.bat`) còn dòng hướng dẫn gõ lệnh `python` trần. CA 0 khẳng định bộ dò biết bắt VÀ biết bỏ qua; CA 2 đọc câu lỗi thật qua tiến trình con và HTTP | Chạy khi thêm/sửa bất kỳ dòng hướng dẫn gõ lệnh nào |
 | `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — mọi câu **và** mọi chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
 | `ghi_ben.py` | **MỘT bản cài duy nhất** của việc ghi tệp cho bền: `ghi_nguyen_tu` · `chep_ben` · `dong_bo_tep` · `dong_bo_thu_muc`. Không biết gì về HTTP, cấu hình, hay Excel | Dùng chung cho `tai_khoan.py`, `web.py`, `kho_tuan.py` — **đừng chép bản thứ hai** |
-| `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
+| `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** (đang là `'2'`). `THE_DOC_PROPS` là **danh sách trắng MỘT phần tử** — `docProps/core.xml` có cả `dc:creator` và `cp:lastModifiedBy`, **đều là TÊN NGƯỜI**, đã đo trên bản thật. Thêm thẻ vào danh sách đó là chuyện phải cân nhắc như mở rộng phạm vi công khai |
 | `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng**. `ghi_khuyet_tat()` **nối thêm**, không bao giờ gán đè, và chỉ đụng `phieu.json` |
-| `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
+| `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp. **Giữ BỐN bất biến về phạm vi công khai — đọc hết trước khi sửa** | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. (1) `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường. (2) **KHÔNG đăng DANH SÁCH GOM SẴN** — `gv` và `lop` đã bỏ 26/8/2026; không khoá cấp trên nào được là bản sao của một cột trong `o`, trang tự dựng lúc chạy. (3) **CỬA KHUÔN `KHUON_TUAN` + danh sách trắng `TRUONG_NGUON`** — chữ tự do của người vận hành kho không qua được; sai khuôn thì TỪ CHỐI cả bản, thiếu hẳn thì đăng `None`. (4) `tieu_de` **cố ý KHÔNG ép khuôn** — chữ của TRƯỜNG thì nguyên văn, đó là quyết định chứ không phải chỗ quên |
 | `doi_chieu.py` | So `phan_cong` của `cauhinh.json` với bản tách của một tuần, **có áp bảng tên**. Khoá `(lớp, môn)` — khác `_so()` khoá `(lớp, thứ, tiết)`. Hàm thuần, **chỉ trả dict** | `tu_ban_tach()` là **bản cài duy nhất** của phép "bản tách → đếm tiết theo khoá". Bảng (c) chỉ hỏi cặp có ở **cả hai** bên; cặp lệch-một-bên là việc của bảng (b) |
 | `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `khuyet-tat` · `de-dang` · `so` · `doi-chieu` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten.py` | **MỘT bản cài duy nhất** của việc TRA BẢNG TÊN. `Bang.chuan()` là `gop.get(s, s)` — **so chuỗi đúng y hệt**, không `.strip()`/`.lower()`/bỏ dấu/gần giống. Không đọc `cauhinh.json` | Áp cho **đối chiếu** và **báo cáo**, **KHÔNG BAO GIỜ** áp cho **đăng** và **KHÔNG** cho bộ đọc. Nạp một lần ở điểm vào, truyền `Bang` xuống |
@@ -1785,6 +1785,19 @@ MƯỜI TÁM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
    trần không chặn gì. Đây là phép thử một phút, làm được cho mọi trần,
    và nó khác câu 15 ở chỗ: câu 15 hỏi bạn *nghĩ* đơn vị có đúng không,
    câu này bắt bạn *đo*. (Nếp hỏng 16.)
+17. **Tên bản vá bạn sắp ghi vào tài liệu chỉ tới ĐÚNG MỘT chỗ lùi chưa?**
+   Thước thử: đưa cái tên đó cho người khác, họ có lùi ra **đúng chỗ bạn
+   đã lùi** không? Nếu lớp chắn ấy có nhiều bản cài, hay câu mô tả đọc
+   được nhiều cách, thì hai người sẽ đo ra hai số **mà không ai sai** —
+   và một con số không tái lập được thì không canh nổi cái gì. Viết
+   *"bỏ lớp chắn phiếu-hỏng **ở `them_ban`**"*, đừng viết *"bỏ lớp chắn
+   phiếu hỏng"*. (Nếp hỏng 17.)
+18. **Lượt đo của bạn có đủ BỐN phần chống bytecode chưa?**
+   `PYTHONDONTWRITEBYTECODE=1` (tiến trình CON) · `-B` (tiến trình CHA) ·
+   xoá `__pycache__` · **mỗi bản vá một `cp -r` mới**. Thiếu phần nào
+   cũng hở một đường, và cái hở đó **không làm đỏ ca thử nào** — nó làm
+   sai CÁI CÂN, nên con số bạn ghi vào tài liệu sai theo, trong im lặng.
+   (Nếp hỏng 18.)
 
 ---
 
