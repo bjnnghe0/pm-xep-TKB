@@ -1056,6 +1056,52 @@ def ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm):
         kiem(True, 'Số thứ tự bậy -> từ chối gọn, không ném')
 
 
+def ca_14_ghim_hai_danh_sach_trang(tm):
+    print('\nCA 14 — GHIM LITERAL hai danh sách trắng của kho')
+    print('-' * 74)
+
+    # --- (a) CHO_PHEP_SUA_TUAN ------------------------------------------
+    # Ghim literal, cùng hạng `TRUONG_O` / `THE_DOC_PROPS`: một QUYẾT ĐỊNH
+    # VỀ PHẠM VI GHI, không phải chi tiết kỹ thuật. Nối thẳng vào phạm vi
+    # công khai — `sua_tuan()` là đường DUY NHẤT ghi được bốn trường chữ tự
+    # do mà `sinh_dang.KHUON_TUAN` sau đó cho ra trang công khai.
+    SUA_DA_DUYET = ('tu_ngay', 'den_ngay', 'nhan', 'nam_hoc', 'hoc_ky',
+                    'ghi_chu')
+    kiem(tuple(sorted(K.CHO_PHEP_SUA_TUAN)) == tuple(sorted(SUA_DA_DUYET)),
+         f'CHO_PHEP_SUA_TUAN ĐÚNG BẰNG bộ đã duyệt — thừa '
+         f'{sorted(set(K.CHO_PHEP_SUA_TUAN) - set(SUA_DA_DUYET))}, thiếu '
+         f'{sorted(set(SUA_DA_DUYET) - set(K.CHO_PHEP_SUA_TUAN))}')
+    kiem('tieu_de' not in K.CHO_PHEP_SUA_TUAN,
+         "`tieu_de` KHÔNG sửa được — nó là ô A3 NGUYÊN VĂN của trường, và "
+         "nó nguyên vẹn được là vì KHÔNG AI SỬA ĐƯỢC, không phải vì có ai "
+         "canh nội dung nó")
+
+    # Và HÀNH VI: khoá ngoài danh sách phải bị từ chối, không lặng lẽ ghi.
+    goc, MA = os.path.join(tm, 'kho14'), '2026-09-07'
+    t = dung_xlsx(os.path.join(tm, 'k14.xlsx'), o_mau(so_tiet=3))
+    K.them_ban(goc, MA, t, 'người thử', tach=D.doc(t))
+    r = K.sua_tuan(goc, MA, tieu_de='TIÊU ĐỀ BỊA ĐÈ LÊN CHỮ CỦA TRƯỜNG')
+    kiem(r.get('ok') is False and 'tieu_de' in (r.get('cau') or ''),
+         f'sua_tuan TỪ CHỐI khoá ngoài danh sách, gọi đích danh — '
+         f'{(r.get("cau") or "")[:56]!r}')
+    p, _ = K.doc_phieu_ky(goc, MA)
+    kiem('tieu_de' not in (p or {}),
+         'và KHÔNG ghi một chữ nào vào phiếu')
+
+    # --- (b) MAU_BAN ----------------------------------------------------
+    # Danh sách trắng KÝ TỰ được giữ trong tên tệp bản lưu.
+    # ⚠ `os.path.basename()` chạy TRƯỚC nó trong `_ten_ban()` và mới là lớp
+    # chắn thứ nhất chống đi ra khỏi thư mục. MAU_BAN là LỚP CHẮN THỨ HAI,
+    # không phải lớp duy nhất — nới nó ra thì hôm nay chưa thủng, nhưng
+    # ngày nào đó ai bỏ `basename()` đi là thủng ngay mà không mục nào đỏ.
+    # Ghim để việc nới nó phải là một hành động có người ký tên.
+    kiem(K.MAU_BAN.pattern == r'[^0-9A-Za-zÀ-ỹ._-]+',
+         f'MAU_BAN ĐÚNG BẰNG khuôn đã duyệt — {K.MAU_BAN.pattern!r}')
+    xau = K._ten_ban('2026-01-01T00-00-00', '../../../etc/kho ác.xlsx')
+    kiem('/' not in xau and '..' not in xau,
+         f'và tên tệp dựng ra không mang / hay .. — {xau!r}')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -1076,6 +1122,7 @@ def main():
         ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm)
         ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm)
         ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm)
+        ca_14_ghim_hai_danh_sach_trang(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

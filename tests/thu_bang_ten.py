@@ -345,6 +345,39 @@ def ca_6_ve_chuan_phai_co_that(cac_ten, bm, bg):
 
 
 # ==========================================================================
+def ca_7_ghim_khoa_duyet(tm):
+    print('\nCA 7 — GHIM LITERAL `KHOA_DUYET`: chữ ký người duyệt gộp tên')
+    print('-' * 74)
+    # Ghim literal. `KHOA_DUYET` là lý do DUY NHẤT khiến một mục gộp phải là
+    # object chứ không phải cặp chuỗi: không phép đo nào chứng minh được
+    # `T.Hiền` với `T.T.Hiền` là một người — chỉ có chữ ký người duyệt.
+    # Đó là một QUYẾT ĐỊNH VỀ TRÁCH NHIỆM, không phải chi tiết kỹ thuật.
+    DUYET_DA_CHOT = ('nguoi_duyet', 'ngay')
+    kiem(tuple(BT.KHOA_DUYET) == DUYET_DA_CHOT,
+         f'KHOA_DUYET ĐÚNG BẰNG bộ đã chốt — {tuple(BT.KHOA_DUYET)}')
+
+    # VÀ HÀNH VI, cho TỪNG khoá một. Mục ghim ở trên bắt được việc GỌT
+    # DANH SÁCH; mục dưới bắt được việc bỏ phép kiểm mà vẫn giữ danh sách.
+    # Bản cũ chỉ có một mục "thiếu chữ ký -> bảng rỗng", và nó chỉ ĐỎ khi
+    # xoá SẠCH cả hai khoá: đo 26/8/2026, bỏ riêng `'ngay'` cho 23/23,
+    # không mục nào đỏ. Bắt được khi xoá sạch, không bắt được khi gọt dần.
+    sot = []
+    for thieu in DUYET_DA_CHOT:
+        muc = {'chuan': 'Tên Chuẩn Thử', 'nguoi_duyet': 'người thử',
+               'ngay': '2026-08-26'}
+        muc.pop(thieu)
+        dd = os.path.join(tm, f'thieu-{thieu}.json')
+        with io.open(dd, 'w', encoding='utf-8') as f:
+            json.dump({'biet': [], 'gop': {'chuỗi lạ thử': muc}}, f,
+                      ensure_ascii=False)
+        b = BT.nap_mot(dd, 'bảng thử')
+        if not (b.loi and not b.gop):
+            sot.append(thieu)
+    kiem(not sot,
+         f'Thiếu BẤT KỲ khoá nào trong {len(DUYET_DA_CHOT)} khoá -> bảng '
+         f'RỖNG và có lỗi — chưa bắt được: {sot}')
+
+
 def main():
     print('=' * 74)
     print(' THỬ: TRA BẢNG TÊN — SO CHUỖI ĐÚNG Y HỆT, KHÔNG "GẦN ĐÚNG"')
@@ -358,6 +391,7 @@ def main():
         ca_4_bang_that_khong_gop_nham(cap, bm, bg)
         ca_5_bang_hong_thi_do_chu_khong_im(tm, cac_ten)
         ca_6_ve_chuan_phai_co_that(cac_ten, bm, bg)
+        ca_7_ghim_khoa_duyet(tm)
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')

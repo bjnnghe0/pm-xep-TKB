@@ -472,6 +472,19 @@ def ghi_khuyet_tat(goc, ma_tuan, chi_so, mo_ta, nguoi, o_excel=None, khi=None):
     return ra
 
 
+# Khoá cấp TUẦN sửa được từ dòng lệnh. DANH SÁCH TRẮNG — và nó nối thẳng
+# vào phạm vi công khai: `sua_tuan()` là đường DUY NHẤT ghi được bốn trường
+# chữ tự do mà `sinh_dang.KHUON_TUAN` sau đó cho ra trang công khai.
+#
+# ⚠ THÊM `tieu_de` VÀO ĐÂY LÀ CHO NGƯỜI VẬN HÀNH KHO GHI ĐÈ CHỮ CỦA
+# TRƯỜNG rồi đăng. `tieu_de` là ô A3 nguyên văn của nhà trường, CỐ Ý không
+# đi qua cửa khuôn (xem `sinh_dang.py`) — nó nguyên vẹn được là vì KHÔNG
+# AI SỬA ĐƯỢC nó, chứ không phải vì có ai canh nội dung nó.
+# `tests/thu_kho_tuan.py` CA 14 ghim literal danh sách này.
+CHO_PHEP_SUA_TUAN = ('tu_ngay', 'den_ngay', 'nhan', 'nam_hoc', 'hoc_ky',
+                     'ghi_chu')
+
+
 def doc_lai_ban(goc, ma_tuan, chi_so, tach, khi=None):
     """ĐỌC LẠI một bản đã lưu bằng bộ đọc MỚI. KHÔNG BAO GIỜ NÉM.
 
@@ -590,10 +603,13 @@ def doc_lai_ban(goc, ma_tuan, chi_so, tach, khi=None):
 
 
 def sua_tuan(goc, ma_tuan, **doi):
-    """Sửa khai báo cấp TUẦN (tu_ngay, den_ngay, nhan, nam_hoc, hoc_ky,
-       ghi_chu). KHÔNG đụng danh sách bản. KHÔNG BAO GIỜ NÉM."""
-    CHO_PHEP = ('tu_ngay', 'den_ngay', 'nhan', 'nam_hoc', 'hoc_ky', 'ghi_chu')
+    """Sửa khai báo cấp TUẦN. KHÔNG đụng danh sách bản. KHÔNG BAO GIỜ NÉM.
+
+       Khoá sửa được khai ở `CHO_PHEP_SUA_TUAN` — hằng MÔ-ĐUN chứ không
+       phải biến trong hàm, để `tests/thu_kho_tuan.py` ghim được nó.
+    """
     ra = {'ok': False, 'cau': '', 'doi': {}}
+    CHO_PHEP = CHO_PHEP_SUA_TUAN
     la = [k for k in doi if k not in CHO_PHEP]
     if la:
         ra['cau'] = f'Khoá lạ: {la}. Chỉ sửa được {CHO_PHEP}.'
