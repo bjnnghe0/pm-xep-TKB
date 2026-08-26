@@ -130,6 +130,102 @@ def ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm):
          'và không chứa NỘI DUNG khuyết tật — chữ tự do phải dừng ở phiếu')
 
 
+def _cac_chuoi(v):
+    """Mọi chuỗi nằm ở BẤT KỲ độ sâu nào trong một giá trị JSON."""
+    if isinstance(v, str):
+        return [v]
+    if isinstance(v, dict):
+        ra = []
+        for k, x in v.items():
+            ra += _cac_chuoi(x)
+        return ra
+    if isinstance(v, (list, tuple)):
+        ra = []
+        for x in v:
+            ra += _cac_chuoi(x)
+        return ra
+    return []
+
+
+def _tuan_nhieu_gv(goc, ma, tm, ten_gv):
+    """Một tuần có ĐÚNG MỘT bản "dung", các ô mang NHIỀU tên GV khác nhau.
+
+       `o_mau()` của thu_kho_tuan chỉ dùng một tên (`T.Thử`) nên không dùng
+       được ở đây: mốc so của CA 1c là TẬP TÊN NGƯỜI, mà một tập một phần
+       tử thì phép kiểm "danh sách gom sẵn" mất hết khả năng phân biệt.
+       Tên dựng ra CỐ Ý không trùng gì trong `cauhinh.json`.
+    """
+    import doc_tkb as D
+    o = {'A3': 'THỜI KHÓA BIỂU THỬ', 'A4': 'TUẦN 9 (05/1/2026-10/1/2026)'}
+    for i, g in enumerate(ten_gv):
+        o[f'D{8 + i}'] = f'Môn Thử {i + 1} ({g})'
+    for c in 'DEFGHI':
+        o[f'{c}43'] = f'=COUNTA({c}8:{c}42)'
+    t = dung_xlsx(os.path.join(tm, f'{ma}-nhieu-gv.xlsx'), o)
+    K.them_ban(goc, ma, t, 'người thử', tach=D.doc(t))
+    p, _ = K.doc_phieu_ky(goc, ma)
+    K.danh_dau_ban(goc, ma, len((p or {}).get('ban') or []), 'dung',
+                   'ca thử: bản này dùng được')
+
+
+def ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm):
+    print('\nCA 1c — dữ liệu đăng KHÔNG chở DANH SÁCH NGƯỜI gom sẵn')
+    print('-' * 74)
+    goc, MA = os.path.join(tm, 'kho1c'), '2026-04-06'
+    TEN_GV = ['T.Một', 'T.Hai', 'T.Ba', 'T.Bốn']
+    _tuan_nhieu_gv(goc, MA, tm, TEN_GV)
+    d, tu_choi = SD.du_lieu_dang(goc, MA)
+    kiem(isinstance(d, dict) and not tu_choi,
+         f'Sinh được dữ liệu đăng — {tu_choi}')
+    if not isinstance(d, dict):
+        return
+
+    # MỐC SO dựng từ CHÍNH 144 ô, không từ hằng số nào (nếp hỏng 12): ô đổi
+    # thì mốc đổi theo. Cột `gv` là cột thứ mấy thì HỎI `truong_o`, đừng đếm
+    # tay — đếm tay là ghim lại đúng thứ tự mà `TRUONG_O` được phép đổi.
+    to = list(d.get('truong_o') or [])
+    kiem('gv' in to, f'Mỗi ô vẫn khai cột tên GV — truong_o = {to}')
+    if 'gv' not in to:
+        return
+    i_gv = to.index('gv')
+    ten_nguoi = {r[i_gv] for r in (d.get('o') or []) if r[i_gv]}
+
+    # ĐIỀU KIỆN TIÊN QUYẾT. Mốc so là một TẬP; tập một phần tử (hoặc rỗng)
+    # làm mọi phép kiểm dưới đây vẫn XANH mà không kiểm gì cả — bẫy
+    # `n_uyen == 0`, mục 7 của danh sách kiểm.
+    kiem(len(ten_nguoi) > 1,
+         f'Điều kiện tiên quyết: bản thử có {len(ten_nguoi)} tên GV KHÁC '
+         f'nhau trong các ô — mốc so đủ sức phân biệt')
+
+    # (a) TÊN TRONG TỪNG Ô THÌ GIỮ — tờ TKB dán ở trường xưa nay vẫn vậy.
+    kiem(ten_nguoi == set(TEN_GV),
+         f'Tên GV trong TỪNG Ô còn nguyên — {sorted(ten_nguoi)}')
+
+    # (b) Nhưng KHÔNG khoá cấp trên nào được chở tên người. Đi trên MỌI khoá
+    #     chứ không hỏi đích danh 'gv': đổi tên khoá thành 'giao_vien' hay
+    #     'danh_sach' là lách được một phép kiểm hỏi đích danh.
+    ro = []
+    for k, v in d.items():
+        if k == 'o':
+            continue
+        co = sorted(set(_cac_chuoi(v)) & ten_nguoi)
+        if co:
+            ro.append((k, co))
+    kiem(not ro,
+         f'KHÔNG khoá cấp trên nào chở tên người — rò: {ro}')
+
+    # (c) Và nói đích danh khoá đã bỏ. KHÔNG thừa so với (b): `gv: []` lọt
+    #     qua (b) mà vẫn là khoá đã bị người dùng bỏ, quay lại dưới dạng rỗng.
+    kiem('gv' not in d,
+         f"Khoá 'gv' đã bỏ hẳn — còn {len(d)} khoá cấp trên")
+
+    # (d) Trang xem MẤT gì? Không mất gì: dựng lại được từ chính các ô.
+    dung_lai = sorted({r[i_gv] for r in d['o'] if r[i_gv]})
+    kiem(dung_lai == sorted(ten_nguoi),
+         f'Trang dựng lại được danh sách lúc chạy từ {len(d["o"])} ô — '
+         f'{dung_lai}')
+
+
 def ca_2_kien_truc_khong_co_loi_vong():
     print('\nCA 2 — KIẾN TRÚC: không có đường nào khác dẫn tới dữ liệu')
     print('-' * 74)
@@ -366,6 +462,7 @@ def main():
     try:
         ca_1_hanh_vi(tm)
         ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm)
+        ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm)
         ca_2_kien_truc_khong_co_loi_vong()
         ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm)
         ca_4_khong_ghi_vao_docs(tm)

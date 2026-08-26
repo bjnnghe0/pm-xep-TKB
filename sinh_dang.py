@@ -37,6 +37,27 @@
  (`xuat_html.du_lieu()`): tên lớp · họ tên GVCN · tên viết tắt GV bộ môn ·
  môn · thứ và tiết · tuần. KHÔNG thêm trường mới — muốn thêm thì hỏi
  người dùng, đúng như lúc xin phép công khai TKB trên GitHub Pages.
+
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │ KHÔNG ĐĂNG **DANH SÁCH NGƯỜI GOM SẴN**. Tên trong TỪNG Ô thì giữ.    │
+ │                                                                      │
+ │ Hai thứ đó khác hạng nhau, và đây là lý do — người dùng chốt         │
+ │ 26/8/2026, nguyên văn: *"Danh sách 28 tên gom một chỗ là danh bạ.    │
+ │ Tên trong từng ô thì giữ — tờ TKB dán ở trường xưa nay vẫn vậy.      │
+ │ Nhưng danh sách gom sẵn thì trường CHƯA TỪNG PHÁT, và tôi không có   │
+ │ phép của ai để phát nó."*                                            │
+ │                                                                      │
+ │ Tờ giấy dán ở trường có tên cô X ở ô Thứ Ba tiết 6 — ai muốn biết    │
+ │ cô X dạy mấy tiết thì phải tự đọc hết bảng. Một khoá `gv` gom sẵn    │
+ │ thì làm hộ việc đó cho bất kỳ ai trên Internet, bằng một dòng JSON.  │
+ │ Cùng dữ liệu, khác hẳn mức dễ dùng — và mức dễ dùng mới là thứ nhà   │
+ │ trường chưa bao giờ quyết.                                           │
+ │                                                                      │
+ │ Trang xem CẦN danh sách để lọc thì **dựng lúc chạy từ chính 144 ô**  │
+ │ (`[...new Set(o.map(r => r[4]))]`), đừng đăng thành khoá riêng.      │
+ │ `tests/thu_sinh_dang.py` CA 1c canh điều này trên HÀNH VI: không     │
+ │ khoá cấp trên nào được là một danh sách TÊN NGƯỜI gom sẵn.           │
+ └──────────────────────────────────────────────────────────────────────┘
 ==========================================================================
 """
 import io
@@ -98,7 +119,6 @@ def du_lieu_dang(goc, ma_tuan):
         'hoc_ky': _cua_tuan(goc, ma_tuan, 'hoc_ky'),
         'tieu_de': tach.get('tieu_de'),
         'lop': lop,
-        'gv': sorted({r[4] for r in o if r[4]}),
         'truong_o': list(TRUONG_O),
         'o': o,
         'nguon': {'gio_luu': ban.get('gio_luu'),
