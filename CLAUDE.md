@@ -1588,7 +1588,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-MƯỜI LĂM lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+MƯỜI SÁU lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1622,8 +1622,9 @@ MƯỜI LĂM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
 > của ca thử đó, không phải sự cố.**
 
 | 13 | **Mốc so là "khác rỗng" / "khác None" thay vì GIÁ TRỊ TRƯỚC** | `thu_kho_tuan.py` CA 10 viết `b.get('trang_thai') is not None`. Vá cho `ghi_khuyet_tat()` đặt luôn `trang_thai='sai'` thì bộ thử vẫn **152/152, không mục nào đỏ** — mà hậu quả thật là bản tuột khỏi đường đăng (`ban_de_dang` từ 1 xuống 0). Hai chỗ cộng lại: mốc so không phải giá trị trước (khác hẳn `sha256`, cái đó có `bam_truoc`), và ngay sau đó ca thử gọi `danh_dau_ban(...,'dung')` **ghi đè** giá trị đã bị phá, ru ngủ luôn mục kiểm-đăng-được. Cùng họ ở `thu_bang_ten.py`: mục *"trỏ về chính nó"* chỉ hỏi `b.loi and not b.gop`, mà `{X: X}` cũng làm phép kiểm NỐI CHUỖI nổ — nên **bỏ hẳn** phép kiểm tự-trỏ vẫn 21/21. Chữa: mốc phải là **giá trị chụp TRƯỚC**, và hai phép kiểm phủ lên nhau thì phải **tách rời** mới quan sát được từng cái. Sửa 26/8/2026 |
-| 14 | **Trần đếm SAI ĐƠN VỊ — chặn số bao, không chặn số ruột** | `thu_phan_cong_tuan1.py` có `TRAN_NGOAI_LE = 1`, nhưng nó đếm số **object** ngoại lệ, còn mỗi object chở được bao nhiêu mục `sua` cũng được — mà mỗi mục `sua` là một chỗ `cauhinh.json` được tha. Đo 26/8/2026: sửa lén `12B3 Toán học 3→4` cho **19/21**; lén thêm ĐÚNG MỘT mục `sua` vào ngoại lệ **có sẵn** thì về **21/21**, trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) — trần là 1"*. Tệ hơn: mục tự xưng *"trục (lớp, GV) không bịt miệng được"* cũng im, vì nó dựng vế mốc từ bảng **đã đè** ngoại lệ. Chữa: đếm riêng `TRAN_SUA`, và cho trục thứ hai dựng từ con số **ĐỌC THÔ**, không nhìn `ngoai_le` một lần nào. Sửa 26/8/2026 |
+| 14 | **Trần đếm SAI ĐƠN VỊ — chặn số bao, không chặn số ruột** | `thu_phan_cong_tuan1.py` có `TRAN_NGOAI_LE = 1`, nhưng nó đếm số **object** ngoại lệ, còn mỗi object chở được bao nhiêu mục `sua` cũng được — mà mỗi mục `sua` là một chỗ `cauhinh.json` được tha. Đo 26/8/2026: sửa lén `12B3 Toán học 3→4` cho **19/21**; lén thêm ĐÚNG MỘT mục `sua` vào ngoại lệ **có sẵn** thì về **21/21**, trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) — trần là 1"*. Tệ hơn: mục tự xưng *"trục (lớp, GV) không bịt miệng được"* cũng im, vì nó dựng vế mốc từ bảng **đã đè** ngoại lệ. Chữa: đếm riêng `TRAN_SUA`, và cho trục thứ hai dựng từ con số **ĐỌC THÔ**, không nhìn `ngoai_le` một lần nào. Sửa 26/8/2026. **Đây là bản ghi của MỘT LẦN DÍNH; lớp lỗi chung ghi ở nếp hỏng 16.** |
 | 15 | **Canh TÊN ĐỊNH DANH thay vì canh HÀNH VI** | `thu_sinh_dang.py` CA 2 mục (i) cấm `sinh_dang.py` nhắc tới `bang_ten`/`chuan`/`gop` — soi cây cú pháp, ghim literal. Nó chặn được đường **thẳng**, không chặn được đường **vòng**: một bản cài tự `json.load('bang_ten_gv.json')` rồi tra bằng `dict.get` đi lọt sạch, đo 26/8/2026 **37/37 không mục nào đỏ**, trong khi tên GV ra công khai đã bị gộp (`T.Hiền` → `T.T.Hiền`). Giới hạn này **đã ghi vào docstring của chính mục đó**; muốn chặn kín thì phải khẳng định trên **hành vi** — so chuỗi ra công khai với chuỗi thô trong bản tách |
+| 16 | **Trần đặt trên một CON SỐ, mà ĐƠN VỊ của con số ấy là VẬT CHỨA** | Trần vẫn đúng, cửa vẫn mở. **Dấu nhận biết dứt khoát: thêm nội dung vào một đơn vị CÓ SẴN thì con số KHÔNG ĐỔI.** Ví dụ đã dính: `TRAN_NGOAI_LE` đếm số **bao** (object ngoại lệ), mà mỗi bao chở được **vô hạn** mục `sua`, mỗi mục `sua` lại là một chỗ `cauhinh.json` được tha — nếp hỏng 14 là bản ghi của đúng lần dính đó, mục này là bản ghi của **LỚP LỖI**. **Đứng riêng, đừng gộp vào 13/14/15:** ba cái kia là *"ca thử XANH trong khi thứ nó canh đã hỏng"*; cái này là *"ca thử ĐẾM ĐÚNG, nhưng đếm nhầm thứ"* — con số in ra không sai một đơn vị nào, chỉ là nó không nói gì về điều đang cần chặn, nên đọc bao nhiêu lần cũng không thấy. Câu phải hỏi cho MỌI trần: *đơn vị tôi đang đếm có RỖNG RUỘT không?* |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1698,6 +1699,11 @@ MƯỜI LĂM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
    ruột. Và một mục tự xưng "không bịt miệng được" thì phải **dựng vế mốc
    từ dữ liệu CHƯA THA GÌ**, nếu không nó vẫn im như mọi mục khác.
    (Nếp hỏng 14.)
+16. **Thử ngay tại chỗ: THÊM NỘI DUNG VÀO MỘT ĐƠN VỊ CÓ SẴN — con số bạn
+   đang chặn có đổi không?** Không đổi thì đơn vị ấy là VẬT CHỨA và cái
+   trần không chặn gì. Đây là phép thử một phút, làm được cho mọi trần,
+   và nó khác câu 15 ở chỗ: câu 15 hỏi bạn *nghĩ* đơn vị có đúng không,
+   câu này bắt bạn *đo*. (Nếp hỏng 16.)
 
 ---
 
@@ -1719,6 +1725,47 @@ MƯỜI LĂM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
     => Mời người = mở Directus. Hai chuyện này đi liền, đừng tách.
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
+
+[ ] RÀ NẾP HỎNG 16 — bốn chỗ khác cùng hình dạng. LIỆT KÊ 26/8/2026,
+    CHƯA SỬA CÁI NÀO (người dùng dặn: liệt kê, đừng sửa).
+
+    1. tests/thu_ghim_du_lieu.py — `kiem(ngoai_le <= 3, ...)`
+       Đếm số NÚT `ast.Compare` mang chú thích "ghim-co-y", không đếm
+       số HẰNG được tha. ĐÃ ĐO 26/8/2026, đúng dấu nhận biết: nới MỘT
+       dòng ngoại lệ CÓ SẴN từ `c.nhom == 'Sử'` thành
+       `c.nhom in [...bảy tên môn...]` — **1 hằng thành 7 hằng, mà
+       `ngoai_le` ĐỨNG YÊN Ở 2 và bộ thử vẫn 11/11 ĐẠT**.
+       ⚠ NẶNG NHẤT trong bốn mục: đây là chính bộ thử viết ra để canh
+       luật "đừng ghim hằng số", nên chỗ hở này nhân lên khắp bộ khác.
+       Mẫu chữa có sẵn ngay trong cùng tệp: `len(tep) >= 14` (bao) đi
+       kèm `da_soi >= 300` (ruột) — đếm cả bao LẪN ruột.
+
+    2. web.py — `TRAN_PHIEN = 32`
+       Đếm số PHIÊN. Mỗi phiên kéo theo `PHIEN_THEM[ma]`, danh sách quy
+       tắc nháp **không có trần nào** (đo: `PHIEN_THEM` chỉ bị `pop`,
+       `clear`, `setdefault` — không một phép so độ dài nào trong web.py).
+       Một người đã đăng nhập, dùng ĐÚNG MỘT phiên, gọi
+       `POST /api/them-quy-tac` lặp lại với `ghi_chu` khác nhau là bộ nhớ
+       phình mà `len(CAC_PHIEN)` đứng yên ở 1. Đường này ĐÃ SAU xác thực
+       nên không phải lỗ cho người lạ — nhưng cái trần mang tên
+       "TRAN_PHIEN" không chặn được thứ người đọc tưởng nó chặn.
+
+    3. luu_tuan.py — `TRAN_O = 20` (lệnh `so`)
+       Đếm số Ô lệch. Chữ TRONG ô in ra không hề bị cắt
+       (`print(f'     kho: {cu}')`); nhánh `--rong` dùng `{cu:<30}` mà
+       đó là bề rộng TỐI THIỂU. Một ô .xlsx của trường chứa 5.000 ký tự
+       thì số ô vẫn là 20 còn màn hình điện thoại nhận một dòng 5.000
+       cột — đúng cảnh mà TRAN_O được chốt để chặn.
+       `thu_kho_tuan.py` CA 9 có đo bề rộng thật (`rong <= 60`) nhưng dữ
+       liệu dựng ra toàn chuỗi ngắn, nên chưa bao giờ đút một ô dài vào.
+
+    4. luu_tuan.py — `r['ngoai_mo_hinh'][:10]` (lệnh `xem`)
+       Cùng một kiểu với mục 3: cắt ở 10 Ô, in `x["chu"]` nguyên văn.
+       Cùng nguồn dữ liệu không tin được — tệp .xlsx của trường.
+
+    ĐÃ BỊT, ghi lại làm mốc: `TRAN_NGOAI_LE` của
+    tests/thu_phan_cong_tuan1.py — nay có `TRAN_SUA` đếm riêng phần ruột,
+    và mục `sua` là NGUYÊN TỬ (đè đúng một khoá `(lớp, môn)`).
 
 [ ] Chặn KÍN đường áp bảng tên lúc đăng. Hiện `thu_sinh_dang.py` CA 2
     mục (i) chỉ canh TÊN ĐỊNH DANH trên cây cú pháp: nó chặn
