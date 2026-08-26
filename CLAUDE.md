@@ -14,6 +14,8 @@ Người dùng cuối là giáo viên, **không biết lập trình**: họ ch�
 ## Lệnh hay dùng
 
 ```bash
+# -B ở mọi lệnh CHẠY THỬ / ĐO SỐ là CỐ Ý — xem "Vì sao -B, và vì sao -B
+# CHƯA ĐỦ" ở mục "Cách kiểm chứng một thay đổi".
 python3 xep_tkb.py                      # xếp và xuất TKB_Khoi12.xlsx
 python3 xep_tkb.py --quy-tac            # in danh mục mọi loại quy tắc + mẫu JSON
 python3 xep_tkb.py --in-man-hinh        # in luôn TKB ra màn hình
@@ -23,26 +25,26 @@ python3 xep_tkb.py --xuat TKB_T3.xlsx   # đổi tên file kết quả
 python3 xep_tkb.py --tuan "TUẦN 3 ..."  # đổi dòng chữ tuần, không sửa cauhinh.json
 python3 xep_tkb.py --xuat-html          # xuất thêm trang web tĩnh tkb_web.html
 python3 xep_tkb.py --tai-lap            # chế độ TÁI LẬP: cùng seed -> cùng kết quả
-python3 tu_kiem_tra.py                  # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
-python3 tests/thu_du_phong.py           # thử nhánh dự phòng của main()
-python3 tests/thu_kiem_khai_bao.py      # thử việc bắt lỗi khai sai thứ / tiết
-python3 tests/thu_loc_tru.py            # thử khoá "tru" trong bộ lọc
-python3 tests/thu_gop_bo_loc.py         # thử hai chỗ lọc dùng chung khop_loc()
-python3 tests/thu_web.py                # thử giao diện web
-python3 tests/thu_xuat_html.py          # thử trang web tĩnh
-python3 tests/thu_truong.py             # thử khai báo TRUONG của các loại quy tắc
-python3 tests/thu_them_quy_tac.py       # thử thêm/xoá/lưu quy tắc từ giao diện
-python3 tests/thu_an_ninh.py            # BẮT BUỘC chạy sau mỗi lần sửa web.py
-python3 tests/thu_lenh_chay.py          # ghim: mọi hướng dẫn gõ lệnh là python3
-python3 tests/thu_chong_do.py           # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
-python3 tests/thu_ghim_du_lieu.py       # ghim luật: ca thử không được ghim hằng số
-python3 tests/thu_dau_ban.py            # 2C: dấu bản chống mất bản sửa
-python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
-python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
-python3 tests/thu_kho_tuan.py           # kho TKB theo tuần + bộ đọc .xlsx
-python3 tests/thu_sinh_dang.py          # BẮT BUỘC khi sửa sinh_dang.py
-python3 tests/thu_bang_ten.py           # BẮT BUỘC khi sửa bang_ten.py hoặc hai bảng tên
-python3 tests/thu_phan_cong_tuan1.py    # BẮT BUỘC khi sửa phan_cong trong cauhinh.json
+python3 -B tu_kiem_tra.py               # BẮT BUỘC chạy sau mỗi lần sửa quy_tac.py
+python3 -B tests/thu_du_phong.py        # thử nhánh dự phòng của main()
+python3 -B tests/thu_kiem_khai_bao.py   # thử việc bắt lỗi khai sai thứ / tiết
+python3 -B tests/thu_loc_tru.py         # thử khoá "tru" trong bộ lọc
+python3 -B tests/thu_gop_bo_loc.py      # thử hai chỗ lọc dùng chung khop_loc()
+python3 -B tests/thu_web.py             # thử giao diện web
+python3 -B tests/thu_xuat_html.py       # thử trang web tĩnh
+python3 -B tests/thu_truong.py          # thử khai báo TRUONG của các loại quy tắc
+python3 -B tests/thu_them_quy_tac.py    # thử thêm/xoá/lưu quy tắc từ giao diện
+python3 -B tests/thu_an_ninh.py         # BẮT BUỘC chạy sau mỗi lần sửa web.py
+python3 -B tests/thu_lenh_chay.py       # ghim: mọi hướng dẫn gõ lệnh là python3
+python3 -B tests/thu_chong_do.py        # BẮT BUỘC chạy sau mỗi lần sửa khoá tạm
+python3 -B tests/thu_ghim_du_lieu.py    # ghim luật: ca thử không được ghim hằng số
+python3 -B tests/thu_dau_ban.py         # 2C: dấu bản chống mất bản sửa
+python3 -B tests/thu_doc_lai.py         # Đợt 3 việc 1+2: câu đọc lại, xem trước phạm vi
+python3 -B tests/thu_o_tong.py          # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
+python3 -B tests/thu_kho_tuan.py        # kho TKB theo tuần + bộ đọc .xlsx
+python3 -B tests/thu_sinh_dang.py       # BẮT BUỘC khi sửa sinh_dang.py
+python3 -B tests/thu_bang_ten.py        # BẮT BUỘC khi sửa bang_ten.py hoặc hai bảng tên
+python3 -B tests/thu_phan_cong_tuan1.py # BẮT BUỘC khi sửa phan_cong trong cauhinh.json
 
 python3 luu_tuan.py xem <tệp.xlsx>       # đọc thử một tuần, KHÔNG ghi gì
 python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
@@ -1088,15 +1090,45 @@ cp -r <dự án> /tmp/bancu            # chép sang thư mục tạm, đừng đ
 cd /tmp/bancu && python3 -B tests/thu_du_phong.py    # phải thoát mã 1
 ```
 
-> **⚠ LÙI NHIỀU BẢN VÁ LIÊN TIẾP THÌ PHẢI TẮT BYTECODE — `python3 -B` cộng
-> `PYTHONDONTWRITEBYTECODE=1`.** Python quyết định dùng lại `.pyc` theo
-> **(mtime, kích thước)** của tệp nguồn. Hai bản vá **dài bằng nhau** viết
-> trong **cùng một giây** — `s.strip()` và `s.lower()`, chuyện rất dễ xảy
-> ra khi lùi một loạt biến thể — làm lượt sau chạy lại bytecode của lượt
-> trước. Đo 26/8/2026: cùng một bản vá cho `19/21` ở lượt đo có cache và
-> `18/21` ở lượt đo sạch. Cùng họ với **nếp hỏng 10** ("cùng giây"), chỉ
-> khác là nó làm hỏng chính PHÉP ĐO chứ không hỏng ca thử — và phép đo
-> hỏng thì con số ghi vào tài liệu cũng hỏng theo.
+#### Vì sao `-B`, và vì sao `-B` CHƯA ĐỦ
+
+> **⚠ LÙI NHIỀU BẢN VÁ LIÊN TIẾP THÌ PHẢI TẮT BYTECODE.** Python quyết định
+> dùng lại `.pyc` theo **(mtime, kích thước)** của tệp nguồn. Hai bản vá
+> **dài bằng nhau** viết trong **cùng một giây** — `s.strip()` và
+> `s.lower()`, chuyện rất dễ xảy ra khi lùi một loạt biến thể — làm lượt
+> sau chạy lại bytecode của lượt trước. Đo 26/8/2026: cùng một bản vá cho
+> `19/21` ở lượt đo có cache và `18/21` ở lượt đo sạch. Cùng họ với **nếp
+> hỏng 10** ("cùng giây"), chỉ khác là nó làm hỏng chính PHÉP ĐO chứ không
+> hỏng ca thử — và phép đo hỏng thì con số ghi vào tài liệu cũng hỏng theo.
+
+**Vì vậy mọi lệnh CHẠY THỬ / ĐO SỐ trong tài liệu này đều viết `python3 -B`**
+(mục "Lệnh hay dùng", mục "Trạng thái đã kiểm chứng", bảng "Số đếm"). Ai chép
+một lệnh trong tài liệu ra chạy thì phải đo được đúng con số tài liệu ghi;
+`-B` là điều kiện để câu đó đúng.
+
+> **`-B` CHỈ tắt bytecode cho TIẾN TRÌNH ĐÓ — nó KHÔNG truyền xuống tiến
+> trình con. Đã đo 26/8/2026, không suy luận:**
+>
+> | Chạy thế nào | tiến trình CHA | tiến trình CON |
+> |---|---|---|
+> | `python3 -B cha.py` | tắt bytecode | **VẪN GHI `.pyc`** |
+> | `PYTHONDONTWRITEBYTECODE=1 python3 -B cha.py` | tắt bytecode | tắt bytecode |
+>
+> Mà **8 tệp ca thử có gọi tiến trình con** bằng `sys.executable` (đếm:
+> `grep -l "sys.executable" tests/*.py | wc -l`) — `thu_chong_do` ·
+> `thu_dang_nhap` · `thu_lenh_chay` · `thu_sinh_dang` · `thu_web` ·
+> `thu_tai_lap` · `thu_them_quy_tac` · `thu_kho_tuan`. Với tám tệp đó,
+> `-B` một mình **để hở đúng nhánh chạy tiến trình con**, tức đúng nhánh
+> mà các ca thử nghiêm nhất đang canh.
+>
+> **Công thức đủ, dùng cho mọi phép đo lùi-bản-vá:**
+> ```bash
+> export PYTHONDONTWRITEBYTECODE=1                  # cho tiến trình CON
+> find . -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null
+> python3 -B tests/<ca thử>.py                      # cho tiến trình CHA
+> ```
+> Và **mỗi bản vá một thư mục `cp -r` mới** — đừng vá chồng lên thư mục cũ.
+> Ba việc này chống ba đường rò khác nhau; thiếu cái nào cũng hở.
 
 > **Script vá tài liệu phải GHI TỆP NGAY SAU MỖI PHÉP THAY.** Đã dính
 > 26/8/2026: một script vá `CLAUDE.md` gom mọi phép thay rồi mới ghi ở
@@ -1127,15 +1159,15 @@ việc chọn phương án chuyển đỏ, CA 2 vẫn xanh nguyên.
 
 | Muốn biết | Gõ |
 |---|---|
-| Số **loại quy tắc** đã đăng ký | `python3 -c "import quy_tac as Q; print(len(Q.DANH_MUC))"` |
-| Số **kiểu trường** (`QT.KIEU`) | `python3 -c "import quy_tac as Q; print(len(Q.KIEU))"` |
-| Số **quy tắc** trong tệp / đang bật | `python3 -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len(q), len([r for r in q if r.get('bat',True)]))"` |
-| Số quy tắc **cứng** đang bật | `python3 -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len([r for r in q if r.get('bat',True) and not r['loai'].startswith('uu_tien')]))"` |
-| Số **giáo viên** | `python3 -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print(len({m[1] for k,d in p.items() if not k.startswith('_') for m in d}))"` |
-| Số **ô** của cả khối (lớp × ngày × tiết) | `python3 -c "import json; c=json.load(open('cauhinh.json')); k=c['khung_gio']; print(len(c['lop'])*len(k['cac_thu'])*len(k['cac_tiet']))"` |
-| Số **tiết/tuần** mỗi lớp | `python3 -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print({k: sum(x for m in d for x in m if isinstance(x,int)) for k,d in p.items() if not k.startswith('_')})"` |
-| Số **cụm** | `python3 -c "import xep_tkb as X; print(len(X.BaiToan(X.doc_cau_hinh('cauhinh.json')).cac_cum))"` |
-| Số **đường dẫn** máy chủ | `python3 -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))) + 5)"` — 14 API + 5 tĩnh |
+| Số **loại quy tắc** đã đăng ký | `python3 -B -c "import quy_tac as Q; print(len(Q.DANH_MUC))"` |
+| Số **kiểu trường** (`QT.KIEU`) | `python3 -B -c "import quy_tac as Q; print(len(Q.KIEU))"` |
+| Số **quy tắc** trong tệp / đang bật | `python3 -B -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len(q), len([r for r in q if r.get('bat',True)]))"` |
+| Số quy tắc **cứng** đang bật | `python3 -B -c "import json; q=json.load(open('cauhinh.json'))['quy_tac']; print(len([r for r in q if r.get('bat',True) and not r['loai'].startswith('uu_tien')]))"` |
+| Số **giáo viên** | `python3 -B -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print(len({m[1] for k,d in p.items() if not k.startswith('_') for m in d}))"` |
+| Số **ô** của cả khối (lớp × ngày × tiết) | `python3 -B -c "import json; c=json.load(open('cauhinh.json')); k=c['khung_gio']; print(len(c['lop'])*len(k['cac_thu'])*len(k['cac_tiet']))"` |
+| Số **tiết/tuần** mỗi lớp | `python3 -B -c "import json; p=json.load(open('cauhinh.json'))['phan_cong']; print({k: sum(x for m in d for x in m if isinstance(x,int)) for k,d in p.items() if not k.startswith('_')})"` |
+| Số **cụm** | `python3 -B -c "import xep_tkb as X; print(len(X.BaiToan(X.doc_cau_hinh('cauhinh.json')).cac_cum))"` |
+| Số **đường dẫn** máy chủ | `python3 -B -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))) + 5)"` — 14 API + 5 tĩnh |
 | Số **ca** trong một bộ thử | `grep -cE '^def ca_' tests/<tên>.py` |
 | Số **công thức** trong mẫu Excel | `unzip -p mau_tkb.xlsx xl/worksheets/sheet1.xml \| grep -o '<f>' \| wc -l` |
 | Số **dòng hậu kiểm** | đọc dòng `Tổng: N/N quy tắc ĐẠT` của `python3 xep_tkb.py` |
@@ -1218,7 +1250,9 @@ mốc đóng băng: `phan_cong_tuan1.json` + `tests/thu_phan_cong_tuan1.py`.
 **đọc thô** từ tệp trường, `ngoai_le` ghi con số **đúng**; ca thử lấy thô rồi
 đè bằng đúng. Bỏ qua khoá là mở một lỗ — sửa `cauhinh.json` đúng chỗ được tha
 thì không mục nào đỏ. Đo được: "chữa" 12B1 cho khớp số thô của tệp làm ca thử
-**ĐỎ 19/21**, đúng như phải vậy.
+**ĐỎ 19/21** — con số đó đo trên bộ **21 mục** và **không có `-B`**.
+Đo lại 26/8/2026 với `-B` trên bộ **22 mục** hiện nay: **ĐỎ 20/22**. Hai
+con số nói cùng một điều (*hai mục đỏ*), chỉ khác mẫu số — giữ cả hai.
 
 `TRAN_NGOAI_LE = 1` ghim literal trong ca thử — **đúng chứ không phạm luật
 "đừng ghim hằng số"**, cùng lẽ với `TRUONG_O`: nó là một *quyết định về mức
@@ -1300,6 +1334,35 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 
 ## Trạng thái đã kiểm chứng — MỖI DÒNG MỘT NGÀY, KHÔNG PHẢI MỘT NGÀY CHUNG
 
+> ### ⚠ MỌI SỐ LÙI-BẢN-VÁ ĐO TRƯỚC 26/8/2026 ĐỀU ĐO **KHÔNG CÓ `-B`**
+>
+> Cái bẫy `.pyc` (mục "Vì sao `-B`, và vì sao `-B` CHƯA ĐỦ") chỉ được phát
+> hiện **26/8/2026**. Mọi con số lùi-bản-vá viết trước ngày đó — và mọi con
+> số **không ghi ngày** — đều ra đời từ những lượt đo có thể đã dùng lại
+> bytecode của bản vá trước. Chúng **CHƯA được đo lại**.
+>
+> **Dán nhãn cho cả nhóm, một lần, ở đây:**
+> *"đo trước 26/8/2026 · chưa đo lại với `-B` · có thể lệch"*.
+>
+> | Ngày ghi trong tài liệu | Bộ thử có số lùi-bản-vá mang ngày đó |
+> |---|---|
+> | **19/8/2026** | `thu_du_phong` · `thu_kiem_khai_bao` · `thu_loc_tru` · `thu_gop_bo_loc` · `thu_an_ninh` · `thu_truong` · `thu_them_quy_tac` |
+> | **20/8/2026** | `thu_dang_nhap` · `thu_chong_do` |
+> | **21/8/2026** | `thu_doc_lai` · `thu_dau_ban` · `thu_o_tong` · `thu_ghim_du_lieu` · `thu_lenh_chay` |
+> | **22/8/2026** | `thu_sinh_dang` (bộ 32 mục) · `thu_kho_tuan` (bộ 126 mục) |
+> | **KHÔNG GHI NGÀY** | bảng bất biến an ninh A1–A11 · `thu_phien` · các mẫu số cũ 113/100/77/76 của `thu_kho_tuan` · `19/21` của `thu_phan_cong_tuan1` ở mục "Ghim bộ số" |
+> | **26/8/2026** | `thu_sinh_dang` · `thu_kho_tuan` · `thu_bang_ten` · `thu_phan_cong_tuan1` — **NHÓM DUY NHẤT ĐÃ ĐO LẠI VỚI `-B`** |
+>
+> **ĐỪNG XOÁ, ĐỪNG ĐO LẠI HÀNG LOẠT.** Một con số đo không có `-B` vẫn nói
+> đúng một điều thật: *"lùi bản vá ra thì ca thử BIẾT ĐỎ"* — và đó mới là
+> điều nó sinh ra để nói. Chỉ **mẫu số** và **số mục đỏ** là có thể lệch.
+> Đo lại **khi và chỉ khi** bạn đụng vào chính bộ thử đó; đo xong thì đổi
+> ngày của dòng ấy sang 26/8 hoặc muộn hơn, chứ đừng đổi lén con số.
+>
+> Muốn đếm chính xác còn bao nhiêu con số chưa đo lại thì **đếm, đừng chép**
+> — chúng nằm rải rác cả ngoài mục này (bảng A1–A11, bảng nếp hỏng, mục 2B).
+
+
 > **Tiêu đề mục này từng ghi `(19/8/2026)`, và cái ngày đó che cho quá nhiều
 > thứ.** Sáu bộ thử dưới đây **ra đời SAU 19/8** — `thu_dang_nhap`,
 > `thu_chong_do`, `thu_phien` (Giai đoạn 2, 20/8), `thu_doc_lai`,
@@ -1323,24 +1386,24 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   đừng ghim N; đo 22/8/2026 là `23/23`), xuất `TKB_Khoi12.xlsx` đủ 3 sheet,
   144 ô chữ trong D8:I32, dòng 43 vẫn còn công thức COUNTA, font Times
   New Roman + viền `thin` nguyên vẹn.  *(đo 19/8/2026)*
-- `python3 tu_kiem_tra.py`: mọi loại quy tắc đã đăng ký, ca CƠ SỞ + các ca thử đều
+- `python3 -B tu_kiem_tra.py`: mọi loại quy tắc đã đăng ký, ca CƠ SỞ + các ca thử đều
   **OK** (~105s), điểm từng ca −36 / −39 / −33 / −43 / −25 / −48 / −55 / −22 / 6 /
   −49 / −50 / 33. Một số loại được thử trực tiếp; số còn lại (`chi_xep_tiet`,
   `khong_xep_thu`, `khac_ngay`, và 3 loại `uu_tien_*`) được phủ qua ca CƠ SỞ vì
   đã có sẵn trong `cauhinh.json`.  *(đo 19/8/2026)*
-- `python3 tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
+- `python3 -B tests/thu_du_phong.py`: **20/20 mục ĐẠT** (~10s). Lùi riêng dòng xếp hạng
   dự phòng về bản cũ thì tụt còn 13/18 — ca thử có biết đỏ.  *(đo 19/8/2026)*
-- `python3 tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
+- `python3 -B tests/thu_kiem_khai_bao.py`: **42/42 mục ĐẠT** (~5s). Lùi phần kiểm miền
   khoá tiết về bản im lặng cũ thì tụt còn 10/21; lùi riêng phần khoá `thu` thì tụt
   còn 34/42 — ca thử có biết đỏ, và đỏ đúng chỗ.  *(đo 19/8/2026)*
-- `python3 tests/thu_loc_tru.py`: **26/26 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
+- `python3 -B tests/thu_loc_tru.py`: **26/26 mục ĐẠT** (~3s). Lùi khoá `tru` khỏi cả hai
   chỗ lọc thì tụt còn 5/25.  *(đo 19/8/2026)*
-- `python3 tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
+- `python3 -B tests/thu_gop_bo_loc.py`: **23/23 mục ĐẠT** (~5s). Trả `_cum_cua()` về bản
   cài riêng thì tụt còn 16/23.  *(đo 19/8/2026)*
-- `python3 tests/thu_web.py`: **66/66 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
+- `python3 -B tests/thu_web.py`: **66/66 mục ĐẠT** (~40s). Chạy trong thư mục tạm, không
   đụng `cauhinh.json` thật. Mục quan trọng nhất: mọi ô của vùng D8:I32 giống hệt
   nhau giữa dòng lệnh và web.  *(đo 19/8/2026)*
-- `python3 tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 12 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản
+- `python3 -B tests/thu_an_ninh.py`: **213/213 mục ĐẠT** (~2 phút), 12 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản
   vá ra thì tụt đúng phần của nó và **chỉ** phần của nó — đo trên bộ 172 mục:
   A9 → 163 (9× CA A9) · A10 → 158 (14× CA A10) · A11 → 166 (6× CA A11) ·
   tiêu đề trùng → 166 (6× CA A1). Danh sách tên máy đo trên bộ 202 mục:
@@ -1349,25 +1412,26 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   Cổng gác mọi đường đo trên bộ 211 mục: thêm đường ghi mới mà quên gác → 210 ·
   bỏ cổng ở `do_POST` → 192 · bỏ cổng ở `do_GET` → 194 ·
   **chỉ gác đường tĩnh, thả nổi mọi `/api/` → 192**.  *(đo 19/8/2026)*
-- `python3 tests/thu_truong.py`: **30/30 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
+- `python3 -B tests/thu_truong.py`: **30/30 mục ĐẠT** (~2s). Bỏ `kiem_khoa_quy_tac()`
   thì tụt còn 15/23.  *(đo 19/8/2026)*
-- `python3 tests/thu_them_quy_tac.py`: **61/61 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
+- `python3 -B tests/thu_them_quy_tac.py`: **61/61 mục ĐẠT** (~30s). Bỏ `X.BaiToan(cfg)`
   trong `them_quy_tac()` và thu nhỏ `.nut-o` thì tụt còn 38/50.  *(đo 19/8/2026)*
-- `python3 tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
+- `python3 -B tests/thu_dang_nhap.py`: **94/94 mục ĐẠT** (~8s), 12 ca. Bỏ
   `tuoi_tai_khoan()` khỏi `doc_phien()` thì tụt còn **87/94** — đỏ đúng 7 mục về
   QĐ 3, trong đó có cả hai mục cũ ở CA 2/CA 7 vốn được lời gọi tay ru ngủ.  *(đo 20/8/2026)*
-- `python3 tests/thu_doc_lai.py`: **44/44 mục ĐẠT** (~5s), 7 ca (đếm: `grep -cE "^def ca_"`). Lùi ra thì đỏ
+- `python3 -B tests/thu_doc_lai.py`: **44/44 mục ĐẠT** (~5s), 7 ca (đếm: `grep -cE "^def ca_"`). Lùi ra thì đỏ
   đúng phần của nó: `so_ghi_chu` luôn trả None → 25/28 · bỏ nhánh `doc_lai` ở
   `web.py` → 24/28 · cho hai loại dùng CHUNG một `MAU_CAU` → 27/28.
   > **Mục cuối suýt là một mục canh sai chỗ.** Bản đầu chỉ so CÂU ĐÃ DỰNG, và
   > **không** bắt được template chép lại — vì mỗi loại dựng câu từ `VI_DU`
   > riêng nên chuỗi ra vẫn khác nhau. Phải so **chính `MAU_CAU`** mới bắt được.
   > Một mục canh sai chỗ trông y hệt một mục canh đúng chỗ.  *(đo 21/8/2026)*
-- `python3 tests/thu_dau_ban.py`: **39/39 mục ĐẠT** (~90s), 6 ca. Lùi ra thì đỏ
+- `python3 -B tests/thu_dau_ban.py`: **39/39 mục ĐẠT** (~90s), 6 ca. Lùi ra thì đỏ
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.  *(đo 21/8/2026)*
-- `python3 tests/thu_sinh_dang.py`: **37/37 mục ĐẠT** (~6s, đo 26/8/2026), 5 ca.
+- `python3 -B tests/thu_sinh_dang.py`: **37/37 mục ĐẠT** (**0,19 s**, MÁY A,
+  đo lại 26/8/2026 — tài liệu trước ghi `~6s`), 5 ca.
   Hai mục MỚI 26/8/2026, cả hai đều là chỗ trước đây KHÔNG CÓ GÌ CANH:
   CA 2 mục (i) cấm `sinh_dang.py` nhắc tới bảng tên → lùi ra 36/37 ·
   CA 1b đòi `khuyet_tat` không rò ra dữ liệu đăng → lùi ra 35/37.
@@ -1389,11 +1453,26 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > đây là ĐÚNG chứ không phạm luật "đừng ghim hằng số": `TRUONG_O` không phải
   > dữ liệu nhà trường mà là một **quyết định về phạm vi công khai**, và cả
   > điểm của mục này là bắt người nới nó phải đi hỏi lại nhà trường.
-- `python3 tests/thu_kho_tuan.py`: **153/153 mục ĐẠT** (~25s, đo 26/8/2026), 11 ca.
+- `python3 -B tests/thu_kho_tuan.py`: **153/153 mục ĐẠT** (**0,37 s**, MÁY A,
+  ba lượt cho 0,37 / 0,38 / 0,39 — tài liệu trước ghi `~25s`, lệch ~70 lần),
+  11 ca.
   CA 10 (khuyết tật NỐI THÊM) và CA 11 (lệnh `doi-chieu` CHỈ ĐỌC) thêm
-  26/8/2026. Lùi ra: `ghi_khuyet_tat` gán đè → 150/153 · ghi đè phiếu
-  hỏng → 151/153 · bỏ đòi tên người → 149/153 · đổi luôn `trang_thai`
-  → 152/153.
+  26/8/2026. Lùi ra (**đo lại với `-B` ngày 26/8/2026, mỗi số hai lượt
+  trong hai thư mục `cp -r` riêng**): `ghi_khuyet_tat` gán đè → 150/153 ·
+  bỏ đòi tên người → 149/153 · đổi luôn `trang_thai` → 152/153.
+  > **Con số thứ tư ĐÃ ĐỔI, và nó đổi vì mô tả bản vá quá rộng.** Tài liệu
+  > ghi *"ghi đè phiếu hỏng → **151/153**"*. Đo lại: **không dựng lại được
+  > 151 bằng cách nào**. Lớp chắn "phiếu hỏng thì DỪNG" nằm ở **bốn** hàm
+  > (`them_ban`, `danh_dau_ban`, `ghi_khuyet_tat`, `sua_tuan`), nên có ba
+  > cách lùi và cả ba đều đo được:
+  > · bỏ **cả bốn** → **147/153** (6 mục đỏ) — chỉ cách này mới thật sự
+  >   GHI ĐÈ được tệp hỏng, nên đây là con số thay thế;
+  > · bỏ riêng ở `them_ban` → 148/153;
+  > · bỏ riêng ở `ghi_khuyet_tat` → 152/153, và tệp hỏng **KHÔNG** bị ghi
+  >   đè (phép kiểm `chi_so` chặn trước) — tức cách này không dựng ra được
+  >   hành vi mà cái tên bản vá mô tả.
+  > Bài học không phải "số sai" mà là **tên bản vá phải chỉ đúng MỘT chỗ
+  > lùi**; "bỏ lớp chắn X" mà X có bốn bản cài thì con số không tái lập được.
   Số cũ **126/126, 9 ca (22/8/2026)** đã trôi từ 26/8.
   CA 9 đo bề rộng thật qua tiến trình con: dạng mặc định **39 cột**,
   `--rong` **89 cột**. Lùi ra thì đỏ: quay lại in bảng rộng mặc định →
@@ -1412,13 +1491,29 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > khi bỏ vòng chống va chạm, vì hai tệp thử vốn đã khác tên gốc — nay có
   > mục ép **cùng tên gốc, cùng giây** (truyền `khi=`, không trông vào tốc độ
   > máy). Đúng bài học "một mục canh sai chỗ trông y hệt mục canh đúng chỗ".
-- `python3 tests/thu_bang_ten.py`: **23/23 mục ĐẠT** (~1s, đo 26/8/2026), 6 ca.
+- `python3 -B tests/thu_bang_ten.py`: **23/23 mục ĐẠT** (**0,04 s**, MÁY A,
+  đo lại 26/8/2026 — tài liệu trước ghi `~1s`), 6 ca.
   Mục canh chính là BẢNG BẪY TỔNG HỢP: 42 tên thật từ `cauhinh.json` × 12
   phép biến đổi → 386 khoá bẫy trỏ tới đích giả. Lùi 12 bản cài `chuan()`
   sai (bản đúng 23/23): `.strip()` 21 · `.lower()` / `.strip().lower()` /
   `.casefold()` / NFD / bỏ dấu / bỏ chấm / bỏ khoảng trắng đều 20 ·
   quét theo phần sau chấm cuối 19 · quét `endswith` 19 · `return s` 22 ·
-  chuẩn hoá KHOÁ lúc nạp 21. **12/12 ĐỎ, không lần nào VỠ.**
+  chuẩn hoá KHOÁ lúc nạp **17** (số cũ ghi 21 — xem ngay dưới).
+  **12/12 ĐỎ, không lần nào VỠ.** (Mười một số đầu **đo lại với `-B` ngày
+  26/8/2026, mỗi số hai lượt**, và **khớp y nguyên**.)
+  > **Biến thể 12 ĐỔI, và nó đổi vì mô tả bản vá không đủ để dựng lại.**
+  > *"Chuẩn hoá KHOÁ lúc nạp"* đọc được ít nhất ba cách, và **không cách
+  > nào cho 21**:
+  > · sửa cả `nap_mot` lẫn `_kiem` → **17/23** (hai lượt) ·
+  > · sửa `nap_mot` + `_kiem` rồi vá luôn hai phép kiểm của `_kiem` cho
+  >   khỏi hỏng lây → **17/23** ·
+  > · sửa **tối thiểu** (chỉ `nap_mot` + `chuan()`, không đụng `_kiem`)
+  >   → **19/23**.
+  > Vì sao đỏ nhiều hơn số cũ: hạ chữ thường **khoá** mà không hạ **vế
+  > chuẩn** làm hai bộ khoá lệch nhau, nên ngoài ba mục của CA 2/CA 3 còn
+  > kéo đổ hai mục của CA 5 (nối chuỗi và tự-trỏ đều hụt).
+  > **KHÔNG ép số cho khớp** — ghi con số vừa đo (17), giữ lại con số cũ
+  > (21) để thấy nó trôi từ lúc nào, đúng nếp `danh-dau --ly-do`.
   > **CA 4 (cặp tên thật) chỉ đỏ ở 2/12** — hai bản quét theo đuôi. Số đo
   > này là lý do mục canh chính KHÔNG phải là nó: mọi phép chuẩn hoá sai
   > chỉ đụng KHOÁ TRA, mà `H.Hiền` lẫn `T.T.Hiền` đều không phải khoá `gop`
@@ -1428,8 +1523,8 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > CA 4 đỏ" — hai câu mâu thuẫn nhau, và câu đầu lấy từ một phép đo trên
   > bộ biến thể KHÁC. Số đúng là **2/12**, đo lại 26/8/2026. Nếp hỏng 11,
   > lần thứ hai trong cùng một ngày.)*
-- `python3 tests/thu_phan_cong_tuan1.py`: **22/22 mục ĐẠT** (~1s, đo
-  26/8/2026), 5 ca. Chạy được trên máy vừa `git clone` — chỉ cần
+- `python3 -B tests/thu_phan_cong_tuan1.py`: **22/22 mục ĐẠT** (**0,03 s**,
+  MÁY A, đo lại 26/8/2026 — tài liệu trước ghi `~1s`), 5 ca. Chạy được trên máy vừa `git clone` — chỉ cần
   `cauhinh.json` + `phan_cong_tuan1.json`. Lùi ra (bản đúng 22/22): sửa số
   tiết một môn 20 · đổi tên GV 20 · thêm môn 20 · bỏ môn 20 · "chữa" 12B1
   cho khớp số thô 20 · nới bảng gộp rồi quên sinh lại mốc 21 · khai thêm
@@ -1440,21 +1535,23 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > *object* ngoại lệ, mà mỗi object chở được bao nhiêu mục `sua` cũng
   > được — nên lén thêm một mục `sua` vào ngoại lệ có sẵn thì CA 2 im, và
   > CA 3 (vốn dựng vế mốc từ bảng ĐÃ ĐÈ ngoại lệ) cũng im: đo được
-  > 20/21 → **21/21**, trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) —
+  > **19/21** → **21/21** (đo lại với `-B` 26/8/2026; tài liệu trước ghi
+  > `20/21`, và `19/21` mới là con số khớp với nếp hỏng 14 ở bảng kỷ luật
+  > — hai chỗ nay nói cùng một số), trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) —
   > trần là 1"* và CA 3 vẫn in nguyên câu tự xưng *"khai thêm ngoại lệ ở
   > CA 2 cũng không bịt miệng được mục này"*. Bịt bằng hai việc: thêm
   > `TRAN_SUA` đếm riêng, và cho **CA 3 dựng vế mốc từ con số ĐỌC THÔ**,
   > không nhìn `ngoai_le` một lần nào.
-- `python3 tests/thu_o_tong.py`: **36/36 mục ĐẠT** (~2s, đo 21/8/2026), 5 ca.
+- `python3 -B tests/thu_o_tong.py`: **36/36 mục ĐẠT** (~2s, đo 21/8/2026), 5 ca.
   Vá `D43` về `COUNTA(D10:D42)` trên **bản chép** thì bộ dò ĐỎ **đúng một cột**,
   năm cột kia vẫn sạch, và `mau_tkb.xlsx` thật không bị đụng. CA 4 chứng minh
   `thu_an_ninh.py` CA A8 **không** thay được tệp này: A8 hỏi "bảy công thức còn
   hay mất", mà bản hỏng thì vẫn còn đủ bảy.
-- `python3 tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
+- `python3 -B tests/thu_ghim_du_lieu.py`: **11/11 mục ĐẠT** (~1s). Lùi ra thì đỏ đúng
   phần của nó: ghim lại số cứng ở `thu_web.py` → 10/11 (D1) · ghim lại danh sách tên
   lớp ở `thu_loc_tru.py` → 10/11 (D2) · làm từ vựng bóc rỗng → 8/11 · cho bộ dò soi
   danh sách tệp rỗng → 8/11. **Không lần nào Traceback.**  *(đo 21/8/2026)*
-- `python3 tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 13 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản vá
+- `python3 -B tests/thu_chong_do.py`: **58/58 mục ĐẠT** (~15s), 13 ca (đếm: `grep -cE "^def ca_"`). Lùi từng bản vá
   ra thì tụt đúng phần của nó: chặn TRƯỚC khi băm → 46/51 (5 mục về điều kiện 2) ·
   bỏ chốt chặn trong `ghi_nhan_thu()` → 49/51 (loạt bắn dồn lọt 8 thay vì đúng 5) ·
   đăng nhập đúng không xoá bộ đếm → 48/51 · gõ thêm lại dời mốc khoá → 50/51 ·
@@ -1462,13 +1559,13 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   → 52/55 (và khi đó **mọi** lần đăng nhập, kể cả mật khẩu ĐÚNG, đều trả 500).
   **Không lần nào Traceback** — bản đầu có vỡ ở `doc_so()` khi thiếu tệp, đã sửa
   thành hàm toàn phần.  *(đo 20/8/2026)*
-- `python3 tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (**~0,7s** — đo lại 21/8/2026,
+- `python3 -B tests/thu_lenh_chay.py`: **19/19 mục ĐẠT** (**~0,7s** — đo lại 21/8/2026,
   ba lượt cho 0,69 / 0,68 / 0,69 giây; con số `~10s` cũ đã sai. Chạy được bằng **cả**
   `python3` hệ thống lẫn venv, vì `openpyxl` chỉ nạp muộn trong `xuat_excel()`).
   Lùi `quy_tac.py:125` về
   `python` trần thì tụt còn 16/19; lùi thêm `web.py:1191` + `tai_khoan.py:123` thì 14/19.
   Làm hỏng bộ dò cũng đỏ: bắt hụt → 15/19, bỏ lookbehind (bắt quá rộng) → 17/19.  *(đo 21/8/2026)*
-- `python3 tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so từng ô, lần này
+- `python3 -B tests/thu_xuat_html.py`: **32/32 mục ĐẠT** (~5s). Cũng so từng ô, lần này
   giữa `tkb_web.html` và file Excel. Mục `node --check` tự bỏ qua nếu máy không có
   `node` — ca thử không đòi hỏi phải cài `node`.  *(đo 19/8/2026)*
 - Dòng hậu kiểm = 3 kiểm tra nền + 1 dòng gom tiết mỗi môn + 1 dòng mỗi quy
@@ -2539,7 +2636,7 @@ Trên 10 thì khoá oan không giảm thêm mà an ninh vẫn tiếp tục giả
 | Nhóm | Đếm bằng |
 |---|---|
 | Tĩnh (GET) | `/` · `/index.html` · `/web/index.html` · `/web/style.css` · `/web/app.js` — **gọi tên, không đếm** |
-| API | `python3 -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))))"` |
+| API | `python3 -B -c "import re,io; print(len(set(re.findall(r'/api/[a-z-]+', io.open('web.py',encoding='utf-8').read()))))"` |
 
 **Đo 22/8/2026: 14 API + 5 tĩnh = 19 đường.** Ba đường đăng nhập
 (`/api/toi-la-ai`, `/api/dang-nhap`, `/api/dang-xuat`) **đã làm xong** —
