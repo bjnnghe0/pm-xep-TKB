@@ -48,12 +48,15 @@ python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
 python3 luu_tuan.py liet-ke              # các tuần đang có trong kho
 python3 luu_tuan.py danh-dau --tuan 2026-08-24 --ban 2 \
         --trang-thai sai --ly-do "..."   # bản này dùng được hay không
+python3 luu_tuan.py khuyet-tat --tuan 2026-08-24 --ban 1 \
+        --mo-ta "..." --nguoi "..." --o D11 --o D18   # chỗ ghi SAI đã biết
 python3 luu_tuan.py de-dang  --tuan 2026-08-24   # bản nào ĐĂNG ĐƯỢC
 python3 bang_ten.py                      # xem hai bảng tên đã duyệt
 python3 luu_tuan.py so <tệp.xlsx> --tuan 2026-08-24   # so với bản đã lưu
         # mặc định in HẸP (<= 60 cột) cho điện thoại, cắt ở 20 ô
         # --rong = bảng 84 cột · --het = in hết
 python3 luu_tuan.py dang-thu --tuan 2026-08-24    # sinh JSON vào thư mục TẠM
+python3 luu_tuan.py doi-chieu --tuan 2026-08-24   # phan_cong có khớp bản thật không
 
 python3 web.py                          # giao diện web -> http://127.0.0.1:20266
 python3 web.py --port 8080              # đổi cổng; Ctrl+C để tắt
@@ -106,15 +109,16 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `tests/thu_doc_lai.py` | Đợt 3 việc 1+2: câu đọc lại **và** xem trước phạm vi. Canh CHẤT LƯỢNG — mọi câu **và** mọi chuỗi mẫu khác nhau đôi một, câu nhắc lại giá trị từ `VI_DU`, và không từ khoá nào thì câu **vẫn hiện**. CA 7 canh phần phạm vi: gõ sai tên phải chỉ **đích danh**, loại hai vế phải đếm **riêng từng vế**, và gõ dở thì **không được ném** | **Chạy khi thêm loại quy tắc, sửa `MAU_CAU`, hoặc sửa `pham_vi_quy_tac()`** |
 | `ghi_ben.py` | **MỘT bản cài duy nhất** của việc ghi tệp cho bền: `ghi_nguyen_tu` · `chep_ben` · `dong_bo_tep` · `dong_bo_thu_muc`. Không biết gì về HTTP, cấu hình, hay Excel | Dùng chung cho `tai_khoan.py`, `web.py`, `kho_tuan.py` — **đừng chép bản thứ hai** |
 | `doc_tkb.py` | Đọc một `.xlsx` của trường → một dict. `zipfile` + `xml.etree`, **chỉ đọc**. Không biết `luu_tru/` hay `cauhinh.json` tồn tại | Đợt 4 dùng lại y nguyên. Sửa cách đọc thì **bump `PHIEN_BAN`** |
-| `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng** |
+| `kho_tuan.py` | Kho TKB theo tuần: `phieu.json`, thêm bản, đánh dấu, liệt kê. **KHÔNG biết Excel là gì** | Năm luật: không bao giờ đè · trùng SHA-256 thì từ chối · phiếu ghi nguyên tử · khoá tuần là NGÀY · **`ban_de_dang()` là cửa DUY NHẤT ra đường đăng**. `ghi_khuyet_tat()` **nối thêm**, không bao giờ gán đè, và chỉ đụng `phieu.json` |
 | `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
-| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
+| `doi_chieu.py` | So `phan_cong` của `cauhinh.json` với bản tách của một tuần, **có áp bảng tên**. Khoá `(lớp, môn)` — khác `_so()` khoá `(lớp, thứ, tiết)`. Hàm thuần, **chỉ trả dict** | `tu_ban_tach()` là **bản cài duy nhất** của phép "bản tách → đếm tiết theo khoá". Bảng (c) chỉ hỏi cặp có ở **cả hai** bên; cặp lệch-một-bên là việc của bảng (b) |
+| `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `khuyet-tat` · `de-dang` · `so` · `doi-chieu` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten.py` | **MỘT bản cài duy nhất** của việc TRA BẢNG TÊN. `Bang.chuan()` là `gop.get(s, s)` — **so chuỗi đúng y hệt**, không `.strip()`/`.lower()`/bỏ dấu/gần giống. Không đọc `cauhinh.json` | Áp cho **đối chiếu** và **báo cáo**, **KHÔNG BAO GIỜ** áp cho **đăng** và **KHÔNG** cho bộ đọc. Nạp một lần ở điểm vào, truyền `Bang` xuống |
 | `bang_ten_mon.json` · `bang_ten_gv.json` | Chuỗi tên môn / tên viết tắt GV **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp**. Mỗi mục `gop` **bắt buộc** có `nguoi_duyet` + `ngay`. `biet` của bảng GV **cố ý để rỗng** — danh sách tên GV đã biết là `cauhinh.json`, chép sang là dựng bản thứ hai |
 | `tests/thu_bang_ten.py` | 6 ca. Mục canh chính là **BẢNG BẪY TỔNG HỢP**: sinh mọi biến thể của mọi tên thật, trỏ tới **đích giả**, rồi đòi tên thật đi qua nguyên vẹn. CA 4 canh cặp **H.Hiền ~ T.T.Hiền** không bao giờ ra cùng một người | **Chạy khi sửa `bang_ten.py` hoặc hai bảng tên** |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 10 |
 | `tests/thu_sinh_dang.py` | 5 ca. **CA 2 canh KIẾN TRÚC bằng cây cú pháp**: `sinh_dang.py` không được gọi `doc_phieu*`, không bóc khoá `'ban'`, mọi hàm công khai phải bắt đầu bằng `(goc, ma_tuan)`, và **mục (i) cấm nhắc tới bảng tên** — trường phát ra sao thì đăng vậy. CA 3 thử gọi thẳng vào ruột với bản SAI làm đối số. **CA 1b** đòi `khuyet_tat` KHÔNG rò ra dữ liệu đăng | **Chạy khi sửa `sinh_dang.py` hoặc `ban_de_dang()`** |
-| `tests/thu_kho_tuan.py` | 6 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |
+| `tests/thu_kho_tuan.py` | 11 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng · **CA 10** khuyết tật NỐI THÊM không đè · **CA 11** lệnh `doi-chieu` chỉ đọc và CÓ áp bảng tên. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |
 | `tests/thu_o_tong.py` | Sáu ô "TỔNG SỐ TIẾT/TUẦN" (dòng 43) phải đếm **từ dòng đầu vùng dữ liệu**. Dòng đầu suy từ `vi_tri_bang`, dòng phải phủ suy từ `khung_gio` — **không ghim số trần**. CA 3 vá một cột về dòng sau trên **bản chép** rồi đòi bộ dò ĐỎ đúng một cột | **Chạy khi sửa `mau_tkb.xlsx` hoặc `xuat_excel()`** |
 | `tests/thu_dau_ban.py` | 2C: dấu bản của `cauhinh.json` (QĐ 7) và của **kết quả xếp** (QĐ 4). Có mục bắn 12 người cùng lúc để canh phép kiểm dấu nằm TRONG khoá ghi | **Chạy khi sửa `luu_quy_tac` hoặc hai đường tải** |
 | `tests/thu_ghim_du_lieu.py` | **Ghim LUẬT**: không ca thử nào được so bằng với hằng số lấy từ `cauhinh.json`. Đi trên **cây cú pháp**, từ vựng dựng từ chính tệp dữ liệu. **Tha SÀN KHÁC-RỖNG** (`> 0`, `> 1`, `>= 1` — chỉ toán tử thứ tự, chỉ số 0 và 1), vì CLAUDE.md bắt buộc phải khẳng định số đếm khác 0 trước khi dùng. Ngoại lệ khai bằng `ghim-co-y`, và số ngoại lệ bị chặn trên | **Chạy khi viết ca thử mới** |
@@ -1151,6 +1155,48 @@ nói vì sao thì sáu tháng nữa không ai dám tin cái dấu đó, và sẽ
 
 > **KHÔNG XOÁ BẢN SAI.** Nó là bằng chứng, và là ca thử thật duy nhất đang có.
 
+#### Khuyết tật ĐÃ BIẾT ≠ trạng thái
+
+`trang_thai` trả lời *"bản này dùng được không"*; `khuyet_tat` trả lời *"chỗ
+nào trong bản này ghi sai, mà ta đã biết và **cố ý không sửa**"*. Một bản vẫn
+có thể `dung` mà mang khuyết tật.
+
+Đã xảy ra thật: bản 18/8 của tuần `2026-08-24` ghi 12B1 **ba ô cùng chữ
+"Địa lí"** (D11, D18, D19), trong đó một ô thực ra là Chuyên đề Địa lí —
+**không biết ô nào**. Anh Lân xác nhận 26/8/2026 rằng thực tế là 2 + 1 và
+`cauhinh.json` khai đúng.
+
+| Cách chữa | Vì sao KHÔNG |
+|---|---|
+| Sửa tệp gốc | Không biết ô nào. Đoán là bịa, mà bịa xong thì không ai biết ta đã bịa |
+| Thêm mục vào `bang_ten_mon.json` | Bảng tên chỉ nhận cặp đúng ở **MỌI ô**. Đo 26/8/2026: bản đó có **13 ô** mang đúng chuỗi `"Địa lí"`, nên một mục gộp để chữa 1 ô sẽ đổi cả 13, sáu lớp sai một lượt, trong im lặng |
+| Đánh dấu bản là `sai` | Bản này đúng; nó chỉ ghi thiếu một cái nhãn |
+
+Nên: ghi lại chỗ hỏng, để nguyên tệp. `luu_tuan.py de-dang` in khuyết tật ra
+**ngay trước khi ai đó đăng**; `liet-ke` đếm.
+
+> **Ra công khai thì hiện ĐÚNG NHƯ TỆP — ba ô "Địa lí".** Trường phát ra sao
+> thì đăng vậy, không tự bịa nhãn. `khuyet_tat` là chữ tự do và **không bao
+> giờ** ra tới dữ liệu đăng — `thu_sinh_dang.py` CA 1b canh đúng chuyện đó.
+
+#### Đối chiếu `cauhinh.json` với bản thật — bốn bảng
+
+`python3 luu_tuan.py doi-chieu --tuan <mã>`. **CHỈ ĐỌC**, đo bằng dấu của
+từng tệp trong kho trước/sau. Đo 26/8/2026 trên bản 18/8 tuần `2026-08-24`,
+sau khi áp hai bảng tên: **(a) rỗng · (b) hai dòng của đúng khuyết tật 12B1 ·
+(c) rỗng · (d) rỗng**.
+
+Bảng **(b) ra hai dòng chứ không một** — `Chuyên đề Địa lí -/1` và
+`Địa lí 3/2` — và đó **không** phải chỗ lệch thứ hai: nếu 1 trong 3 ô
+`"Địa lí"` thực ra là chuyên đề thì Địa lí = 2 **và** Chuyên đề Địa lí = 1.
+Một khuyết tật, nhìn từ hai phía.
+
+Bảng **(d) là trục `(lớp, GV)` và nó KHÔNG có ngoại lệ nào.** Trục
+`(lớp, môn)` có thể bị bịt miệng bằng cách khai thêm ngoại lệ; trục này thì
+không — nó hỏi *"cô này dạy lớp này mấy tiết"*, câu mà việc ghi thiếu nhãn
+môn không đụng tới. Nó sạch, và đó là **bằng chứng độc lập** rằng cả 8 luật
+gộp tên đều đúng: sai một luật thôi thì con số đã không sạch như vậy.
+
 **Khoá tuần vẫn là ngày THỨ HAI** — Khoa chốt 22/8/2026. Tuần `2026-08-24`
 có `tu_ngay` sửa thành `2026-08-24` bằng `kho_tuan.sua_tuan()`, còn chuỗi A4
 nguyên văn `TUẦN 1 (23/8/2026-29/8/2026)` **giữ nguyên** trong
@@ -1462,6 +1508,24 @@ MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu kh�
     => Mời người = mở Directus. Hai chuyện này đi liền, đừng tách.
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
+
+[ ] HỎI ANH LÂN: trang công khai lấy tên môn / tên GV từ đâu — từ
+    cauhinh.json (tên chuẩn) hay từ tệp trường (nguyên văn)? Hiện đang
+    lấy NGUYÊN VĂN TỪ TỆP, và đó là quyết định có chủ ý: trang là bản
+    điện tử của đúng tờ đang treo ở trường. Nhưng hệ quả phải biết:
+    docs/index.html sinh từ cauhinh.json thì hiện "T.T.Hiền", còn bản
+    tách trong kho ghi "T.Hiền" — cùng một cô, hai tên, tuỳ trang nào.
+    Người nối Đợt 4 sẽ thấy chỗ đó và sẽ muốn "chữa" bằng bảng gộp.
+    Cùng hạng quyết định với TRUONG_O: phạm vi công khai, phải hỏi người.
+    (thu_sinh_dang.py CA 2 mục (i) đang chặn cứng, đỏ nếu ai áp bảng.)
+
+[ ] `luu_tuan._so()` có nên áp bảng tên khi so từng ô không? HOÃN, không
+    làm bây giờ, và đây là số đo để lần sau khỏi đo lại (đo 26/8/2026,
+    so bản 18/8 với bản 21/8 của tuần 2026-08-24): KHÔNG áp bảng cho
+    132 ô khác, CÓ áp bảng cũng 132 ô khác — KHÔNG MUA ĐƯỢC GÌ. Cùng lẽ với
+    việc đã bác unit systemd cho tailscale serve: thêm mã khi số đo nói
+    không cần là thêm một chỗ để hỏng. Rủi ro "so và doi-chieu nói ngược
+    nhau về cùng hai chuỗi" là có thật nhưng chưa xảy ra.
 
 [ ] Đổi mật khẩu thử trước khi đặt sau reverse proxy
 [ ] Bật cờ Secure cho cookie khi có TLS
