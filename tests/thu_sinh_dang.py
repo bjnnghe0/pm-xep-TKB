@@ -228,6 +228,27 @@ def ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm):
          f'Trang dựng lại được danh sách lúc chạy từ {len(d["o"])} ô — '
          f'{dung_lai}')
 
+    # (e) LỚP LỖI RỘNG HƠN: không khoá cấp trên nào được là BẢN SAO của
+    #     một CỘT trong `o`. Bắt cả `gv` lẫn `lop` lẫn bất cứ cột nào ai
+    #     đó gom sẵn ngày mai — hỏi đích danh hai cái tên thì cột thứ ba
+    #     vẫn lọt. `truong_o` KHÁC HẠNG và cố ý được tha: nó là danh sách
+    #     TÊN CỘT, không dựng từ `o`, và bỏ nó thì trang phải ghim cứng
+    #     thứ tự cột trong JS — đúng bẫy khop_loc()/_cum_cua().
+    cot = {t: sorted({r[j] for r in d['o'] if r[j] is not None})
+           for j, t in enumerate(to)}
+    ban_sao = []
+    for k, v in d.items():
+        if k in ('o', 'truong_o') or not isinstance(v, list):
+            continue
+        for t, gt in cot.items():
+            if gt and sorted(v) == gt:
+                ban_sao.append((k, f'= cột {t!r}'))
+    kiem(not ban_sao,
+         f'KHÔNG khoá cấp trên nào là BẢN SAO của một cột trong `o` — '
+         f'{ban_sao}')
+    kiem('lop' not in d,
+         f"Cụ thể: khoá 'lop' cũng đã bỏ — còn {len(d)} khoá cấp trên")
+
 
 def _tiem_dau(v, giu, dau, duong=''):
     """Thay MỌI chuỗi trong phiếu bằng một dấu duy nhất, trừ `giu`.

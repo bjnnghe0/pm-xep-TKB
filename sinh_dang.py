@@ -57,6 +57,17 @@
  │ (`[...new Set(o.map(r => r[4]))]`), đừng đăng thành khoá riêng.      │
  │ `tests/thu_sinh_dang.py` CA 1c canh điều này trên HÀNH VI: không     │
  │ khoá cấp trên nào được là một danh sách TÊN NGƯỜI gom sẵn.           │
+ │                                                                      │
+ │ 26/8/2026 người dùng bỏ tiếp khoá `lop` **cùng một lẽ** — nó cũng    │
+ │ chỉ là `sorted({r[0] for r in o})`, tức một bản sao của thứ đã nằm   │
+ │ sẵn trong 144 ô. Nay KHÔNG khoá cấp trên nào là bản sao của một cột  │
+ │ trong `o`; CA 1c canh cả lớp lỗi đó chứ không riêng hai cái tên.     │
+ │                                                                      │
+ │ HỆ QUẢ ĐÃ BIẾT VÀ ĐÃ CHẤP NHẬN: lớp nghỉ TRỌN TUẦN, không có ô nào,  │
+ │ sẽ biến mất khỏi ô chọn của trang. **Đó KHÔNG phải lỗi.** Trang này  │
+ │ nói *tuần này học gì*; lớp không có tiết nào thì không có gì để      │
+ │ hiện. Người dùng chốt 26/8/2026. Đo trên tuần 2026-08-24: cả 6 lớp   │
+ │ đều có 24 ô, số lớp không có ô nào là 0.                             │
  └──────────────────────────────────────────────────────────────────────┘
 ==========================================================================
 """
@@ -203,8 +214,6 @@ def du_lieu_dang(goc, ma_tuan):
         o.append([x.get(k) for k in TRUONG_O])
     o.sort(key=lambda r: (r[1] or 0, r[2] or 0, str(r[0])))
 
-    lop = sorted({r[0] for r in o if r[0]})
-
     # MỌI trường cấp tuần đi qua CỬA KHUÔN. Không khai khuôn thì không ra.
     ra = {'ma_tuan': ma_tuan}
     for khoa in KHUON_TUAN:
@@ -240,7 +249,6 @@ def du_lieu_dang(goc, ma_tuan):
     # Xem CLAUDE.md mục "Hai trang công khai, hai NGUỒN CHỮ".
     ra['tieu_de'] = tach.get('tieu_de')
 
-    ra['lop'] = lop
     ra['truong_o'] = list(TRUONG_O)
     ra['o'] = o
     return ra, None

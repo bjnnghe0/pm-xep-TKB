@@ -1283,6 +1283,33 @@ cửa đó* — và ranh giới **KHÔNG** phải hình dạng chuỗi, mà là 
 > qua cửa khuôn rồi định "bịt nốt cho đủ bộ" thì đang đổi một quyết định,
 > không phải vá một chỗ quên.
 
+##### Bản đăng KHÔNG chở danh sách gom sẵn — và lớp nghỉ trọn tuần thì biến mất
+
+26/8/2026 người dùng bỏ **hai** khoá khỏi dữ liệu đăng: `gv` rồi `lop`. Cả
+hai chỉ là bản sao của thứ đã nằm sẵn trong các ô (`sorted({r[4] …})` và
+`sorted({r[0] …})`). Lý do, nguyên văn: *"Danh sách 28 tên gom một chỗ là
+danh bạ. Tên trong từng ô thì giữ — tờ TKB dán ở trường xưa nay vẫn vậy.
+Nhưng danh sách gom sẵn thì trường **chưa từng phát**."* Cùng dữ liệu, khác
+hẳn **mức dễ dùng** — và mức dễ dùng mới là thứ nhà trường chưa bao giờ
+quyết. Trang cần danh sách để lọc thì dựng lúc chạy: `[...new Set(o.map(r
+=> r[0]))]`.
+
+> **HỆ QUẢ ĐÃ BIẾT VÀ ĐÃ CHẤP NHẬN — ĐỪNG COI LÀ LỖI.** Lớp nào nghỉ **trọn
+> tuần**, không có một ô nào, sẽ **biến mất khỏi ô chọn** của trang. Người
+> dùng chốt 26/8/2026: *"Trang này nói TUẦN NÀY HỌC GÌ; lớp không có tiết
+> nào thì không có gì để hiện."* Đo trên tuần `2026-08-24`: cả 6 lớp đều 24
+> ô, số lớp không có ô nào là **0**.
+
+`truong_o` thì **GIỮ**, và nó khác hạng: đó là danh sách **TÊN CỘT**, không
+phát tên ai, không dựng từ các ô. Bỏ nó thì trang phải ghim cứng thứ tự 5
+cột trong JS — dựng bản cài thứ hai của đúng một quyết định, đúng bẫy
+`khop_loc()` / `_cum_cua()`, và lệch thì lệch **trong im lặng** (môn hiện ra
+ô giáo viên).
+
+`tests/thu_sinh_dang.py` CA 1c canh **cả lớp lỗi**, không riêng hai cái tên:
+không khoá cấp trên nào được là **bản sao của một cột trong `o`**. Đo được:
+gom sẵn cột `mon` — thứ chưa ai từng gom — cũng ĐỎ.
+
 #### Ghim bộ số — `phan_cong_tuan1.json`
 
 Ba bảng đối chiếu chỉ nói về **hôm nay**. Thứ canh được **tuần sau** là một
