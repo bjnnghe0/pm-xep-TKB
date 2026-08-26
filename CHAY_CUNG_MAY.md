@@ -329,6 +329,14 @@ nó lên · và ghi được xuống đĩa.
 > `< > : " | ? *`. Đừng đổi tên tệp trước khi nạp, và **đừng coi đó là dấu
 > hiệu tệp bị can thiệp** — cứ nạp như thường.
 >
+> **TÊN TỆP BỊ ĐỔI KHI NẠP LÀ BÌNH THƯỜNG — ĐỪNG TƯỞNG NẠP NHẦM TỆP.**
+> Kho đặt tên theo **giờ lưu** (`2026-08-22T11-32-21_...`) để mọi bản xếp
+> đúng thứ tự thời gian. Tên gốc Khoa gửi **KHÔNG MẤT** — nó nằm trong
+> `phieu.json` ở khoá `ten_goc`, nguyên văn từng ký tự. Xem bằng:
+> ```bash
+> python3 -B luu_tuan.py liet-ke
+> ```
+>
 > `kho_tuan._ten_ban()` tự dọn: mọi ký tự ngoài `[0-9A-Za-zÀ-ỹ._-]` thành
 > `_`. Đo 26/8/2026:
 > ```
