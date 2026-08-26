@@ -401,14 +401,30 @@ globalThis.__thu = {
 """
 
 
+BO_QUA = []
+
+
+def bo_qua(mo_ta):
+    """Mục KHÔNG kiểm được vì thiếu công cụ ngoài. KHÔNG tính là ĐẠT.
+
+       `kiem(True, 'bỏ qua...')` là sai: nó cộng một mục vào "Tổng: N/N",
+       nên máy không có công cụ vẫn ra một bộ thử XANH TRỌN VẸN — và người
+       đọc con số ấy không có cách nào biết một mục đã không chạy.
+       Ở đây mục rơi HẲN khỏi tổng, và tổng in kèm dòng "BỎ QUA k mục".
+    """
+    BO_QUA.append(mo_ta)
+    print(f'  [BỎ QUA] {mo_ta}')
+
+
 def ca_6c_chua_chon_loai(tm):
     print('\nCA 6c — "CHƯA CHỌN LOẠI": CHẠY THẬT app.js dưới node')
     print('-' * 74)
     node = shutil.which('node')
     if not node:
-        # Tự khai MẤT KHẢ NĂNG PHÂN BIỆT chứ không âm thầm xanh.
-        kiem(True, 'BỎ QUA: máy này không có node — ca thử KHÔNG kiểm được '
-                   'gì ở mục này. Cài node rồi chạy lại.')
+        # TỰ KHAI, và KHÔNG tính là ĐẠT — xem bo_qua().
+        bo_qua('Máy này KHÔNG CÓ node nên CA 6c không kiểm được gì: sáu chỗ '
+               'đọc loại đang chọn đều CHƯA được thử. Cài node rồi chạy lại '
+               '(xem CHAY_CUNG_MAY.md mục 11).')
         return
 
     js = os.path.join(tm, 'thu_chua_chon.js')
@@ -992,6 +1008,13 @@ if __name__ == '__main__':
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
+    # Mục BỎ QUA rơi HẲN khỏi tổng, nên phải in riêng — nếu không thì máy
+    # thiếu công cụ vẫn cho ra một bộ thử XANH TRỌN VẸN và không ai biết.
+    if BO_QUA:
+        print(f'  ⚠ BỎ QUA {len(BO_QUA)} mục vì THIẾU CÔNG CỤ NGOÀI — '
+              f'bộ thử này CHƯA kiểm hết:')
+        for m in BO_QUA:
+            print(f'      · {m}')
     if hong:
         for m in hong:
             print('  LỖI:', m)

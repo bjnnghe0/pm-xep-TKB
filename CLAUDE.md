@@ -1669,7 +1669,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-HAI MƯƠI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1710,6 +1710,7 @@ HAI MƯƠI lần đã dính, cùng một gốc — mỗi lần một kiểu khá
 | 18 | **Chạy phép đo THIẾU PHẦN — `-B` một mình là chưa đủ** | Phép đo cần **đủ bốn phần**, thiếu phần nào cũng hở một đường: `PYTHONDONTWRITEBYTECODE=1` (cho tiến trình CON — `-B` **không** truyền xuống, đã đo) · `-B` (cho tiến trình CHA) · **xoá `__pycache__`** (bytecode còn lại từ lượt trước) · **mỗi bản vá một `cp -r` mới** (vá chồng lên thư mục cũ là mang theo cả bản vá trước). Đây không phải một mẹo chạy lệnh mà là một nếp hỏng thật: nó không làm sai ca thử nào, nó làm sai **CÁI CÂN** — và cân sai thì mọi con số cân ra đều sai theo, trong im lặng. Đo 26/8/2026: cùng một bản vá cho `19/21` ở lượt có cache và `18/21` ở lượt sạch. Công thức đủ ghi ở mục "Vì sao `-B`, và vì sao `-B` CHƯA ĐỦ". |
 | 19 | **Cột lùi lại ĐỎ, nhưng đỏ vì MỤC KHÁC — không phải mục nó nhắm** | **Cột lùi phải đỏ vì ĐÚNG MỤC nó nhắm, không phải vì mục khác đỏ thay.** Mã thoát vẫn là 1, số vẫn tụt, bảng vẫn trông như một cột lùi tử tế — nên đây là kiểu hỏng **tự tin nhất** trong cả bảng: nó không giấu mình sau một mục xanh, nó giấu mình sau một mục ĐỎ. Đã dính 26/8/2026: để chứng minh mục *"tên người không ra khỏi `doc_tkb`"* biết đỏ, tôi vá "thêm `dc:creator` vào **cuối** `THE_DOC_PROPS`" và bộ thử tụt 161→160. Nhưng mục đỏ lại là mục **kiểm khuôn ISO**, không phải mục tên người — vì `modified` đứng TRƯỚC trong danh sách nên hàm vẫn trả về đúng ngày, chưa hề rò tên. Phải cho `creator` đứng **ĐẦU** thì tên mới thật sự ra, và khi đó mới đỏ đúng chỗ (158/161, 3 mục). **Luật: ghi cột lùi thì ghi kèm TÊN MỤC đã đỏ, đừng chỉ ghi con số** — con số một mình không phân biệt nổi "đỏ đúng chỗ" với "đỏ nhờ may". |
 | 20 | **Số đo không nói rõ ĐO TRÊN BẢN NÀO** | **Mọi số đo phải nói rõ đo trên BẢN TRÊN CÂY GIT hay BẢN ĐÃ VÁ trong scratchpad. Thiếu vế đó thì người đọc mặc định là bản thật — và xử lý nhầm.** Đã dính 26/8/2026, và hậu quả đi xa hơn mọi nếp hỏng khác trong bảng này: tôi báo *"bắn HTTP thật, không cookie phiên, vào chính máy chủ đó → `/api/gia-tri` trả 200, 726 byte, tên MỌI giáo viên"*. Câu ấy đúng từng chữ — nhưng "máy chủ đó" là **bản đã vá** trong scratchpad, không phải bản trên cây git. Người dùng đọc thành "cửa đang mở" và ra lệnh **đóng gấp một cửa chưa bao giờ mở**. Đo lại trên bản thật: `/api/gia-tri` → **401**, `'/api/gia-tri' in web.DUONG_MO` → **False**. Chữa: mỗi con số kèm một vế **"trên bản X"** — *"bản thật"*, *"bản vá <tên bản vá>"*. Nguy nhất ở chỗ nó **không hỏng ca thử nào cả** — nó hỏng ở lớp giữa mã và người, chỗ không bộ thử nào với tới.<br><br>**KHÔNG CÓ CỘT LÙI NGHĨA LÀ NẾP NÀY CHỈ CHẶN ĐƯỢC BẰNG THÓI QUEN ĐỌC, KHÔNG CHẶN ĐƯỢC BẰNG MÁY. Mọi số đo trong báo cáo phải nói rõ đo trên bản nào.** Mười chín dòng còn lại của bảng này đều có một bản vá làm chúng đỏ; dòng này thì không, và sẽ không bao giờ có. Nó là dòng duy nhất mà việc đọc lại chính mình trước khi gửi là hàng rào cuối cùng. |
+| 21 | **Ca thử cần CÔNG CỤ NGOÀI mà vắng công cụ thì lặng lẽ XANH** | **Ca thử cần công cụ ngoài phải TỰ KHAI khi công cụ vắng, không được im lặng xanh. Máy không có `node` thì mục nói rõ "không kiểm được", không phải ĐẠT.** Cách viết sai là `kiem(True, 'bỏ qua vì thiếu X')` — nó **cộng một mục vào "Tổng: N/N"**, nên máy thiếu công cụ vẫn cho ra một bộ thử **xanh trọn vẹn**, và người đọc con số ấy không có cách nào biết một mục đã không chạy. Cách đúng: mục rơi **HẲN** khỏi tổng, in `[BỎ QUA]`, và dòng tổng in kèm `⚠ BỎ QUA k mục vì THIẾU CÔNG CỤ NGOÀI`. Đo 26/8/2026 trên `thu_them_quy_tac.py`: có `node` → **137/137**; giả vờ không có `node` → **128/128 + một dòng ⚠**. Hai con số khác nhau, và cái khác nhau ấy chính là thứ phải nhìn thấy. ⚠ `tests/thu_xuat_html.py:208` **vẫn đang viết theo cách sai** — cùng một lớp lỗi, chưa sửa, chờ người dùng quyết. |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1814,6 +1815,11 @@ HAI MƯƠI lần đã dính, cùng một gốc — mỗi lần một kiểu khá
    `cd` vào; mặc định của họ là bản thật. Đây là nếp hỏng duy nhất trong
    bảng **không ca thử nào bắt được** — nó nằm ở lớp giữa mã và người.
    (Nếp hỏng 20.)
+22. **Mục này có cần CÔNG CỤ NGOÀI không** (`node`, `soffice`, `pdfinfo`,
+   một lệnh hệ thống)? Nếu có: máy thiếu công cụ ấy thì mục **rơi hẳn
+   khỏi tổng và in `[BỎ QUA]`**, chứ KHÔNG được `kiem(True, ...)`.
+   `kiem(True)` cộng một mục vào "Tổng: N/N" và biến "chưa kiểm" thành
+   "đã đạt" — hai chuyện khác hẳn nhau. (Nếp hỏng 21.)
 21. **ĐƯỜNG ĐANG CHẠY THẬT đã ghim chưa?** Cái mới làm thì còn nhớ, cái
    chạy lâu thì không ai soi. Bằng chứng, đo 26/8/2026:
    `sinh_dang.TRUONG_O` — đường đăng **CHƯA dùng thật** — đã ghim literal

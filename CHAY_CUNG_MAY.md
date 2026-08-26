@@ -414,3 +414,31 @@ Kiểm bản sao có thật không:
 diff -rq "/media/adminnam/NAM MEO/projects/PM xep tkb/luu_tru/" \
          "/media/adminnam/<TÊN Ổ NGOÀI>/sao_luu_tkb/"   # không in gì = khớp
 ```
+
+---
+
+## 11. Công cụ ngoài mà BỘ THỬ cần — và cách kiểm
+
+Phần mềm chạy thì **chỉ cần Python + openpyxl**. Nhưng vài ca thử cần thêm
+công cụ ngoài, và **thiếu chúng thì bộ thử KHÔNG báo đỏ — nó báo BỎ QUA**.
+Đọc kỹ dòng cuối mỗi lượt chạy.
+
+| Công cụ | Ca thử nào cần | Thiếu thì sao | Kiểm |
+|---|---|---|---|
+| `node` | `thu_them_quy_tac.py` **CA 6c** — chạy THẬT `web/app.js` để thử trạng thái *"chưa chọn loại"*; `thu_xuat_html.py` mục `node --check` | Mục rơi khỏi tổng, in `[BỎ QUA]`, và dòng tổng có `⚠ BỎ QUA k mục` | `node --version` |
+| `soffice` (LibreOffice) | không ca thử nào — chỉ dùng khi **kiểm bản in bằng tay** (xuất PDF rồi đếm trang) | không ảnh hưởng bộ thử | `soffice --version` |
+| `pdfinfo`, `pdftoppm`, `pdftotext` | như trên | như trên | `pdfinfo -v` |
+
+```bash
+node --version          # cần cho CA 6c. Không có thì cài: sudo apt install nodejs
+~/.venvs/xeptkb/bin/python -B tests/thu_them_quy_tac.py | tail -4
+```
+
+> **Dòng `Tổng: N/N mục ĐẠT` MỘT MÌNH KHÔNG ĐỦ.** Máy có `node` cho
+> **137/137**; máy không có cho **128/128** — cũng "trọn vẹn", cũng không
+> một mục đỏ, mà **chín mục đã không chạy**. Cái phân biệt hai lượt ấy là
+> dòng `⚠ BỎ QUA` ngay dưới. Đây là nếp hỏng 21 trong CLAUDE.md.
+
+> **`node` KHÔNG phải thứ máy của trường cần.** Nó chỉ cần trên máy của
+> người SỬA phần mềm. Máy chạy thật chỉ cần Python + openpyxl, đúng như
+> `HUONG_DAN.md` ghi.
