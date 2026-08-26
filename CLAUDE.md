@@ -1667,7 +1667,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-MƯỜI TÁM lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+MƯỜI CHÍN lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1706,6 +1706,7 @@ MƯỜI TÁM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
 | 16 | **Trần đặt trên một CON SỐ, mà ĐƠN VỊ của con số ấy là VẬT CHỨA** | Trần vẫn đúng, cửa vẫn mở. **Dấu nhận biết dứt khoát: thêm nội dung vào một đơn vị CÓ SẴN thì con số KHÔNG ĐỔI.** Ví dụ đã dính: `TRAN_NGOAI_LE` đếm số **bao** (object ngoại lệ), mà mỗi bao chở được **vô hạn** mục `sua`, mỗi mục `sua` lại là một chỗ `cauhinh.json` được tha — nếp hỏng 14 là bản ghi của đúng lần dính đó, mục này là bản ghi của **LỚP LỖI**. **Đứng riêng, đừng gộp vào 13/14/15:** ba cái kia là *"ca thử XANH trong khi thứ nó canh đã hỏng"*; cái này là *"ca thử ĐẾM ĐÚNG, nhưng đếm nhầm thứ"* — con số in ra không sai một đơn vị nào, chỉ là nó không nói gì về điều đang cần chặn, nên đọc bao nhiêu lần cũng không thấy. Câu phải hỏi cho MỌI trần: *đơn vị tôi đang đếm có RỖNG RUỘT không?* |
 | 17 | **Tên bản vá chỉ tới NHIỀU HƠN MỘT chỗ lùi** | Chỉ nhiều chỗ thì **hai người đo ra hai số mà không ai sai** — và lúc đó con số ghi trong tài liệu không canh nổi cái gì, vì không ai dựng lại được nó. Bằng chứng, đo 26/8/2026: *"ghi đè phiếu hỏng"* ghi **151/153**, nhưng lớp chắn ấy có **bốn** bản cài trong `kho_tuan.py` — ba cách lùi cho **147 / 148 / 152**, không cách nào cho 151. *"Chuẩn hoá KHOÁ lúc nạp"* ghi **21**, đọc được ba cách, cho **17 / 17 / 19**. Chữa: tên bản vá phải nêu **đúng một hàm, một dòng, một khoá** — *"bỏ lớp chắn phiếu-hỏng **ở `them_ban`**"*, không phải *"bỏ lớp chắn phiếu hỏng"*. Thước thử: đưa tên bản vá cho người khác, họ có lùi ra đúng chỗ bạn đã lùi không? |
 | 18 | **Chạy phép đo THIẾU PHẦN — `-B` một mình là chưa đủ** | Phép đo cần **đủ bốn phần**, thiếu phần nào cũng hở một đường: `PYTHONDONTWRITEBYTECODE=1` (cho tiến trình CON — `-B` **không** truyền xuống, đã đo) · `-B` (cho tiến trình CHA) · **xoá `__pycache__`** (bytecode còn lại từ lượt trước) · **mỗi bản vá một `cp -r` mới** (vá chồng lên thư mục cũ là mang theo cả bản vá trước). Đây không phải một mẹo chạy lệnh mà là một nếp hỏng thật: nó không làm sai ca thử nào, nó làm sai **CÁI CÂN** — và cân sai thì mọi con số cân ra đều sai theo, trong im lặng. Đo 26/8/2026: cùng một bản vá cho `19/21` ở lượt có cache và `18/21` ở lượt sạch. Công thức đủ ghi ở mục "Vì sao `-B`, và vì sao `-B` CHƯA ĐỦ". |
+| 19 | **Cột lùi lại ĐỎ, nhưng đỏ vì MỤC KHÁC — không phải mục nó nhắm** | **Cột lùi phải đỏ vì ĐÚNG MỤC nó nhắm, không phải vì mục khác đỏ thay.** Mã thoát vẫn là 1, số vẫn tụt, bảng vẫn trông như một cột lùi tử tế — nên đây là kiểu hỏng **tự tin nhất** trong cả bảng: nó không giấu mình sau một mục xanh, nó giấu mình sau một mục ĐỎ. Đã dính 26/8/2026: để chứng minh mục *"tên người không ra khỏi `doc_tkb`"* biết đỏ, tôi vá "thêm `dc:creator` vào **cuối** `THE_DOC_PROPS`" và bộ thử tụt 161→160. Nhưng mục đỏ lại là mục **kiểm khuôn ISO**, không phải mục tên người — vì `modified` đứng TRƯỚC trong danh sách nên hàm vẫn trả về đúng ngày, chưa hề rò tên. Phải cho `creator` đứng **ĐẦU** thì tên mới thật sự ra, và khi đó mới đỏ đúng chỗ (158/161, 3 mục). **Luật: ghi cột lùi thì ghi kèm TÊN MỤC đã đỏ, đừng chỉ ghi con số** — con số một mình không phân biệt nổi "đỏ đúng chỗ" với "đỏ nhờ may". |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1798,6 +1799,12 @@ MƯỜI TÁM lần đã dính, cùng một gốc — mỗi lần một kiểu kh
    cũng hở một đường, và cái hở đó **không làm đỏ ca thử nào** — nó làm
    sai CÁI CÂN, nên con số bạn ghi vào tài liệu sai theo, trong im lặng.
    (Nếp hỏng 18.)
+19. **Cột lùi lại của bạn đỏ vì ĐÚNG MỤC nó nhắm, hay vì mục khác đỏ
+   thay?** Mã thoát 1 và con số tụt xuống **chưa chứng minh được gì** —
+   phải đọc TÊN MỤC đã đỏ và đối chiếu với điều bạn định chứng minh.
+   Không khớp thì bản vá của bạn chưa chạm tới hành vi cần thử; sửa BẢN
+   VÁ, đừng sửa kỳ vọng. Ghi vào tài liệu thì ghi kèm tên mục, đừng chỉ
+   ghi con số. (Nếp hỏng 19.)
 
 ---
 
