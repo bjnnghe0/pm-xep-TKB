@@ -211,19 +211,92 @@ def ca_3_xoay_ma_phien(tm):
 
 
 # ==========================================================================
+# ==========================================================================
+# BẢNG ĐƯỜNG → HÀNH VI KHI CHƯA ĐĂNG NHẬP. GHIM LITERAL, VIẾT TAY.
+# ==========================================================================
+# Đây là một QUYẾT ĐỊNH — *ai gọi được cái gì mà không cần mật khẩu* — nên
+# nó phải nằm ở đây dưới dạng chữ viết tay, KHÔNG được suy ra từ
+# `W.DUONG_MO` hay `W.TINH`. Mốc so lấy từ chính thứ đang canh là nếp hỏng
+# 12, và ở đây nó đã cắn thật:
+#
+#   Bản cũ chỉ ghim SỐ LƯỢNG (`len(MO) == 8`) rồi bỏ qua mọi đường nằm
+#   trong `W.DUONG_MO`. Đo 26/8/2026: ĐỔI `/index.html` thành
+#   `/api/gia-tri` — vẫn đúng 8 phần tử — thì thu_dang_nhap 94/94,
+#   thu_web 66/66, thu_an_ninh 213/213, KHÔNG MỘT MỤC NÀO ĐỎ; mà bắn HTTP
+#   thật không cookie vào bản vá đó thì `/api/gia-tri` trả **200, 726
+#   byte, tên MỌI giáo viên**. Đếm không phải ghim.
+#
+# Cột thứ ba phân biệt "MỞ" với "GÁC" khi mã trùng nhau: `/api/dang-nhap`
+# là đường MỞ mà vẫn trả 401 (sai mật khẩu). Chỉ nhìn mã thì không phân
+# biệt được nó với một đường bị gác — phải nhìn CÂU.
+CAU_GAC = 'Bạn cần đăng nhập'
+
+BANG_KHONG_COOKIE = {
+    # đường                  cách    mã   trả câu "cần đăng nhập"?
+    '/':                    ('GET',  200, False),
+    '/index.html':          ('GET',  200, False),
+    '/web/index.html':      ('GET',  200, False),
+    '/web/style.css':       ('GET',  200, False),
+    '/web/app.js':          ('GET',  200, False),
+    '/api/toi-la-ai':       ('GET',  200, False),
+    '/api/dang-nhap':       ('POST', 401, False),   # MỞ — 401 là sai mật khẩu
+    '/api/dang-xuat':       ('POST', 200, False),   # MỞ — luỹ đẳng
+    '/api/gia-tri':         ('GET',  401, True),    # tên MỌI giáo viên
+    '/api/quy-tac':         ('GET',  401, True),
+    '/api/loai-quy-tac':    ('GET',  401, True),
+    '/api/trang-thai':      ('GET',  401, True),
+    '/api/tai-ve':          ('GET',  401, True),
+    '/api/tai-web':         ('GET',  401, True),
+    '/api/xep':             ('POST', 401, True),
+    '/api/luu-quy-tac':     ('POST', 401, True),
+    '/api/them-quy-tac':    ('POST', 401, True),
+    '/api/xoa-quy-tac':     ('POST', 401, True),
+    '/api/thu-quy-tac':     ('POST', 401, True),
+}
+
+# Bộ `DUONG_MO` đã duyệt, viết tay. Tách RỜI khỏi bảng trên: bảng kia canh
+# HÀNH VI quan sát qua HTTP, cái này canh CẤU TRÚC. Một đường có thể lọt ra
+# ngoài mà không đi qua `DUONG_MO` (ai đó thêm một nhánh `return` sớm), và
+# ngược lại — hai phép kiểm quan sát được hai thứ khác nhau.
+MO_DA_DUYET = (
+    '/', '/index.html', '/web/index.html', '/web/style.css', '/web/app.js',
+    '/api/toi-la-ai', '/api/dang-nhap', '/api/dang-xuat')
+
+# `TINH` sinh ra phần `/web/*` của `DUONG_MO`, nên nới `TINH` là nới luôn
+# danh sách đường mở — ghim cả nó.
+TINH_DA_DUYET = ('index.html', 'style.css', 'app.js')
+
+
 def ca_4_khong_cookie(tm):
-    print('\nCA 4 — không cookie: mọi đường cần quyền đều 401, KHÔNG trả dữ liệu')
+    print('\nCA 4 — không cookie: MỌI đường phải khớp BẢNG LITERAL')
     print('-' * 74)
     dd, tmx = dung(tm, 'd4')
     import re as _re
     ma_nguon = io.open(os.path.join(GOC_TM, 'web.py'), encoding='utf-8').read()
     duong_api = sorted(set(_re.findall(r"duong == '(/api/[a-z-]+)'", ma_nguon)))
-    MO = sorted(W.DUONG_MO)
     # Guard: phép bóc hỏng thì vòng dưới chạy rỗng và XANH GIẢ.
     kiem(len(duong_api) >= 14,
          f'Bóc được danh sách đường từ web.py — {len(duong_api)} đường')
-    kiem(len(MO) == 8,
-         f'Danh sách MỞ đúng 8 đường (5 tĩnh + 3 xác thực) — {MO}')
+
+    # --- (A) CẤU TRÚC: hai hằng phải ĐÚNG BẰNG bộ đã duyệt --------------
+    kiem(tuple(sorted(W.DUONG_MO)) == tuple(sorted(MO_DA_DUYET)),
+         f'DUONG_MO ĐÚNG BẰNG bộ đã duyệt — thừa '
+         f'{sorted(set(W.DUONG_MO) - set(MO_DA_DUYET))}, thiếu '
+         f'{sorted(set(MO_DA_DUYET) - set(W.DUONG_MO))}')
+    kiem(tuple(sorted(W.TINH)) == tuple(sorted(TINH_DA_DUYET)),
+         f'TINH ĐÚNG BẰNG bộ đã duyệt (nó sinh phần /web/* của DUONG_MO) — '
+         f'thừa {sorted(set(W.TINH) - set(TINH_DA_DUYET))}, thiếu '
+         f'{sorted(set(TINH_DA_DUYET) - set(W.TINH))}')
+
+    # --- (B) BẢNG PHẢI PHỦ HẾT: đường mới mà không khai vào bảng thì ĐỎ --
+    co_that = set(duong_api) | {'/', '/index.html'} | {
+        '/web/' + t for t in W.TINH}
+    thieu = sorted(co_that - set(BANG_KHONG_COOKIE))
+    thua = sorted(set(BANG_KHONG_COOKIE) - co_that)
+    kiem(not thieu,
+         f'MỌI đường của ứng dụng đều có trong BẢNG — chưa khai: {thieu}')
+    kiem(not thua,
+         f'và bảng không khai đường không còn tồn tại — thừa: {thua}')
 
     THAN = {'/api/xep': {'tat': []}, '/api/luu-quy-tac': {'tat': []},
             '/api/them-quy-tac': {'quy_tac': {'loai': 'khong_xep_thu',
@@ -233,32 +306,32 @@ def ca_4_khong_cookie(tm):
             '/api/dang-xuat': {}}
 
     with MayChuTam(dd, dang_nhap=False) as (k, (dia, cong)):
-        lot = []
-        for d in duong_api:
-            if d in W.DUONG_MO:
-                continue
+        # --- (C) HÀNH VI: đi qua MỌI đường, HTTP THẬT, KHÔNG cookie phiên.
+        #     Vòng này CỐ Ý không hỏi `W.DUONG_MO` một lần nào — nó đi theo
+        #     BẢNG. Bản cũ viết `if d in W.DUONG_MO: continue`, nên đường
+        #     nào bị đẩy vào DUONG_MO là **không bao giờ bị bắn tới**; đó
+        #     đúng là chỗ `/api/gia-tri` lọt được mà bộ thử im.
+        lech = []
+        for d, (cach, ma_cho, cau_cho) in sorted(BANG_KHONG_COOKIE.items()):
             kh = Khach(cong)
-            ma, t = (kh.post(d, THAN[d]) if d in THAN else kh.get(d))
-            if ma != 401:
-                lot.append(f'{d}:{ma}')
-            elif '"quy_tac"' in t or '"lop"' in t or '"luoi"' in t:
-                lot.append(f'{d}: LỘ DỮ LIỆU')
-        kiem(not lot,
-             f'Mọi đường cần quyền đều 401 và không lộ dữ liệu — lọt: {lot}')
+            ma, t = (kh.post(d, THAN.get(d, {})) if cach == 'POST'
+                     else kh.get(d))
+            t = t if isinstance(t, str) else str(t)
+            if ma != ma_cho:
+                lech.append(f'{d}: mã {ma}, chờ {ma_cho}')
+                continue
+            if (CAU_GAC in t) != cau_cho:
+                lech.append(f'{d}: {"CÓ" if CAU_GAC in t else "KHÔNG"} câu '
+                            f'gác, chờ {"CÓ" if cau_cho else "KHÔNG"}')
+            elif cau_cho and ('"quy_tac"' in t or '"lop"' in t
+                              or '"luoi"' in t or '"gv"' in t):
+                lech.append(f'{d}: LỘ DỮ LIỆU')
+        kiem(not lech,
+             f'MỌI đường khớp bảng khi chưa đăng nhập — lệch: {lech}')
 
         # đường không tồn tại: 401 TRƯỚC 404, để không tiết lộ đường nào có thật
         ma, _ = Khach(cong).get('/api/khong-co-duong-nay')
         kiem(ma == 401, f'Đường không tồn tại cũng 401, không phải 404 — {ma}')
-
-        # đường MỞ vẫn phải phục vụ, nếu không thì không có chỗ hiện ô mật khẩu
-        chan = []
-        for d in MO:
-            if d in ('/api/dang-nhap', '/api/dang-xuat'):
-                continue
-            ma, _ = Khach(cong).get(d)
-            if ma != 200:
-                chan.append(f'{d}:{ma}')
-        kiem(not chan, f'Đường tĩnh + /api/toi-la-ai vẫn mở — chặn nhầm: {chan}')
         ma, d = Khach(cong).js('/api/toi-la-ai')
         kiem(d == {'dang_nhap': False, 'ten': None},
              f'/api/toi-la-ai chưa đăng nhập: đúng hai khoá, không kèm dữ liệu '
