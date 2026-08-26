@@ -1085,8 +1085,25 @@ Ca thử xanh chưa chứng minh được gì cả — phải chứng minh nó *
 ```bash
 cp -r <dự án> /tmp/bancu            # chép sang thư mục tạm, đừng đụng bản thật
 # sửa /tmp/bancu/xep_tkb.py, lùi ĐÚNG dòng vừa đổi về bản cũ
-cd /tmp/bancu && python3 tests/thu_du_phong.py    # phải thoát mã 1
+cd /tmp/bancu && python3 -B tests/thu_du_phong.py    # phải thoát mã 1
 ```
+
+> **⚠ LÙI NHIỀU BẢN VÁ LIÊN TIẾP THÌ PHẢI TẮT BYTECODE — `python3 -B` cộng
+> `PYTHONDONTWRITEBYTECODE=1`.** Python quyết định dùng lại `.pyc` theo
+> **(mtime, kích thước)** của tệp nguồn. Hai bản vá **dài bằng nhau** viết
+> trong **cùng một giây** — `s.strip()` và `s.lower()`, chuyện rất dễ xảy
+> ra khi lùi một loạt biến thể — làm lượt sau chạy lại bytecode của lượt
+> trước. Đo 26/8/2026: cùng một bản vá cho `19/21` ở lượt đo có cache và
+> `18/21` ở lượt đo sạch. Cùng họ với **nếp hỏng 10** ("cùng giây"), chỉ
+> khác là nó làm hỏng chính PHÉP ĐO chứ không hỏng ca thử — và phép đo
+> hỏng thì con số ghi vào tài liệu cũng hỏng theo.
+
+> **Script vá tài liệu phải GHI TỆP NGAY SAU MỖI PHÉP THAY.** Đã dính
+> 26/8/2026: một script vá `CLAUDE.md` gom mọi phép thay rồi mới ghi ở
+> CUỐI; một phép neo giữa chừng ném `AssertionError` nên **không chỗ nào
+> được ghi**, kể cả những chỗ đã khớp. Lệnh `git commit` đứng ở dòng riêng
+> chứ không nối bằng `&&` nên vẫn chạy tiếp — mã vào kho, tài liệu thì
+> không. Xem commit `ed21fdf`.
 
 Kiểm cả **mục nào** đỏ, không chỉ nhìn mã thoát: đúng những mục nói về hành vi
 vừa sửa phải đỏ, các mục không liên quan (nhất là mục không-hồi-quy) phải vẫn
@@ -1350,7 +1367,17 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   đúng phần của nó: bỏ hẳn phép kiểm dấu → 33/39 · đẩy phép kiểm RA NGOÀI
   `KHOA_GHI` → 38/39 (**8/12 yêu cầu song song ghi được** thay vì đúng 1) ·
   bỏ kiểm dấu ở hai đường tải → 34/39. Không lần nào Traceback.  *(đo 21/8/2026)*
-- `python3 tests/thu_sinh_dang.py`: **32/32 mục ĐẠT** (~5s, đo 22/8/2026), 4 ca.
+- `python3 tests/thu_sinh_dang.py`: **37/37 mục ĐẠT** (~6s, đo 26/8/2026), 5 ca.
+  Hai mục MỚI 26/8/2026, cả hai đều là chỗ trước đây KHÔNG CÓ GÌ CANH:
+  CA 2 mục (i) cấm `sinh_dang.py` nhắc tới bảng tên → lùi ra 36/37 ·
+  CA 1b đòi `khuyet_tat` không rò ra dữ liệu đăng → lùi ra 35/37.
+  > **Giới hạn đã biết của mục (i):** nó soi TÊN ĐỊNH DANH trên cây cú
+  > pháp, nên một bản cài tự `json.load('bang_ten_gv.json')` rồi tra
+  > bằng `dict.get` **đi vòng được** — đã đo 26/8/2026, 37/37 không mục
+  > nào đỏ trong khi tên GV ra công khai đã bị gộp. Nó chặn đường
+  > THẲNG, không chặn được đường vòng.
+  Số cũ **32/32, 4 ca (22/8/2026)** đã trôi từ 26/8 — giữ lại đây để
+  thấy nó trôi vào lúc nào.
   Lùi ra thì đỏ đúng phần của nó: đọc thẳng `phieu['ban'][0]` thay vì qua cửa
   → 23/32 · cho hàm công khai NHẬN thẳng một bản → 29/32 · bỏ cửa chặn `docs/`
   → 28/32 · cho bản `chua_ro` đăng được → 29/32 · **nới `TRUONG_O` thêm hai
@@ -1362,7 +1389,12 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > đây là ĐÚNG chứ không phạm luật "đừng ghim hằng số": `TRUONG_O` không phải
   > dữ liệu nhà trường mà là một **quyết định về phạm vi công khai**, và cả
   > điểm của mục này là bắt người nới nó phải đi hỏi lại nhà trường.
-- `python3 tests/thu_kho_tuan.py`: **126/126 mục ĐẠT** (~8s, đo 22/8/2026), 9 ca.
+- `python3 tests/thu_kho_tuan.py`: **153/153 mục ĐẠT** (~25s, đo 26/8/2026), 11 ca.
+  CA 10 (khuyết tật NỐI THÊM) và CA 11 (lệnh `doi-chieu` CHỈ ĐỌC) thêm
+  26/8/2026. Lùi ra: `ghi_khuyet_tat` gán đè → 150/153 · ghi đè phiếu
+  hỏng → 151/153 · bỏ đòi tên người → 149/153 · đổi luôn `trang_thai`
+  → 152/153.
+  Số cũ **126/126, 9 ca (22/8/2026)** đã trôi từ 26/8.
   CA 9 đo bề rộng thật qua tiến trình con: dạng mặc định **39 cột**,
   `--rong` **89 cột**. Lùi ra thì đỏ: quay lại in bảng rộng mặc định →
   122/126 · bỏ trần 20 ô → 123/126 · nới trần lên 200 → 123/126.
@@ -1380,6 +1412,39 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
   > khi bỏ vòng chống va chạm, vì hai tệp thử vốn đã khác tên gốc — nay có
   > mục ép **cùng tên gốc, cùng giây** (truyền `khi=`, không trông vào tốc độ
   > máy). Đúng bài học "một mục canh sai chỗ trông y hệt mục canh đúng chỗ".
+- `python3 tests/thu_bang_ten.py`: **23/23 mục ĐẠT** (~1s, đo 26/8/2026), 6 ca.
+  Mục canh chính là BẢNG BẪY TỔNG HỢP: 42 tên thật từ `cauhinh.json` × 12
+  phép biến đổi → 386 khoá bẫy trỏ tới đích giả. Lùi 12 bản cài `chuan()`
+  sai (bản đúng 23/23): `.strip()` 21 · `.lower()` / `.strip().lower()` /
+  `.casefold()` / NFD / bỏ dấu / bỏ chấm / bỏ khoảng trắng đều 20 ·
+  quét theo phần sau chấm cuối 19 · quét `endswith` 19 · `return s` 22 ·
+  chuẩn hoá KHOÁ lúc nạp 21. **12/12 ĐỎ, không lần nào VỠ.**
+  > **CA 4 (cặp tên thật) chỉ đỏ ở 2/12** — hai bản quét theo đuôi. Số đo
+  > này là lý do mục canh chính KHÔNG phải là nó: mọi phép chuẩn hoá sai
+  > chỉ đụng KHOÁ TRA, mà `H.Hiền` lẫn `T.T.Hiền` đều không phải khoá `gop`
+  > nên cả hai rơi vào nhánh else và cái bẫy IM. Giữ CA 4 với vai khác:
+  > canh bảng VIẾT TAY có gộp nhầm hai người có thật không.
+  > *(Thông điệp commit `eb79251` ghi "bắt 1/11" và "hai bản duy nhất làm
+  > CA 4 đỏ" — hai câu mâu thuẫn nhau, và câu đầu lấy từ một phép đo trên
+  > bộ biến thể KHÁC. Số đúng là **2/12**, đo lại 26/8/2026. Nếp hỏng 11,
+  > lần thứ hai trong cùng một ngày.)*
+- `python3 tests/thu_phan_cong_tuan1.py`: **22/22 mục ĐẠT** (~1s, đo
+  26/8/2026), 5 ca. Chạy được trên máy vừa `git clone` — chỉ cần
+  `cauhinh.json` + `phan_cong_tuan1.json`. Lùi ra (bản đúng 22/22): sửa số
+  tiết một môn 20 · đổi tên GV 20 · thêm môn 20 · bỏ môn 20 · "chữa" 12B1
+  cho khớp số thô 20 · nới bảng gộp rồi quên sinh lại mốc 21 · khai thêm
+  ngoại lệ thứ hai 20 · **sửa lén `cauhinh.json` RỒI lén thêm một mục
+  `sua` vào ngoại lệ CÓ SẴN 20** · nhập `kho_tuan` 21 · ghép đường dẫn tới
+  kho 21 · mốc rách 4/8 (ĐỎ, không VỠ). **11/11 ĐỎ.**
+  > **Dòng in đậm là một lỗ đã bịt 26/8/2026.** `TRAN_NGOAI_LE` đếm số
+  > *object* ngoại lệ, mà mỗi object chở được bao nhiêu mục `sua` cũng
+  > được — nên lén thêm một mục `sua` vào ngoại lệ có sẵn thì CA 2 im, và
+  > CA 3 (vốn dựng vế mốc từ bảng ĐÃ ĐÈ ngoại lệ) cũng im: đo được
+  > 20/21 → **21/21**, trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) —
+  > trần là 1"* và CA 3 vẫn in nguyên câu tự xưng *"khai thêm ngoại lệ ở
+  > CA 2 cũng không bịt miệng được mục này"*. Bịt bằng hai việc: thêm
+  > `TRAN_SUA` đếm riêng, và cho **CA 3 dựng vế mốc từ con số ĐỌC THÔ**,
+  > không nhìn `ngoai_le` một lần nào.
 - `python3 tests/thu_o_tong.py`: **36/36 mục ĐẠT** (~2s, đo 21/8/2026), 5 ca.
   Vá `D43` về `COUNTA(D10:D42)` trên **bản chép** thì bộ dò ĐỎ **đúng một cột**,
   năm cột kia vẫn sạch, và `mau_tkb.xlsx` thật không bị đụng. CA 4 chứng minh
@@ -1426,7 +1491,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+MƯỜI LĂM lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1458,6 +1523,10 @@ MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu kh�
 > **LUẬT: ca thử cố ý dựng dữ liệu HỎNG phải bọc phép gọi trong `try`, hoặc
 > kiểm HÌNH DẠNG câu trả lời TRƯỚC khi bóc. Dữ liệu hỏng là đầu vào mong đợi
 > của ca thử đó, không phải sự cố.**
+
+| 13 | **Mốc so là "khác rỗng" / "khác None" thay vì GIÁ TRỊ TRƯỚC** | `thu_kho_tuan.py` CA 10 viết `b.get('trang_thai') is not None`. Vá cho `ghi_khuyet_tat()` đặt luôn `trang_thai='sai'` thì bộ thử vẫn **152/152, không mục nào đỏ** — mà hậu quả thật là bản tuột khỏi đường đăng (`ban_de_dang` từ 1 xuống 0). Hai chỗ cộng lại: mốc so không phải giá trị trước (khác hẳn `sha256`, cái đó có `bam_truoc`), và ngay sau đó ca thử gọi `danh_dau_ban(...,'dung')` **ghi đè** giá trị đã bị phá, ru ngủ luôn mục kiểm-đăng-được. Cùng họ ở `thu_bang_ten.py`: mục *"trỏ về chính nó"* chỉ hỏi `b.loi and not b.gop`, mà `{X: X}` cũng làm phép kiểm NỐI CHUỖI nổ — nên **bỏ hẳn** phép kiểm tự-trỏ vẫn 21/21. Chữa: mốc phải là **giá trị chụp TRƯỚC**, và hai phép kiểm phủ lên nhau thì phải **tách rời** mới quan sát được từng cái. Sửa 26/8/2026 |
+| 14 | **Trần đếm SAI ĐƠN VỊ — chặn số bao, không chặn số ruột** | `thu_phan_cong_tuan1.py` có `TRAN_NGOAI_LE = 1`, nhưng nó đếm số **object** ngoại lệ, còn mỗi object chở được bao nhiêu mục `sua` cũng được — mà mỗi mục `sua` là một chỗ `cauhinh.json` được tha. Đo 26/8/2026: sửa lén `12B3 Toán học 3→4` cho **19/21**; lén thêm ĐÚNG MỘT mục `sua` vào ngoại lệ **có sẵn** thì về **21/21**, trong khi CA 1 vẫn in *"Số ngoại lệ còn ít (1) — trần là 1"*. Tệ hơn: mục tự xưng *"trục (lớp, GV) không bịt miệng được"* cũng im, vì nó dựng vế mốc từ bảng **đã đè** ngoại lệ. Chữa: đếm riêng `TRAN_SUA`, và cho trục thứ hai dựng từ con số **ĐỌC THÔ**, không nhìn `ngoai_le` một lần nào. Sửa 26/8/2026 |
+| 15 | **Canh TÊN ĐỊNH DANH thay vì canh HÀNH VI** | `thu_sinh_dang.py` CA 2 mục (i) cấm `sinh_dang.py` nhắc tới `bang_ten`/`chuan`/`gop` — soi cây cú pháp, ghim literal. Nó chặn được đường **thẳng**, không chặn được đường **vòng**: một bản cài tự `json.load('bang_ten_gv.json')` rồi tra bằng `dict.get` đi lọt sạch, đo 26/8/2026 **37/37 không mục nào đỏ**, trong khi tên GV ra công khai đã bị gộp (`T.Hiền` → `T.T.Hiền`). Giới hạn này **đã ghi vào docstring của chính mục đó**; muốn chặn kín thì phải khẳng định trên **hành vi** — so chuỗi ra công khai với chuỗi thô trong bản tách |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1520,6 +1589,18 @@ MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu kh�
    xanh. Mốc phải độc lập: một **literal** viết thẳng trong ca thử, hoặc dựng
    lại bằng một đường **khác hẳn**. (Mốc dựng từ `cauhinh.json` là chuyện
    KHÁC và là chuyện ĐÚNG — xem mục 7.) (Nếp hỏng 12.)
+13. **Mốc so có phải là GIÁ TRỊ CHỤP TRƯỚC không**, hay chỉ là "khác None" /
+   "khác rỗng"? Dạng sau chỉ bắt được việc XOÁ, không bắt được việc ĐỔI.
+   Và nếu ngay sau đó ca thử tự ghi đè giá trị ấy (gọi một hàm `danh_dau`,
+   `luu`, `dat`) thì mục kế tiếp cũng bị ru ngủ theo. (Nếp hỏng 13.)
+14. **Hai phép kiểm của bạn có phủ lên nhau không?** Nếu điều kiện A luôn
+   kéo theo điều kiện B thì bỏ hẳn phép kiểm A vẫn không mục nào đỏ. Tách
+   rời chúng ra mới quan sát được từng cái. (Nếp hỏng 13.)
+15. **Cái trần bạn đặt đếm ĐÚNG ĐƠN VỊ chưa?** Đếm số *bao* mà thứ gây hại
+   nằm trong *ruột* thì trần đó không chặn gì — một bao chở được vô hạn
+   ruột. Và một mục tự xưng "không bịt miệng được" thì phải **dựng vế mốc
+   từ dữ liệu CHƯA THA GÌ**, nếu không nó vẫn im như mọi mục khác.
+   (Nếp hỏng 14.)
 
 ---
 
@@ -1541,6 +1622,17 @@ MƯỜI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu kh�
     => Mời người = mở Directus. Hai chuyện này đi liền, đừng tách.
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
+
+[ ] Chặn KÍN đường áp bảng tên lúc đăng. Hiện `thu_sinh_dang.py` CA 2
+    mục (i) chỉ canh TÊN ĐỊNH DANH trên cây cú pháp: nó chặn
+    `import bang_ten` rồi `.chuan()`, nhưng một bản cài tự
+    `json.load('bang_ten_gv.json')` rồi tra bằng `dict.get` thì ĐI LỌT —
+    đo 26/8/2026: 37/37, không mục nào đỏ, trong khi tên GV ra công khai
+    đã bị gộp. Chặn kín thì phải khẳng định trên HÀNH VI: so từng chuỗi
+    `mon`/`gv` trong `du_lieu_dang()` với chuỗi THÔ trong bản tách, đòi
+    giống hệt. Chưa làm vì nó cần dựng một kho thử có chuỗi lạ trong bản
+    tách, và mục hiện có đã chặn được đường mà người ta thật sự sẽ đi.
+    Xem nếp hỏng 15.
 
 [ ] HỎI ANH LÂN: trang công khai lấy tên môn / tên GV từ đâu — từ
     cauhinh.json (tên chuẩn) hay từ tệp trường (nguyên văn)? Hiện đang

@@ -224,7 +224,16 @@ def ca_2_bang_bay_tong_hop(tm, cac_ten):
 
     # Mục 2: khoá đã khai vẫn phải tra ra đúng đích. Thiếu mục này thì một
     # bản cài `chuan()` trả về `s` luôn cũng xanh — nó không kéo ai đi đâu.
-    truot = [k for k in b.gop if b.chuan(k) != gop[k]]
+    # Bóc bằng `.get()`, KHÔNG `gop[k]`: `b.gop` là khoá do BẢN CÀI (có thể
+    # hỏng) đẻ ra, còn `gop` là dict của ca thử. Một bản cài chuẩn hoá khoá
+    # LÚC NẠP làm hai bộ khoá lệch nhau, và `gop[k]` khi đó ném KeyError —
+    # ca thử VỠ chứ không ĐỎ, CA 3..6 không bao giờ chạy (kiểu hỏng số 2,
+    # đo 26/8/2026).
+    thieu = sorted(set(gop) - set(b.gop))
+    kiem(not thieu,
+         f'Mọi khoá khai vào đều còn nguyên sau khi nạp — {len(thieu)} mất'
+         + (': ' + str(thieu[:5]) if thieu else ''))
+    truot = [k for k in b.gop if b.chuan(k) != gop.get(k)]
     kiem(not truot,
          f'Mọi khoá đã khai đều tra ra đúng đích — {len(truot)} trượt'
          + (': ' + str(truot[:5]) if truot else ''))
@@ -323,6 +332,16 @@ def ca_6_ve_chuan_phai_co_that(cac_ten, bm, bg):
                               'TÊN KHÔNG CÓ THẬT'})
     kiem(bia.ten_la(co) == ['TÊN KHÔNG CÓ THẬT'],
          'Và ten_la() thật sự bắt được một vế chuẩn bịa ra')
+
+    # VẾ LẠ cũng phải soi, không chỉ vế chuẩn. Một luật mà vế LẠ lại là tên
+    # CÓ THẬT thì nó XOÁ SỔ một môn / một giáo viên ở mọi lượt đọc — đo
+    # 26/8/2026: thêm '"Toán học" -> "Chuyên đề Toán"' làm tệp tuần 1 tụt từ
+    # 77 xuống 71 cặp, mà bốn bộ thử vẫn xanh trọn (chỉ cần cập nhật
+    # gop_da_dung là hết dấu vết).
+    xoa_so = sorted({k for b2 in (bm, bg) for k in b2.gop if k in co})
+    kiem(not xoa_so,
+         'Không luật gộp nào lấy một tên CÓ THẬT làm vế lạ — '
+         f'{len(xoa_so)} tên bị xoá sổ: {xoa_so}')
 
 
 # ==========================================================================

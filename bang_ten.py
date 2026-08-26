@@ -189,7 +189,12 @@ def _kiem(ten, biet, gop):
     # NỐI CHUỖI: a -> b và b -> c. Tra một lần cho ra b, tra hai lần cho ra c;
     # kết quả phụ thuộc SỐ LẦN TRA, tức phép tra không còn là một hàm nữa.
     thang = {k: _chuan_cua(v) for k, v in gop.items() if isinstance(k, str)}
-    noi = sorted(k for k, v in thang.items() if isinstance(v, str) and v in thang)
+    # `v != k` — CỐ Ý. Không có nó thì mục tự-trỏ ({X: X}) cũng làm phép
+    # kiểm này nổ, hai phép kiểm phủ lên nhau hoàn toàn, và khi đó BỎ HẲN
+    # phép kiểm tự-trỏ cũng KHÔNG ca thử nào đỏ (đo 26/8/2026: 21/21).
+    # Tách rời ra thì mỗi phép kiểm quan sát được riêng.
+    noi = sorted(k for k, v in thang.items()
+                 if isinstance(v, str) and v in thang and v != k)
     if noi:
         loi.append(f'{ten}: gộp NỐI CHUỖI ở {noi} — tên chuẩn của mục này lại '
                    'là chuỗi lạ của mục khác. Tra một lần và tra hai lần sẽ ra '

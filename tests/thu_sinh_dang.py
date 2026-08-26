@@ -269,6 +269,13 @@ def ca_2_kien_truc_khong_co_loi_vong():
     kiem(not dinh,
          'KHÔNG áp bảng tên lúc đăng — trường phát ra sao thì đăng vậy. '
          f'Thấy {dinh}')
+    # ⚠ GIỚI HẠN ĐÃ BIẾT, ĐỪNG ĐỌC QUÁ: mục này canh TÊN ĐỊNH DANH, không
+    # canh HÀNH VI. Nó chặn đường THẲNG (`import bang_ten` rồi `.chuan()`),
+    # KHÔNG chặn đường VÒNG — một bản cài tự `json.load('bang_ten_gv.json')`
+    # rồi tra bằng `dict.get` đi lọt sạch: đo 26/8/2026 vẫn 37/37, không
+    # mục nào đỏ, trong khi tên GV ra công khai đã bị gộp (T.Hiền ->
+    # T.T.Hiền). Chặn kín thì phải khẳng định trên HÀNH VI — so chuỗi ra
+    # công khai với chuỗi thô trong bản tách. Ghi ở "Việc treo".
 
 
 def ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm):

@@ -58,6 +58,12 @@ KQ = []
 # Cả điểm của nó là: ai muốn khai thêm ngoại lệ thì phải sửa dòng này và
 # giải thích vì sao — chứ không lặng lẽ nới cho ca thử xanh lại.
 TRAN_NGOAI_LE = 1
+# Và trần số SỬA, đếm riêng. Không có nó thì `TRAN_NGOAI_LE` không chặn gì:
+# một object ngoại lệ chở được bao nhiêu mục `sua` cũng được, và mỗi mục là
+# một chỗ `cauhinh.json` được tha. Đo 26/8/2026: sửa lén 12B3 Toán 3->4 làm
+# ca thử 19/21; lén thêm ĐÚNG MỘT mục `sua` vào ngoại lệ CÓ SẴN thì về lại
+# 21/21, mà CA 1 vẫn in "Số ngoại lệ còn ít (1) — trần là 1".
+TRAN_SUA = 2
 
 # Tên thư mục kho, ghép từ hai mẩu: viết thẳng thì chính bộ dò của CA 4
 # sẽ bắt được dòng khai này, và câu báo lỗi thành vô nghĩa.
@@ -82,8 +88,11 @@ def _doc(ten):
         return None
 
 
-def _tu_moc(moc):
+def _tu_moc(moc, ap_ngoai_le=True):
     """Mốc -> {(khối, môn): (số tiết, GV)}. Thô RỒI ĐÈ bằng ngoại lệ.
+
+       `ap_ngoai_le=False` trả về con số ĐỌC THÔ từ tệp trường, chưa tha gì.
+       CA 3 dùng dạng đó — xem docstring của nó.
 
        Mọi phép bóc chịu được hình dạng hỏng: một mốc rách phải làm ca thử
        ĐỎ chứ không VỠ (kiểu hỏng số 2).
@@ -96,7 +105,8 @@ def _tu_moc(moc):
         for muc in cac:
             if isinstance(muc, list) and len(muc) >= 3:
                 ra[(khoi, muc[0])] = (muc[2], muc[1])
-    for x in (moc.get('ngoai_le') or []) if isinstance(moc, dict) else []:
+    for x in ((moc.get('ngoai_le') or []) if (ap_ngoai_le and isinstance(moc, dict))
+              else []):
         for s in (x.get('sua') or []) if isinstance(x, dict) else []:
             if not isinstance(s, dict):
                 continue
@@ -148,6 +158,10 @@ def ca_1_dieu_kien_tien_quyet(moc, cfg):
          f'Số ngoại lệ trong mốc còn ít ({len(ng)}) — trần là '
          f'{TRAN_NGOAI_LE}. Mục này để cửa thoát hiểm không lặng lẽ phình '
          'thành cửa chính')
+    so_sua = sum(len(x.get('sua') or []) for x in ng if isinstance(x, dict))
+    kiem(so_sua <= TRAN_SUA,
+         f'Và số chỗ được THA còn ít ({so_sua}) — trần là {TRAN_SUA}. Đếm '
+         'riêng, vì một ngoại lệ chở được bao nhiêu mục "sua" cũng được')
     return a, b
 
 
@@ -179,9 +193,21 @@ def ca_2_truc_lop_mon(a, b):
         print('        ngày + người + lý do. ĐỪNG SỬA SỐ CHO KHỚP.')
 
 
-def ca_3_truc_lop_gv(a, b):
-    print('\nCA 3 — trục (lớp, GV): KHÔNG ngoại lệ nào, không bịt miệng được')
+def ca_3_truc_lop_gv(moc, b):
+    """Trục (lớp, GV), dựng từ con số ĐỌC THÔ — KHÔNG áp ngoại lệ nào.
+
+       Bản đầu dùng bảng ĐÃ ĐÈ ngoại lệ, nên câu "không bịt miệng được" là
+       SAI: lén thêm một mục `sua` là CA 2 lẫn CA 3 cùng im (đo 26/8/2026,
+       19/21 -> 21/21). Nay CA 3 không nhìn `ngoai_le` một lần nào.
+
+       Dùng được con số thô là nhờ một tính chất của chính khuyết tật 12B1:
+       cả hai chỗ sửa đều là CÙNG MỘT CÔ (N.Dung), 3 = 2 + 1, nên tổng theo
+       (lớp, GV) không đổi. Ngoại lệ nào làm đổi tổng đó sẽ làm mục này ĐỎ —
+       và đó là ĐÚNG: nó không còn là "chỉ ghi thiếu một cái nhãn" nữa.
+    """
+    print('\nCA 3 — trục (lớp, GV): dựng từ SỐ THÔ, không tha gì')
     print('-' * 74)
+    a = _tu_moc(moc, ap_ngoai_le=False)
     if not a or not b:
         kiem(False, 'Không có gì để so — xem CA 1')
         return
@@ -191,12 +217,12 @@ def ca_3_truc_lop_gv(a, b):
     lech = [(k, x.get(k), y.get(k)) for k in sorted(set(x) | set(y))
             if x.get(k) != y.get(k)]
     kiem(not lech,
-         'Mỗi giáo viên dạy mỗi khối ĐÚNG số tiết của mốc — '
+         'Mỗi giáo viên dạy mỗi khối ĐÚNG số tiết ĐỌC THÔ từ tệp trường — '
          f'{len(lech)} chỗ lệch: {lech[:4]}')
-    print('        Trục này KHÔNG nhận ngoại lệ nào, cố ý: việc bản của')
-    print('        trường ghi thiếu một cái NHÃN MÔN không đụng tới câu')
-    print('        "cô này dạy khối này mấy tiết". Khai thêm ngoại lệ ở')
-    print('        CA 2 cũng không bịt miệng được mục này.')
+    print('        Mục này dựng vế mốc từ con số THÔ, KHÔNG áp một ngoại')
+    print('        lệ nào — nên khai thêm ngoại lệ ở CA 2 không bịt miệng')
+    print('        được nó. Việc bản của trường ghi thiếu một cái NHÃN MÔN')
+    print('        không đụng tới câu "cô này dạy khối này mấy tiết".')
 
 
 def ca_4_khong_dung_lai_ve_B():
@@ -308,7 +334,7 @@ def main():
     cfg = _doc('cauhinh.json')
     a, b = ca_1_dieu_kien_tien_quyet(moc, cfg)
     ca_2_truc_lop_mon(a, b)
-    ca_3_truc_lop_gv(a, b)
+    ca_3_truc_lop_gv(moc, b)
     ca_4_khong_dung_lai_ve_B()
     ca_5_moc_sinh_duoi_dung_bang_ten(moc)
     print('=' * 74)

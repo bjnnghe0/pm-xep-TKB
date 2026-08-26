@@ -145,12 +145,16 @@ def _in_khuyet_tat(ban, thut='      '):
     ds = K.khuyet_tat_cua(ban)
     if not ds:
         return
-    print(f'{thut}[KHUYẾT TẬT ĐÃ BIẾT] {len(ds)} chỗ — bản này vẫn dùng '
-          'được, nhưng:')
+    print(f'{thut}[KHUYẾT TẬT ĐÃ BIẾT] {len(ds)} chỗ')
+    print(f'{thut}bản này vẫn dùng được, nhưng:')
     for x in ds:
-        o = ', '.join(x.get('o_excel') or []) or '(không ghi ô)'
         print(f'{thut}   · {x.get("mo_ta")}')
-        print(f'{thut}     ô {o} · {x.get("nguoi")} xác nhận {x.get("ngay")}')
+        # Mỗi thứ một dòng: gộp lại thì dòng vượt 39 cột, mà thầy cô đọc
+        # trên ĐIỆN THOẠI. Câu mô tả ở trên là chữ NGƯỜI GÕ nên không cắt
+        # được — nhưng mọi dòng do MÃ sinh thì phải vừa màn hình.
+        for o in (x.get('o_excel') or []) or ['(không ghi ô)']:
+            print(f'{thut}     ô {o}')
+        print(f'{thut}     {x.get("nguoi")} xác nhận {x.get("ngay")}')
 
 
 def _lech_ngay(r, ma_tuan):

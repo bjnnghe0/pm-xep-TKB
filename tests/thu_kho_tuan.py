@@ -681,6 +681,7 @@ def ca_10_khuyet_tat_noi_them_khong_de(tm):
         return
     dd_ban = K.duong_ban(goc, MA, a['ban'])
     bam_truoc = K.bam_tep(dd_ban)
+    tt_truoc = (K.trang_thai_cua(a['ban']), a['ban'].get('ly_do'))
     tach_truoc = _doc_tach(goc, MA, a['ban'])
     kiem(tach_truoc is not None, 'và bản tách có mặt trên đĩa để so về sau')
 
@@ -722,8 +723,15 @@ def ca_10_khuyet_tat_noi_them_khong_de(tm):
          'Tệp GỐC trong ban/ không bị đụng một byte')
     kiem(tach_truoc is not None and _doc_tach(goc, MA, b) == tach_truoc,
          'Bản TÁCH trong tach/ không bị đụng một byte')
-    kiem(b.get('sha256') == bam_truoc and b.get('trang_thai') is not None,
-         'sha256 và trang_thai của bản không đổi')
+    # Mốc so là GIÁ TRỊ TRƯỚC, không phải "khác None". Bản đầu viết
+    # `b.get('trang_thai') is not None` nên chỉ bắt được việc XOÁ khoá: vá
+    # cho ghi_khuyet_tat() đặt luôn trang_thai='sai' thì bộ thử vẫn
+    # 152/152 (đo 26/8/2026), mà hậu quả thật là bản tuột khỏi đường đăng.
+    kiem(b.get('sha256') == bam_truoc,
+         f'sha256 của bản không đổi — {b.get("sha256") == bam_truoc}')
+    kiem((K.trang_thai_cua(b), b.get('ly_do')) == tt_truoc,
+         f'trang_thai và ly_do KHÔNG đổi — trước {tt_truoc}, '
+         f'sau {(K.trang_thai_cua(b), b.get("ly_do"))}')
 
     # --- khuyết tật KHÔNG phải trạng thái: bản vẫn ra được đường đăng ---
     K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử: bản này dùng được')
