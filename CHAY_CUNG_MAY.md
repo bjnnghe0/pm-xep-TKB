@@ -323,6 +323,33 @@ nó lên · và ghi được xuống đĩa.
 
 ## 9. MỖI TUẦN KHOA GỬI TỆP MỚI — BỐN BƯỚC
 
+> **TÊN TỆP KIỂU WINDOWS LÀ BÌNH THƯỜNG, KHÔNG PHẢI DẤU HIỆU TỆP LẠ.**
+> Tệp Khoa gửi sang đến từ máy Windows, nên tên nó có thể mang `\`, có thể
+> là đường `C:\Users\...`, đường mạng `\\may-khoa\tkb\...`, hay có
+> `< > : " | ? *`. Đừng đổi tên tệp trước khi nạp, và **đừng coi đó là dấu
+> hiệu tệp bị can thiệp** — cứ nạp như thường.
+>
+> `kho_tuan._ten_ban()` tự dọn: mọi ký tự ngoài `[0-9A-Za-zÀ-ỹ._-]` thành
+> `_`. Đo 26/8/2026:
+> ```
+> ..\..\windows\x.xlsx        -> 2026-…_.._.._windows_x.xlsx
+> \\may-khoa\tkb\Tuần 1.xlsx  -> 2026-…_may-khoa_tkb_Tuần_1.xlsx
+> C:\Users\Khoa\TKB Tuần 1.xlsx -> 2026-…_C_Users_Khoa_TKB_Tuần_1.xlsx
+> TKB<Tuần>1:"|?*.xlsx          -> 2026-…_TKB_Tuần_1_.xlsx
+> ```
+> Chữ tiếng Việt có dấu thì **giữ nguyên** — `Tuần` vẫn là `Tuần`.
+>
+> **Một cảnh DUY NHẤT bị từ chối: tên QUÁ DÀI.** Tên tệp nguồn từ khoảng
+> **236 byte trở lên** cộng 20 ký tự dấu thời gian là vượt giới hạn 255
+> byte của hệ tệp. Lúc đó `luu_tuan.py them` **từ chối gọn, nói đúng lý
+> do, và KHÔNG ghi một byte nào vào kho**:
+> ```
+> [DỪNG] Không chép được tệp vào kho: [Errno 36] File name too long: ...
+> ```
+> Chữa: đổi tên tệp cho ngắn lại rồi nạp lại. Không mất gì, không hỏng gì.
+
+
+
 > **⚠ TỆP CÙNG TÊN "TUẦN 1" CÓ THỂ LÀ BẢN KHÁC. LUÔN SO TRƯỚC, ĐỪNG TIN TÊN
 > TỆP.** Tuần 1 đã dính đúng chỗ này: hai tệp cùng tên `KHOA KHCB-TKB Tuần 1
 > (24-8-26 - 29-8-26)`, chỉ khác cái đuôi `_1` và `-2`, mà **132 trên 150 ô

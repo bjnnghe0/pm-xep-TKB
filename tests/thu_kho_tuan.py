@@ -1128,6 +1128,70 @@ def ca_14_ghim_hai_danh_sach_trang(tm):
          f'cắt gì — {os.path.basename(win)!r}. Ở cảnh đó MAU_BAN là lớp '
          f'DUY NHẤT, không phải lớp thứ hai')
 
+    # --- (c) TÊN TỆP KIỂU WINDOWS — đường đi THẬT, hằng tuần ------------
+    # Tệp .xlsx Khoa gửi sang đến từ máy Windows. Tên kiểu Windows là
+    # BÌNH THƯỜNG, không phải dấu hiệu tệp lạ. Mỗi cảnh một mục, và mỗi
+    # mục đòi MAU_BAN chặn được MỘT MÌNH (không nhờ basename).
+    CANH = [
+        ('dấu \\ đơn', '..\\..\\windows\\x.xlsx'),
+        ('đường UNC', '\\\\may-khoa\\tkb\\Tuần 1.xlsx'),
+        ('ổ C: kiểu Windows', 'C:\\Users\\Khoa\\TKB Tuần 1.xlsx'),
+        ('ký tự Windows cấm', 'TKB<Tuần>1:"|?*.xlsx'),
+        ('toàn ký tự cấm', '<>:"|?*'),
+        ('chuỗi rỗng', ''),
+    ]
+    con = []
+    for nhan, t in CANH:
+        mot_minh = K.MAU_BAN.sub('_', t)        # KHÔNG qua basename()
+        if '/' in mot_minh or '\\' in mot_minh:
+            con.append((nhan, mot_minh))
+    kiem(not con,
+         f'MAU_BAN MỘT MÌNH xoá sạch dấu phân cách ở cả {len(CANH)} cảnh '
+         f'Windows — còn: {con}')
+    for nhan, t in CANH:
+        ra = K._ten_ban('2026-01-01T00-00-00', t)
+        sach = ('/' not in ra and '\\' not in ra
+                and ra.startswith('2026-01-01') and len(ra) > 20)
+        kiem(sach, f'  · {nhan}: dựng ra {ra[:52]!r}')
+    kiem(K._ten_ban('2026-01-01T00-00-00', '') .endswith('TKB.xlsx'),
+         'Tên rỗng / toàn ký tự cấm -> lùi về "TKB.xlsx", không ra tên rỗng')
+
+    # --- (d) TÊN QUÁ DÀI: MAU_BAN KHÔNG chặn — và đó là SỰ THẬT ---------
+    # MAU_BAN là danh sách trắng KÝ TỰ; nó không cắt được độ dài, và
+    # `_ten_ban()` còn CỘNG THÊM 20 ký tự dấu thời gian ở đầu. Nên một
+    # tên nguồn HỢP LỆ 240 byte cho ra tên đích 260 byte > 255 byte mà
+    # hệ tệp cho phép. Đo 26/8/2026 trên MÁY A (PC_NAME_MAX = 255):
+    #     nguồn 200 byte -> đích 220 -> them_ban ok=True
+    #     nguồn 240 byte -> đích 260 -> them_ban ok=False
+    # Mục này KHÔNG đòi MAU_BAN chặn — nó đòi kho HỎNG CHO TỬ TẾ.
+    kiem(len(K._ten_ban('2026-01-01T00-00-00', 'T' * 240 + '.xlsx')) > 255,
+         'ĐỐI CHỨNG: tên nguồn dài hợp lệ + 20 ký tự dấu thời gian vượt '
+         '255 byte — MAU_BAN KHÔNG cắt độ dài, và không định cắt')
+    dai = 'T' * 235 + '.xlsx'
+    nguon = dung_xlsx(os.path.join(tm, 'nguon-dai.xlsx'), o_mau(so_tiet=3))
+    p = os.path.join(tm, dai)
+    try:
+        shutil.copy(nguon, p)
+        dung_duoc = True
+    except OSError:
+        # Hệ tệp không tạo nổi tên dài này thì KHÔNG kiểm được cảnh đó.
+        # In [BỎ QUA] chứ KHÔNG `kiem(True, ...)` — nếp hỏng 21.
+        dung_duoc = False
+        print(f'  [BỎ QUA] hệ tệp này không tạo nổi tệp tên {len(dai)} byte '
+              f'nên cảnh "tên quá dài" CHƯA được thử')
+    if dung_duoc:
+        r = K.them_ban(os.path.join(tm, 'kho-dai'), '2026-10-05', p,
+                       'người thử', tach=D.doc(p))
+        kiem(r.get('ok') is False,
+             f'Tên quá dài -> them_ban TỪ CHỐI GỌN, không ném — '
+             f'{(r.get("cau") or "")[:70]!r}')
+        kiem('too long' in (r.get('cau') or '').lower()
+             or 'quá dài' in (r.get('cau') or '').lower(),
+             'và câu từ chối nói ĐÚNG lý do, không phải một mã lỗi trần')
+        kiem(not os.path.exists(os.path.join(tm, 'kho-dai', '2026-10-05',
+                                             'phieu.json')),
+             'và KHÔNG ghi một byte nào vào kho')
+
 
 def main():
     dat_dong_ho_canh(180)
