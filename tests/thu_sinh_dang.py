@@ -95,8 +95,11 @@ def ca_1_hanh_vi(tm):
         kiem(len(d.get('o') or []) > 1, f'Có {len(d.get("o") or [])} ô')
         kiem(d.get('ma_tuan') == '2026-01-19', 'Ghi đúng mã tuần')
         ng = d.get('nguon') or {}
-        kiem(bool(ng.get('sha256')) and bool(ng.get('ly_do_dung')),
-             'Kèm nguồn: SHA-256 của bản, và LÝ DO nó được đánh dấu "dung"')
+        kiem(bool(ng.get('sha256')) and bool(ng.get('gio_luu')),
+             'Kèm nguồn: SHA-256 và giờ lưu — hai giá trị MÁY SINH')
+        kiem('ly_do_dung' not in ng and 'ly_do' not in ng,
+             f'và KHÔNG kèm lý do — chữ tự do dừng ở phiếu; nguồn còn '
+             f'{sorted(ng)}')
 
     kiem(SD.du_lieu_dang(goc, '2026-02-02')[0] is None,
          'Tuần chưa có -> trả None, không ném')
@@ -224,6 +227,98 @@ def ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm):
     kiem(dung_lai == sorted(ten_nguoi),
          f'Trang dựng lại được danh sách lúc chạy từ {len(d["o"])} ô — '
          f'{dung_lai}')
+
+
+def _tiem_dau(v, giu, dau, duong=''):
+    """Thay MỌI chuỗi trong phiếu bằng một dấu duy nhất, trừ `giu`.
+
+       Đi đệ quy nên trường chữ tự do mới thêm vào phiếu ngày mai cũng bị
+       tiêm mà không phải sửa ca thử — đó là cả điểm của cách làm này. Một
+       danh sách tên trường viết tay thì đúng hôm nay và sai từ ngày mai.
+    """
+    if isinstance(v, dict):
+        for k in list(v):
+            if k in giu:
+                continue
+            x = v[k]
+            if isinstance(x, str) and x:
+                m = f'CHU-TU-DO-{len(dau):02d}-KHONG-DUOC-RA-CONG-KHAI'
+                dau[m] = f'{duong}{k}'
+                v[k] = m
+            else:
+                _tiem_dau(x, giu, dau, f'{duong}{k}.')
+    elif isinstance(v, list):
+        for i, x in enumerate(v):
+            if isinstance(x, str) and x:
+                m = f'CHU-TU-DO-{len(dau):02d}-KHONG-DUOC-RA-CONG-KHAI'
+                dau[m] = f'{duong}[{i}]'
+                v[i] = m
+            else:
+                _tiem_dau(x, giu, dau, f'{duong}[{i}].')
+
+
+def ca_1d_khong_chu_tu_do_nao_qua_cua(tm):
+    print('\nCA 1d — KHÔNG trường chữ tự do nào của phiếu qua được cửa đăng')
+    print('-' * 74)
+    goc, MA = os.path.join(tm, 'kho1d'), '2026-05-04'
+    _dung_tuan(goc, MA, 'dung', 'ca thử: bản này dùng được', 4, tm)
+    K.ghi_khuyet_tat(goc, MA, 1, 'khuyết tật của ca thử', 'người thử')
+    # `them_ban` không đòi các khai báo cấp TUẦN, nên kho thử mặc định
+    # không có chúng — mà đó lại chính là bốn trường chữ tự do cần thử.
+    # `sua_tuan()` là đường DUY NHẤT ghi được chúng (đã kiểm: không mô-đun
+    # nào khác gọi nó), nên dựng qua đúng đường đó.
+    K.sua_tuan(goc, MA, nhan='TUẦN 3', nam_hoc='2026-2027', hoc_ky='1',
+               ghi_chu='ghi chú riêng của khoa, không phải để ai đọc')
+
+    dd = os.path.join(K.thu_muc_tuan(goc, MA), 'phieu.json')
+    with io.open(dd, encoding='utf-8') as f:
+        p = json.load(f)
+
+    # GIỮ NGUYÊN: trường có KHUÔN (thử riêng ở phần B), hai đường dẫn tệp
+    # (tiêm vào là hỏng chỗ tìm tệp, thử nhầm thứ), và ba giá trị MÁY SINH
+    # vốn ĐƯỢC PHÉP ra ngoài.
+    giu = set(SD.KHUON_TUAN) | {'tep', 'tach', 'sha256', 'gio_luu', 'bo_doc',
+                                'trang_thai'}
+    dau = {}
+    _tiem_dau(p, giu, dau)
+    with io.open(dd, 'w', encoding='utf-8') as f:
+        json.dump(p, f, ensure_ascii=False)
+
+    kiem(len(dau) > 4,
+         f'Điều kiện tiên quyết: tiêm được {len(dau)} dấu vào phiếu — '
+         f'{sorted(dau.values())}')
+
+    d, tu_choi = SD.du_lieu_dang(goc, MA)
+    kiem(isinstance(d, dict) and not tu_choi,
+         f'Bản vẫn đăng được sau khi phiếu đầy chữ tự do — {tu_choi}')
+    if not isinstance(d, dict):
+        return
+    tho = json.dumps(d, ensure_ascii=False)
+    ro = sorted(dau[m] for m in dau if m in tho)
+    kiem(not ro, f'KHÔNG dấu nào trong {len(dau)} dấu ra tới bản đăng — '
+                 f'rò: {ro}')
+
+    # Đường dẫn tệp mang tên tệp gốc của trường — cũng không được ra.
+    ten_tep = (p.get('ban') or [{}])[0].get('tep') or ''
+    kiem(bool(ten_tep) and ten_tep not in tho,
+         'và tên tệp gốc cũng không ra — đường dẫn là siêu dữ liệu của kho')
+
+    # ---- B. Trường CÓ KHUÔN: sai khuôn thì TỪ CHỐI, không lặng lẽ bỏ ----
+    with io.open(dd, encoding='utf-8') as f:
+        p2 = json.load(f)
+    p2['nhan'] = 'TUẦN 1 — nhắc cô X nộp sổ đầu bài trước Thứ Sáu'
+    with io.open(dd, 'w', encoding='utf-8') as f:
+        json.dump(p2, f, ensure_ascii=False)
+    d2, tc2 = SD.du_lieu_dang(goc, MA)
+    kiem(d2 is None and bool(tc2),
+         'Trường CÓ KHUÔN mà bị gõ chữ tự do vào -> TỪ CHỐI ĐĂNG cả bản')
+    kiem('nhan' in (tc2 or ''),
+         f'và câu từ chối gọi ĐÍCH DANH trường sai khuôn — {(tc2 or "")[:60]}')
+
+    # ---- C. `_cua_tuan` không lấy được khoá chưa khai khuôn -------------
+    kiem('ghi_chu' in p, 'Phiếu THẬT SỰ có khoá ghi_chu cấp tuần')
+    kiem(SD._cua_tuan(goc, MA, 'ghi_chu') is None,
+         'nhưng _cua_tuan() KHÔNG lấy được nó — cửa khoá ở tầng dưới nữa')
 
 
 def ca_2_kien_truc_khong_co_loi_vong():
@@ -463,6 +558,7 @@ def main():
         ca_1_hanh_vi(tm)
         ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm)
         ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm)
+        ca_1d_khong_chu_tu_do_nao_qua_cua(tm)
         ca_2_kien_truc_khong_co_loi_vong()
         ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm)
         ca_4_khong_ghi_vao_docs(tm)

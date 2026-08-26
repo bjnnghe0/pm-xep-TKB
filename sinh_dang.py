@@ -63,12 +63,90 @@
 import io
 import json
 import os
+import re
 
 import kho_tuan as K
 
 # Đúng bộ trường mà trang xem hiện tại đã hiện. Thêm vào đây là MỞ RỘNG
 # phạm vi công khai — phải hỏi người dùng trước.
 TRUONG_O = ('lop', 'thu', 'tiet', 'mon', 'gv')
+
+# ==========================================================================
+# CỬA KHUÔN — CHỮ TỰ DO KHÔNG QUA ĐƯỢC CỬA ĐĂNG
+# ==========================================================================
+# Người dùng chốt 26/8/2026, nguyên văn: *"Rà toàn phiếu, liệt kê MỌI trường
+# chữ tự do, chặn hết. Không chừa trường nào vì 'câu hiện tại vô hại' — câu
+# hiện tại là câu tôi viết, câu sau thì chưa ai viết."*
+#
+# Rà ra được **năm** trường chữ tự do đang đi thẳng ra công khai, không phải
+# một: `ly_do` · `nhan` · `nam_hoc` · `hoc_ky` · `tieu_de`. Bốn cái đầu vào
+# phiếu qua `--nhan` / `--nam-hoc` / `--hoc-ky` / `--ly-do`, không khoá nào
+# kiểm lấy một ký tự.
+#
+# CÁCH BỊT KHÔNG PHẢI DANH SÁCH CẤM, MÀ LÀ **KHUÔN**. Danh sách cấm thì mỗi
+# trường mới thêm vào phiếu lại lọt cho tới khi có người nhớ ra; khuôn thì
+# trường nào chưa khai khuôn là **không ra được**, im lặng cũng không ra.
+# Một trường đã ép khuôn thì thôi không còn là chữ tự do nữa — đó mới là
+# điều đang cần, chứ không phải bỏ hẳn trường đi.
+KHUON_TUAN = {
+    'ma_tuan':  r'^\d{4}-\d{2}-\d{2}$',      # ngày Thứ Hai, khoá kho
+    'nhan':     r'^TUẦN \d{1,2}$',             # "TUẦN 1"
+    'tu_ngay':  r'^\d{4}-\d{2}-\d{2}$',
+    'den_ngay': r'^\d{4}-\d{2}-\d{2}$',
+    'nam_hoc':  r'^\d{4}-\d{4}$',             # "2026-2027"
+    'hoc_ky':   r'^[12]$',
+}
+
+# Khoá của MỘT BẢN được phép ra ngoài. Cả ba đều MÁY SINH, không có đường
+# nào cho người gõ chữ vào: mốc thời gian ISO, 64 hex, và dấu bộ đọc.
+# `ly_do` CỐ Ý KHÔNG có ở đây — xem khối chữ dưới.
+TRUONG_NGUON = ('gio_luu', 'sha256', 'bo_doc')
+
+
+def _qua_khuon(khoa, gt):
+    """Giá trị có đúng KHUÔN đã khai không. Trả (giá trị, None) hoặc
+       (None, câu từ chối). Không khai khuôn thì KHÔNG QUA — fail-closed."""
+    mau = KHUON_TUAN.get(khoa)
+    if mau is None:
+        return None, (f'Trường {khoa!r} chưa khai khuôn trong KHUON_TUAN nên '
+                      'KHÔNG được đăng. Thêm khuôn là MỞ RỘNG phạm vi công '
+                      'khai — phải hỏi nhà trường, đúng như TRUONG_O.')
+    # THIẾU HẲN ≠ SAI KHUÔN, và phân biệt hai cái là bắt buộc.
+    # Phiếu không khai `nhan` là chuyện THƯỜNG — `them_ban` không đòi
+    # `--nhan`. Không khai thì đăng None: không một ký tự nào ra ngoài, mà
+    # cũng không chặn oan cả tuần. Còn CÓ KHAI mà sai khuôn thì đúng là có
+    # người vừa gõ chữ vào, và lúc đó phải DỪNG.
+    # (Bản đầu gộp hai cái làm một: `nhan is None` cũng bị từ chối, và ca
+    #  thử CA 1d đỏ ngay lượt chạy đầu — kho thử không khai `nhan` bao giờ.)
+    if gt is None:
+        return None, None
+    if not isinstance(gt, str) or not re.match(mau, gt):
+        return None, (
+            f'Trường {khoa!r} của phiếu không đúng khuôn {mau} — đang là '
+            f'{gt!r}. KHÔNG đăng, và cố ý KHÔNG lặng lẽ bỏ qua: một ô chữ '
+            'tự do lọt ra trang công khai thì không rút lại được, còn git '
+            'thì nhớ vĩnh viễn. Sửa phiếu cho đúng khuôn rồi đăng lại.')
+    return gt, None
+
+
+def _cau_khai_nguon(gio_luu, sha256):
+    """Dòng KHAI NGUỒN của trang, sinh TỪ TRƯỜNG CÓ CẤU TRÚC.
+
+       KHÔNG có ô nào cho người gõ chữ tự do vào dòng này — nó ghép từ đúng
+       hai giá trị máy sinh: mốc ISO và 64 hex.
+
+       ⚠ `gio_luu` là lúc BẤM LỆNH LƯU VÀO KHO, **không phải** ngày nhà
+       trường sửa tệp. Đo 26/8/2026 trên bản tuần 1: lưu 22/8 11:32, còn
+       tệp thì trường sửa lần cuối 18/8 17:06 — lệch BỐN NGÀY. Vì vậy câu
+       dưới nói "lưu vào kho lúc", tuyệt đối không nói "bản ngày".
+       Ngày sửa tệp thật nằm trong `docProps/core.xml` (`dcterms:modified`)
+       mà `doc_tkb.py` KHÔNG đọc — thêm nó là việc riêng, phải bump
+       `PHIEN_BAN`, và phải tránh `cp:lastModifiedBy` ngay cạnh (tên người).
+    """
+    if not isinstance(gio_luu, str) or not isinstance(sha256, str):
+        return None
+    return (f'Bản nhà trường phát, lưu vào kho lúc {gio_luu} · '
+            f'SHA-256 {sha256[:12]}…')
 
 
 def du_lieu_dang(goc, ma_tuan):
@@ -110,22 +188,34 @@ def du_lieu_dang(goc, ma_tuan):
     o.sort(key=lambda r: (r[1] or 0, r[2] or 0, str(r[0])))
 
     lop = sorted({r[0] for r in o if r[0]})
-    return {
-        'ma_tuan': ma_tuan,
-        'nhan': _cua_tuan(goc, ma_tuan, 'nhan'),
-        'tu_ngay': _cua_tuan(goc, ma_tuan, 'tu_ngay'),
-        'den_ngay': _cua_tuan(goc, ma_tuan, 'den_ngay'),
-        'nam_hoc': _cua_tuan(goc, ma_tuan, 'nam_hoc'),
-        'hoc_ky': _cua_tuan(goc, ma_tuan, 'hoc_ky'),
-        'tieu_de': tach.get('tieu_de'),
-        'lop': lop,
-        'truong_o': list(TRUONG_O),
-        'o': o,
-        'nguon': {'gio_luu': ban.get('gio_luu'),
-                  'sha256': ban.get('sha256'),
-                  'bo_doc': ban.get('bo_doc'),
-                  'ly_do_dung': ban.get('ly_do')},
-    }, None
+
+    # MỌI trường cấp tuần đi qua CỬA KHUÔN. Không khai khuôn thì không ra.
+    ra = {'ma_tuan': ma_tuan}
+    for khoa in KHUON_TUAN:
+        gt = ma_tuan if khoa == 'ma_tuan' else _cua_tuan(goc, ma_tuan, khoa)
+        gt, tu_choi = _qua_khuon(khoa, gt)
+        if tu_choi:
+            return None, tu_choi
+        ra[khoa] = gt
+
+    # `nguon` dựng từ DANH SÁCH TRẮNG, không phải bóc từng khoá bằng tay.
+    # Bóc tay là cách `ly_do` lọt ra được suốt từ đầu: nó nằm ngay cạnh ba
+    # khoá máy sinh, trông y như chúng, và không ai phải quyết gì để nó ra.
+    ra['nguon'] = {k: ban.get(k) for k in TRUONG_NGUON}
+    ra['khai_nguon'] = _cau_khai_nguon(ban.get('gio_luu'), ban.get('sha256'))
+
+    # ⚠ `tieu_de` là NGOẠI LỆ DUY NHẤT, và là ngoại lệ KHAI RA chứ không
+    # phải bỏ sót. Nó KHÔNG nằm trong phiếu — nó là ô A3 của chính tệp nhà
+    # trường phát, tức chữ tự do của TRƯỜNG, không phải của người vận hành
+    # kho. Người dùng đã chốt 26/8/2026 rằng trang công khai hiện NGUYÊN VĂN
+    # những gì trường phát (tên môn, tên GV), và ô A3 cùng hạng với chúng.
+    # Muốn ép khuôn cả nó thì phải hỏi lại — đó là đổi một quyết định cũ.
+    ra['tieu_de'] = tach.get('tieu_de')
+
+    ra['lop'] = lop
+    ra['truong_o'] = list(TRUONG_O)
+    ra['o'] = o
+    return ra, None
 
 
 def _cua_tuan(goc, ma_tuan, khoa):
@@ -133,7 +223,15 @@ def _cua_tuan(goc, ma_tuan, khoa):
 
        Hàm này CỐ Ý không đọc `phieu['ban']` — nó chỉ lấy đúng một khoá cấp
        tuần, và không có đường nào từ đây tới danh sách bản.
+
+       Và nó CHỈ lấy được khoá đã khai khuôn. Phiếu còn khoá `ghi_chu` cấp
+       tuần — chữ tự do thuần tuý — mà một dòng `_cua_tuan(g, m, 'ghi_chu')`
+       viết cho nhanh là đủ đưa nó lên Internet. Chặn ngay ở đây thì dòng
+       ấy không viết được, chứ không phải viết được rồi trông chờ người sau
+       nhớ ra.
     """
+    if khoa not in KHUON_TUAN:
+        return None
     ds = K.liet_ke(goc)
     for x in ds:
         if x.get('ma_tuan') == ma_tuan:
