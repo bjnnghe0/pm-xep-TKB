@@ -1982,7 +1982,8 @@ HAI MƯƠI lần đã dính, cùng một gốc — mỗi lần một kiểu khá
       · "nhóm" trong bốn nhãn quan hệ — thầy cô nghĩ theo MÔN và LỚP
       · "cụm"  trong gom_tiet, uu_tien_ke_nhau — cùng câu hỏi
     Ghi ở đây để câu hỏi không trôi mất qua một lần tóm tắt hội thoại.
-    CHƯA trả lời, chờ người dùng đi qua 11 mục xem-bằng-mắt rồi quyết.
+    CHƯA trả lời — là mục 13 của danh sách XEM BẰNG MẮT bên dưới, và
+    CỐ Ý xếp CUỐI: người dùng chỉ quyết sau khi đi hết các mục kia.
 
 > **Ba dòng này đi với nhau, đừng làm lẻ.** Chừng nào còn giữ ràng buộc "không
 > thêm `--host`" thì máy chủ vĩnh viễn chạy `http://127.0.0.1`, mà trên `http://`
@@ -2300,6 +2301,60 @@ chuyện khác hẳn.
 > mà chúng lại cướp phím của người đang gõ ở ô khác. Viền lấy nét dùng
 > `:focus-visible` chứ không `:focus` trần — `:focus` trần để lại khung xanh
 > sau **mỗi cú bấm chuột**, thứ ai cũng tưởng là lỗi hiển thị. CA 11 canh cả hai.
+
+### DANH SÁCH XEM BẰNG MẮT — 23 mục, ghi ở đây vì nó ĐÃ RƠI MẤT MỘT LẦN
+
+Ca thử của màn hình Quy tắc **đọc CSS và mã nguồn, không dựng trình duyệt**
+(`thu_them_quy_tac.py` CA 6/6b/11, `thu_web.py` CA 4). Chúng bắt được việc
+khai sai cỡ và việc **bỏ hẳn** một nhánh; chúng **không** bắt được lỗi bố
+cục. Đây là danh sách những gì phải mở trình duyệt ra nhìn.
+
+> **Danh sách này từng chỉ sống trong hội thoại và đã rơi mất một lần** —
+> CLAUDE.md nhắc "11 mục xem-bằng-mắt" mà không ai còn giữ 11 mục ấy là gì,
+> và dựng lại từ tài liệu thì ra **13**. Nay ghi thẳng vào đây.
+
+`MT` = máy tính · `ĐT` = điện thoại · `2` = cả hai.
+
+```
+ 1 [2 ] Chữ trong thẻ có tràn khung?
+ 2 [MT] Lưới nhiều cột có so le?
+ 3 [ĐT] Thanh Tìm + lọc có chật?
+ 4 [ĐT] 3 nút + công tắc cùng hàng?
+ 5 [2 ] Ba màu huy hiệu phân biệt nổi?
+ 6 [MT] Viền lấy nét Tab thấy rõ?
+ 7 [2 ] Nhãn dài trong ô nhập tràn?
+ 8 [ĐT] Chữ 15px, nút 40px bấm trúng?
+ 9 [2 ] Nhãn Việt / tên kỹ thuật rời?
+10 [2 ] Tạo giống: con trỏ cuối câu?
+11 [MT] Bấm chuột có để khung xanh?
+12 [2 ] Bốn trạng thái + nút Thử lại?
+13 [ĐT] Ba chữ ô/nhóm/cụm hiểu không?   <- CUỐI
+15 [2 ] Tên kỹ thuật hiện 2 chỗ, rối?
+16 [ĐT] Bốn tab có bị bóp méo?
+17 [ĐT] Bộ lọc lồng "tru" dài quá?
+18 [2 ] Khối vàng: rõ là chọn-MỘT?
+19 [2 ] Nút "+ thêm ô" giống nút Xoá?
+20 [2 ] Khung cảnh báo sau Lưu, 13px
+21 [2 ] Khung đọc lại nhấp xanh/đỏ
+22 [ĐT] Gập/mở nhóm bấm có trúng?
+23 [ĐT] Nhãn nhóm 4 xuống dòng đọc ổn?
+24 [2 ] "Chưa chọn loại" có rõ không?
+```
+
+**Số nhảy từ 13 sang 15 là CỐ Ý — mục 14 ĐÃ ĐÓNG 26/8/2026.** Đừng đánh số
+lại: số cũ nằm rải rác trong các báo cáo, đánh lại là làm chúng trỏ sai.
+
+> **[x] Mục 14 — "Nhãn 2 vế trong ô chọn Loại có bị cắt không?" — ĐÓNG
+> 26/8/2026, commit `7949071`.** Nguyên nhân của nó là `<option>` không
+> xuống dòng được nên bộ chọn của hệ điều hành cắt mất vế phân biệt. Bố cục
+> mới **bỏ hẳn `<select>`** — nhãn nay nằm trong một `<span>` xuống dòng
+> được. Nguyên nhân không còn, nên không còn gì để nhìn.
+> Ghi lại chứ không xoá trắng: xoá trắng thì sáu tháng nữa có người lại
+> nghĩ ra đúng mục đó và lại mất một buổi.
+
+Ba mục **22 · 23 · 24 do chính bố cục mới sinh ra**, và mục 24 là mục đáng
+nhìn nhất: *"chưa chọn loại"* là một trạng thái **chưa từng tồn tại** khi
+còn `<select>` (nó luôn tự chọn phần tử đầu).
 
 ### VIẾT THÀNH HÀM RỜI — Đợt 4 cắm vào đây, đừng bắt nó viết lại
 
