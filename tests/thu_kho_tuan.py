@@ -23,6 +23,7 @@
    CA 8  So một tệp với một bản đã lưu — chỉ đọc, đếm đúng số ô khác
    CA 9  Lệnh `so` in VỪA MÀN HÌNH ĐIỆN THOẠI: hẹp, cắt ở 20 ô
    CA 10 Khuyết tật ĐÃ BIẾT: NỐI THÊM, không đè; không đụng tệp gốc
+   CA 11 Lệnh `doi-chieu`: CHỈ ĐỌC, có áp bảng tên, thấy đúng chỗ lệch
 ==========================================================================
 """
 import io
@@ -650,6 +651,21 @@ def _doc_tach(goc, ma_tuan, ban):
         return None
 
 
+def _dau_kho(goc):
+    """Dấu của cả kho: đường dẫn + nội dung mọi tệp. Dùng để khẳng định
+       một lệnh KHÔNG ghi một byte nào."""
+    ra = []
+    for tm2, _, ts in os.walk(goc):
+        for t in sorted(ts):
+            dd = os.path.join(tm2, t)
+            try:
+                with io.open(dd, 'rb') as f:
+                    ra.append((os.path.relpath(dd, goc), f.read()))
+            except OSError:
+                ra.append((os.path.relpath(dd, goc), None))
+    return sorted(ra)
+
+
 def ca_10_khuyet_tat_noi_them_khong_de(tm):
     print('\nCA 10 — khuyết tật đã biết: NỐI THÊM, không bao giờ gán đè')
     print('-' * 74)
@@ -727,6 +743,91 @@ def ca_10_khuyet_tat_noi_them_khong_de(tm):
          'Và phiếu hỏng còn NGUYÊN, không bị ghi đè')
 
 
+def ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm):
+    print('\nCA 11 — lệnh `doi-chieu`: CHỈ ĐỌC, và thấy đúng chỗ lệch')
+    print('-' * 74)
+    GOC_DA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    goc = os.path.join(tm, 'kho11')
+    MA = '2026-04-06'
+
+    # Mọi tên ở đây là tên BỊA, cố ý KHÔNG khớp gì trong cauhinh.json —
+    # ca thử này không bao giờ được có ý kiến về dữ liệu nhà trường.
+    LOP, GV, GV_LA = '9Z1', 'T.Thử', 'T.Thử.Viết.Tắt.Khác'
+    o = {'A3': 'THỬ', 'A4': 'TUẦN 9 (06/4/2026-11/4/2026)'}
+    for i in range(4):
+        o[f'D{8 + i}'] = f'Môn Thử A ({GV_LA})'
+    for i in range(2):
+        o[f'D{12 + i}'] = f'Môn Thử B La ({GV})'
+    for c in 'DEFGHI':
+        o[f'{c}43'] = f'=COUNTA({c}8:{c}42)'
+    t1 = dung_xlsx(os.path.join(tm, 'dc.xlsx'), o)
+
+    import doc_tkb as D
+    K.them_ban(goc, MA, t1, 'người thử', tach=D.doc(t1))
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử: bản này dùng được')
+
+    # cauhinh BỊA: khai tên CHUẨN, còn tệp viết kiểu khác -> phải cần bảng tên
+    dd_cfg = os.path.join(tm, 'cauhinh_thu.json')
+    with io.open(dd_cfg, 'w', encoding='utf-8') as f:
+        json.dump({'phan_cong': {LOP: [['Môn Thử A', GV, 4],
+                                       ['Môn Thử B', GV, 2]]}},
+                  f, ensure_ascii=False)
+
+    def chay(bang=None):
+        moi = dict(os.environ)
+        r = subprocess.run(
+            [sys.executable, os.path.join(GOC_DA, 'luu_tuan.py'),
+             '--kho', goc, 'doi-chieu', '--tuan', MA, '--cauhinh', dd_cfg],
+            cwd=bang or GOC_DA, capture_output=True, text=True, timeout=120,
+            env=moi)
+        return r.stdout + r.stderr
+
+    truoc = _dau_kho(goc)
+    ra = chay()
+    kiem('Traceback' not in ra, 'Chạy được, KHÔNG ném')
+    kiem(_dau_kho(goc) == truoc,
+         'Sau một lượt doi-chieu, kho không đổi MỘT BYTE nào — chỉ đọc')
+
+    # Bản tách ghi lớp theo BỐ CỤC của trường (12B1...), còn cauhinh bịa ghi
+    # 9Z1 — nên mọi cặp đều lệch. Điều cần canh không phải con số, mà là:
+    # có thấy lệch, và có in ra tên chuỗi lạ.
+    kiem('(a) TÊN MÔN' in ra and '(b) SỐ TIẾT' in ra
+         and '(c) GIÁO VIÊN' in ra and '(d) TRỤC' in ra,
+         'In đủ BỐN bảng')
+    kiem('Môn Thử B La' in ra,
+         'Tên môn chỉ có ở tệp hiện ra ở bảng (a) — bộ dò thật sự có chạy')
+    kiem(GV_LA in ra,
+         'Tên GV lạ hiện ra — bảng tên rỗng thì KHÔNG gộp gì, đúng như khai')
+
+    # --- có áp bảng tên: khai hai luật gộp thì hai chuỗi lạ biến mất ---
+    bang = os.path.join(tm, 'bang11')
+    os.makedirs(bang, exist_ok=True)
+    for ten, gop in (('bang_ten_mon.json', {'Môn Thử B La': 'Môn Thử B'}),
+                     ('bang_ten_gv.json', {GV_LA: GV})):
+        with io.open(os.path.join(bang, ten), 'w', encoding='utf-8') as f:
+            json.dump({'biet': [], 'gop': {k: {'chuan': v,
+                                               'nguoi_duyet': 'người thử',
+                                               'ngay': '2026-01-01'}
+                                           for k, v in gop.items()}},
+                      f, ensure_ascii=False)
+    # `luu_tuan.py` nạp bảng từ THƯ MỤC CỦA CHÍNH NÓ, nên phải chép nó sang
+    # thư mục có bảng thử thì mới đổi được bảng mà không đụng bảng thật.
+    for t in ('luu_tuan.py', 'bang_ten.py', 'doc_tkb.py', 'kho_tuan.py',
+              'ghi_ben.py', 'sinh_dang.py', 'doi_chieu.py'):
+        shutil.copy(os.path.join(GOC_DA, t), os.path.join(bang, t))
+    r = subprocess.run(
+        [sys.executable, os.path.join(bang, 'luu_tuan.py'),
+         '--kho', goc, 'doi-chieu', '--tuan', MA, '--cauhinh', dd_cfg],
+        cwd=bang, capture_output=True, text=True, timeout=120)
+    ra2 = r.stdout + r.stderr
+    kiem('Traceback' not in ra2, 'Chạy với bảng tên thử: KHÔNG ném')
+    kiem('Môn Thử B La' not in ra2 and GV_LA not in ra2,
+         'Khai luật gộp thì hai chuỗi lạ BIẾN MẤT khỏi báo cáo — bảng tên '
+         'CÓ được áp lúc đối chiếu')
+    kiem(_dau_kho(goc) == truoc,
+         'Và kho vẫn không đổi một byte nào')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -744,6 +845,7 @@ def main():
         ca_8_so_tep_voi_ban_da_luu(tm)
         ca_9_lenh_so_in_vua_dien_thoai(tm)
         ca_10_khuyet_tat_noi_them_khong_de(tm)
+        ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

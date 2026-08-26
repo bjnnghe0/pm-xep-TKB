@@ -16,6 +16,9 @@
                                 # mặc định in HẸP cho điện thoại;
                                 # --rong = bảng 84 cột, --het = in hết
    python3 luu_tuan.py dang-thu --tuan 2026-08-24 [--ra <thư mục>]
+   python3 luu_tuan.py doi-chieu --tuan 2026-08-24 [--ban N]
+                                # phan_cong trong cauhinh.json có khớp
+                                # bản TKB thật không — CHỈ ĐỌC
 
  `xem` CHỈ ĐỌC, không ghi một byte nào — dùng để ngó trước khi lưu.
 
@@ -32,6 +35,7 @@ import sys
 
 import bang_ten as BT
 import doc_tkb as D
+import doi_chieu as DC
 import kho_tuan as K
 import sinh_dang as SD
 
@@ -254,6 +258,45 @@ def _so(goc, a, bang_mon):
     return 0
 
 
+def _doi_chieu(goc, a, bang_mon, bang_gv):
+    """So `phan_cong` của cauhinh.json với một bản đã lưu. CHỈ ĐỌC."""
+    ban, loi = K.chon_ban(goc, a.tuan, a.ban)
+    if loi:
+        print(f'[DỪNG] {loi}')
+        return 1
+    dt = ban.get('tach')
+    if not dt:
+        print(f'[DỪNG] Bản {ban.get("tep")!r} không có bản tách — chưa có gì '
+              'để đối chiếu.')
+        return 1
+    dd = os.path.join(K.thu_muc_tuan(goc, a.tuan), dt)
+    try:
+        with io.open(dd, encoding='utf-8-sig') as f:
+            tach = json.load(f)
+    except Exception as e:                              # noqa: BLE001
+        print(f'[DỪNG] Không đọc được bản tách {dt}: {type(e).__name__}: {e}')
+        return 1
+    try:
+        with io.open(a.cauhinh, encoding='utf-8-sig') as f:
+            cfg = json.load(f)
+    except Exception as e:                              # noqa: BLE001
+        print(f'[DỪNG] Không đọc được {a.cauhinh}: {type(e).__name__}: {e}')
+        return 1
+
+    # Cắt ở 30 để cả dòng vừa 39 cột — thầy cô đọc trên ĐIỆN THOẠI.
+    print(f'  kho: {os.path.basename(ban.get("tep") or "")[:30]}')
+    print(f'       {(ban.get("gio_luu") or "")[:19]} · '
+          f'{K.trang_thai_cua(ban)}')
+    print(f'  với: {os.path.basename(a.cauhinh)[:30]}')
+    print(f'  bảng tên: môn {len(bang_mon.gop)} cặp · GV {len(bang_gv.gop)} cặp')
+    _in_khuyet_tat(ban, '  ')
+
+    kq = DC.so(*DC.tu_ban_tach(tach, bang_mon, bang_gv), *DC.tu_cau_hinh(cfg))
+    DC.in_hep(kq)
+    print('\n  (chỉ đọc — không ghi một byte nào)')
+    return 0
+
+
 def _dang_thu(goc, a):
     """Sinh JSON một tuần để đăng, ghi vào thư mục TẠM. KHÔNG ghi vào docs/."""
     import tempfile
@@ -344,6 +387,14 @@ def main(argv=None):
     p.add_argument('--ra', default=None,
                    help='thư mục ra; bỏ trống thì dùng thư mục tạm. KHÔNG nhận docs/')
 
+    p = sub.add_parser('doi-chieu',
+                       help='phan_cong trong cauhinh.json có khớp bản thật '
+                            'không — CHỈ ĐỌC')
+    p.add_argument('--tuan', required=True)
+    p.add_argument('--ban', type=int, default=None,
+                   help='số thứ tự bản; bỏ trống thì lấy bản đánh dấu "dung"')
+    p.add_argument('--cauhinh', default=os.path.join(GOC, 'cauhinh.json'))
+
     sub.add_parser('liet-ke', help='các tuần đang có trong kho')
     a = ap.parse_args(argv)
     goc = a.kho or K.goc_mac_dinh()
@@ -374,6 +425,10 @@ def main(argv=None):
             print(f'      lý do đánh dấu "dung": {b.get("ly_do")}')
             _in_khuyet_tat(b)
         return 0
+
+    if a.lenh == 'doi-chieu':
+        _keu_bang(bang_mon, bang_gv)
+        return _doi_chieu(goc, a, bang_mon, bang_gv)
 
     if a.lenh == 'dang-thu':
         return _dang_thu(goc, a)
