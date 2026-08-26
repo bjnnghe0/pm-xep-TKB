@@ -226,33 +226,44 @@ def ca_3_xoay_ma_phien(tm):
 #   thật không cookie vào bản vá đó thì `/api/gia-tri` trả **200, 726
 #   byte, tên MỌI giáo viên**. Đếm không phải ghim.
 #
-# Cột thứ ba phân biệt "MỞ" với "GÁC" khi mã trùng nhau: `/api/dang-nhap`
-# là đường MỞ mà vẫn trả 401 (sai mật khẩu). Chỉ nhìn mã thì không phân
-# biệt được nó với một đường bị gác — phải nhìn CÂU.
+# CỘT LOẠI — ba loại, và nó KHÔNG suy được từ mã.
+#
+#   'gac'         chưa đăng nhập thì KHÔNG vào được
+#   'mo'          ai cũng vào được
+#   'mo_tu_choi'  MỞ, nhưng từ chối vì LÝ DO RIÊNG (sai mật khẩu, thiếu
+#                 tham số) — mã có thể trùng với 'gac' mà bản chất khác hẳn
+#
+# `/api/dang-nhap` trả 401 vì SAI MẬT KHẨU, không phải vì bị gác. Chỉ nhìn
+# mã thì hai thứ ấy giống hệt nhau; phân biệt được chúng là điều kiện để
+# câu "đường này có bị gác không" có nghĩa. Vì vậy tầng (C) đòi khớp CẢ mã
+# LẪN loại: một đường khai 'gac' mà trả 401 kèm câu SAI MẬT KHẨU thì ĐỎ —
+# nó đang từ chối vì lý do khác, và ngày mai lý do ấy hết thì cửa mở toang
+# mà mã vẫn 401 suốt.
 CAU_GAC = 'Bạn cần đăng nhập'
 
 BANG_KHONG_COOKIE = {
-    # đường                  cách    mã   trả câu "cần đăng nhập"?
-    '/':                    ('GET',  200, False),
-    '/index.html':          ('GET',  200, False),
-    '/web/index.html':      ('GET',  200, False),
-    '/web/style.css':       ('GET',  200, False),
-    '/web/app.js':          ('GET',  200, False),
-    '/api/toi-la-ai':       ('GET',  200, False),
-    '/api/dang-nhap':       ('POST', 401, False),   # MỞ — 401 là sai mật khẩu
-    '/api/dang-xuat':       ('POST', 200, False),   # MỞ — luỹ đẳng
-    '/api/gia-tri':         ('GET',  401, True),    # tên MỌI giáo viên
-    '/api/quy-tac':         ('GET',  401, True),
-    '/api/loai-quy-tac':    ('GET',  401, True),
-    '/api/trang-thai':      ('GET',  401, True),
-    '/api/tai-ve':          ('GET',  401, True),
-    '/api/tai-web':         ('GET',  401, True),
-    '/api/xep':             ('POST', 401, True),
-    '/api/luu-quy-tac':     ('POST', 401, True),
-    '/api/them-quy-tac':    ('POST', 401, True),
-    '/api/xoa-quy-tac':     ('POST', 401, True),
-    '/api/thu-quy-tac':     ('POST', 401, True),
+    # đường                  cách    mã   loại
+    '/':                    ('GET',  200, 'mo'),
+    '/index.html':          ('GET',  200, 'mo'),
+    '/web/index.html':      ('GET',  200, 'mo'),
+    '/web/style.css':       ('GET',  200, 'mo'),
+    '/web/app.js':          ('GET',  200, 'mo'),
+    '/api/toi-la-ai':       ('GET',  200, 'mo'),
+    '/api/dang-nhap':       ('POST', 401, 'mo_tu_choi'),   # sai mật khẩu
+    '/api/dang-xuat':       ('POST', 200, 'mo'),           # luỹ đẳng
+    '/api/gia-tri':         ('GET',  401, 'gac'),          # tên MỌI giáo viên
+    '/api/quy-tac':         ('GET',  401, 'gac'),
+    '/api/loai-quy-tac':    ('GET',  401, 'gac'),
+    '/api/trang-thai':      ('GET',  401, 'gac'),
+    '/api/tai-ve':          ('GET',  401, 'gac'),
+    '/api/tai-web':         ('GET',  401, 'gac'),
+    '/api/xep':             ('POST', 401, 'gac'),
+    '/api/luu-quy-tac':     ('POST', 401, 'gac'),
+    '/api/them-quy-tac':    ('POST', 401, 'gac'),
+    '/api/xoa-quy-tac':     ('POST', 401, 'gac'),
+    '/api/thu-quy-tac':     ('POST', 401, 'gac'),
 }
+LOAI_HOP_LE = ('gac', 'mo', 'mo_tu_choi')
 
 # Bộ `DUONG_MO` đã duyệt, viết tay. Tách RỜI khỏi bảng trên: bảng kia canh
 # HÀNH VI quan sát qua HTTP, cái này canh CẤU TRÚC. Một đường có thể lọt ra
@@ -311,23 +322,33 @@ def ca_4_khong_cookie(tm):
         #     BẢNG. Bản cũ viết `if d in W.DUONG_MO: continue`, nên đường
         #     nào bị đẩy vào DUONG_MO là **không bao giờ bị bắn tới**; đó
         #     đúng là chỗ `/api/gia-tri` lọt được mà bộ thử im.
+        la = sorted({l for _, _, l in BANG_KHONG_COOKIE.values()}
+                    - set(LOAI_HOP_LE))
+        kiem(not la, f'Bảng chỉ dùng loại đã khai — loại lạ: {la}')
+
         lech = []
-        for d, (cach, ma_cho, cau_cho) in sorted(BANG_KHONG_COOKIE.items()):
+        for d, (cach, ma_cho, loai) in sorted(BANG_KHONG_COOKIE.items()):
             kh = Khach(cong)
             ma, t = (kh.post(d, THAN.get(d, {})) if cach == 'POST'
                      else kh.get(d))
             t = t if isinstance(t, str) else str(t)
             if ma != ma_cho:
-                lech.append(f'{d}: mã {ma}, chờ {ma_cho}')
+                lech.append(f'{d}: mã {ma}, chờ {ma_cho} ({loai})')
                 continue
-            if (CAU_GAC in t) != cau_cho:
-                lech.append(f'{d}: {"CÓ" if CAU_GAC in t else "KHÔNG"} câu '
-                            f'gác, chờ {"CÓ" if cau_cho else "KHÔNG"}')
-            elif cau_cho and ('"quy_tac"' in t or '"lop"' in t
-                              or '"luoi"' in t or '"gv"' in t):
+            # Khớp CẢ mã LẪN loại. Chỉ 'gac' mới được trả câu gác; 'mo' và
+            # 'mo_tu_choi' mà trả câu ấy nghĩa là đã bị đẩy ra sau cổng.
+            co_cau = CAU_GAC in t
+            if co_cau != (loai == 'gac'):
+                lech.append(
+                    f'{d}: khai {loai!r} mà '
+                    f'{"CÓ" if co_cau else "KHÔNG có"} câu gác — '
+                    f'{t[:44]!r}')
+            elif loai == 'gac' and ('"quy_tac"' in t or '"lop"' in t
+                                    or '"luoi"' in t or '"gv"' in t):
                 lech.append(f'{d}: LỘ DỮ LIỆU')
         kiem(not lech,
-             f'MỌI đường khớp bảng khi chưa đăng nhập — lệch: {lech}')
+             f'MỌI đường khớp CẢ MÃ LẪN LOẠI khi chưa đăng nhập — '
+             f'lệch: {lech}')
 
         # đường không tồn tại: 401 TRƯỚC 404, để không tiết lộ đường nào có thật
         ma, _ = Khach(cong).get('/api/khong-co-duong-nay')
