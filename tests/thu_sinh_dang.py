@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.join(GOC, 'tests'))
 
 import kho_tuan as K                                             # noqa: E402
 import sinh_dang as SD                                           # noqa: E402
-from thu_kho_tuan import dung_xlsx, o_mau                        # noqa: E402
+from thu_kho_tuan import dung_xlsx, o_mau, _them_doc_props       # noqa: E402
 
 KQ = []
 
@@ -321,6 +321,52 @@ def ca_1d_khong_chu_tu_do_nao_qua_cua(tm):
          'nhưng _cua_tuan() KHÔNG lấy được nó — cửa khoá ở tầng dưới nữa')
 
 
+def ca_1e_khai_nguon_noi_ngay_truong_sua(tm):
+    print('\nCA 1e — dòng KHAI NGUỒN nói ngày TRƯỜNG SỬA, hoặc nói là không có')
+    print('-' * 74)
+    import doc_tkb as D
+    NGAY = '2026-08-18T17:06:19Z'
+
+    # ---- A. Tệp CÓ docProps -> câu phải mang đúng ngày đó -------------
+    goc, MA = os.path.join(tm, 'kho1e'), '2026-06-01'
+    t = dung_xlsx(os.path.join(tm, 'co-ngay.xlsx'), o_mau(so_tiet=4))
+    _them_doc_props(t, **{'dcterms:modified': NGAY})
+    K.them_ban(goc, MA, t, 'người thử', tach=D.doc(t))
+    K.danh_dau_ban(goc, MA, 1, 'dung', 'ca thử: bản này dùng được')
+    d, tu_choi = SD.du_lieu_dang(goc, MA)
+    kiem(isinstance(d, dict) and not tu_choi, f'Sinh được — {tu_choi}')
+    if not isinstance(d, dict):
+        return
+    cau = d.get('khai_nguon') or ''
+    kiem(NGAY in cau, f'Câu khai nguồn mang ĐÚNG ngày trường sửa — {cau!r}')
+
+    # MỐC SO là giá trị CHỤP TRƯỚC, không phải "khác rỗng" (nếp hỏng 13):
+    # `gio_luu` thật của bản này, đọc ra rồi mới đòi nó VẮNG trong câu.
+    gio_luu = (d.get('nguon') or {}).get('gio_luu')
+    kiem(isinstance(gio_luu, str) and gio_luu,
+         f'Điều kiện tiên quyết: bản có gio_luu để mà so — {gio_luu!r}')
+    kiem(gio_luu not in cau,
+         'và KHÔNG mang gio_luu — hai mốc khác nhau, đừng để lẫn')
+
+    # ---- B. Tệp KHÔNG có docProps -> nói TRỐNG, KHÔNG thay bằng gio_luu ----
+    goc2, MA2 = os.path.join(tm, 'kho1e2'), '2026-06-08'
+    t2 = dung_xlsx(os.path.join(tm, 'khong-ngay.xlsx'), o_mau(so_tiet=4))
+    K.them_ban(goc2, MA2, t2, 'người thử', tach=D.doc(t2))
+    K.danh_dau_ban(goc2, MA2, 1, 'dung', 'ca thử: bản này dùng được')
+    d2, _ = SD.du_lieu_dang(goc2, MA2)
+    kiem(isinstance(d2, dict), 'Bản KHÔNG có ngày vẫn đăng được')
+    if not isinstance(d2, dict):
+        return
+    cau2 = d2.get('khai_nguon') or ''
+    gl2 = (d2.get('nguon') or {}).get('gio_luu')
+    kiem(isinstance(gl2, str) and gl2 and gl2 not in cau2,
+         f'THIẾU ngày thì KHÔNG thay bằng gio_luu — câu: {cau2!r}')
+    kiem('KHÔNG RÕ' in cau2,
+         'mà nói thẳng là KHÔNG RÕ — thà trống còn hơn nói sai ngày')
+    kiem(NGAY not in cau2 and cau2 != cau,
+         'và không mượn ngày của bản khác')
+
+
 def ca_2_kien_truc_khong_co_loi_vong():
     print('\nCA 2 — KIẾN TRÚC: không có đường nào khác dẫn tới dữ liệu')
     print('-' * 74)
@@ -559,6 +605,7 @@ def main():
         ca_1b_khuyet_tat_khong_ro_ra_cong_khai(tm)
         ca_1c_khong_dang_danh_sach_nguoi_gom_san(tm)
         ca_1d_khong_chu_tu_do_nao_qua_cua(tm)
+        ca_1e_khai_nguon_noi_ngay_truong_sua(tm)
         ca_2_kien_truc_khong_co_loi_vong()
         ca_3_goi_thang_vao_ruot_khong_lay_duoc_gi(tm)
         ca_4_khong_ghi_vao_docs(tm)

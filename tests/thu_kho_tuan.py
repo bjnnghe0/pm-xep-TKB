@@ -836,6 +836,95 @@ def ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm):
          'Và kho vẫn không đổi một byte nào')
 
 
+def _them_doc_props(duong, **the):
+    """Nhét một `docProps/core.xml` vào tệp .xlsx đã dựng.
+
+       `dung_xlsx()` KHÔNG sinh docProps (đã kiểm) — mà docProps mới là thứ
+       CA 12 cần thử, nên phải nối thêm vào chính tệp zip đó. Nối chứ không
+       sửa `dung_xlsx`: mọi ca thử khác đang dùng nó, và không ca nào cần
+       docProps.
+
+       Thứ tự thẻ CỐ Ý xáo trộn: hai bản thật của trường có thứ tự thẻ KHÁC
+       NHAU (bản 18/8 mở đầu bằng `dcterms:created`, bản 21/8 bằng
+       `dc:creator`), nên bộ đọc nào bám vào vị trí sẽ đúng ở tệp này và
+       sai ở tệp kia.
+    """
+    import zipfile as _z
+    ns = ('xmlns:cp="http://schemas.openxmlformats.org/package/2006/'
+          'metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/'
+          '1.1/" xmlns:dcterms="http://purl.org/dc/terms/"')
+    than = ''.join(f'<{k}>{v}</{k}>' for k, v in the.items())
+    with _z.ZipFile(duong, 'a') as z:
+        z.writestr('docProps/core.xml',
+                   f'<?xml version="1.0" encoding="UTF-8"?>'
+                   f'<cp:coreProperties {ns}>{than}</cp:coreProperties>')
+    return duong
+
+
+def ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm):
+    print('\nCA 12 — TÊN NGƯỜI trong docProps KHÔNG ra khỏi doc_tkb')
+    print('-' * 74)
+    # Ba chuỗi bịa, KHÔNG trùng gì trong cauhinh.json lẫn trong tệp thử.
+    NGUOI_TAO = 'NGUOI-TAO-KHONG-DUOC-RA'
+    NGUOI_SUA = 'NGUOI-SUA-CUOI-KHONG-DUOC-RA'
+    NGAY = '2026-08-18T17:06:19Z'
+
+    t = dung_xlsx(os.path.join(tm, 'docprops.xlsx'), o_mau(so_tiet=3))
+    _them_doc_props(
+        t,
+        **{'dcterms:created': '2023-08-30T02:39:09Z',
+           'dc:creator': NGUOI_TAO,
+           'cp:lastPrinted': '2026-08-18T04:38:12Z',
+           'dcterms:modified': NGAY,
+           'cp:lastModifiedBy': NGUOI_SUA,
+           'cp:revision': '1'})
+
+    r = D.doc(t)
+    kiem(not r['loi'], f'Đọc được tệp có docProps — lỗi: {r["loi"]}')
+
+    # (a) ĐIỀU KIỆN TIÊN QUYẾT: hai tên người THẬT SỰ có trong tệp. Không
+    #     có mục này thì bản vá "bỏ hẳn docProps đi" cũng làm mục (c) xanh.
+    with zipfile.ZipFile(t) as z:
+        xml = z.read('docProps/core.xml').decode('utf-8')
+    kiem(NGUOI_TAO in xml and NGUOI_SUA in xml,
+         'Điều kiện tiên quyết: cả hai tên người NẰM THẬT trong tệp')
+
+    # (b) Ngày thì PHẢI ra, nguyên văn, không đổi múi giờ.
+    kiem(r.get('ngay_truong_sua') == NGAY,
+         f'Lấy được dcterms:modified NGUYÊN VĂN — {r.get("ngay_truong_sua")!r}')
+
+    # (c) Còn hai tên người thì KHÔNG, ở BẤT KỲ ĐÂU trong dict trả về.
+    tho = json.dumps(r, ensure_ascii=False)
+    ro = [x for x in (NGUOI_TAO, NGUOI_SUA) if x in tho]
+    kiem(not ro, f'KHÔNG tên người nào ra khỏi doc_tkb.doc() — rò: {ro}')
+
+    # (d) Và cả những thẻ KHÔNG PHẢI tên người cũng không tự đi theo:
+    #     danh sách trắng MỘT phần tử, không phải "đọc hết rồi lọc".
+    theo = [x for x in ('2023-08-30T02:39:09Z', '2026-08-18T04:38:12Z')
+            if x in tho]
+    kiem(not theo,
+         f'và thẻ khác trong cùng tệp XML cũng không đi theo — {theo}')
+
+    # (e) Thiếu docProps thì TRỐNG, không ném, không bịa.
+    t2 = dung_xlsx(os.path.join(tm, 'khong-docprops.xlsx'), o_mau(so_tiet=3))
+    r2 = D.doc(t2)
+    kiem(not r2['loi'] and r2.get('ngay_truong_sua') is None,
+         f'Tệp KHÔNG có docProps -> ngày là None, không ném — '
+         f'{r2.get("ngay_truong_sua")!r}')
+
+    # (f) docProps rách / ngày không đúng khuôn -> TRỐNG, không nhận bừa.
+    t3 = dung_xlsx(os.path.join(tm, 'docprops-rach.xlsx'), o_mau(so_tiet=3))
+    _them_doc_props(t3, **{'dcterms:modified': 'sáng thứ Ba tuần trước'})
+    r3 = D.doc(t3)
+    kiem(not r3['loi'] and r3.get('ngay_truong_sua') is None,
+         f'Ngày KHÔNG đúng khuôn ISO -> None, không nhận bừa — '
+         f'{r3.get("ngay_truong_sua")!r}')
+
+    # (g) Dấu bộ đọc PHẢI đổi theo — bump PHIEN_BAN là một lời hứa.
+    kiem(D.dau_bo_doc().get('phien_ban') != '1',
+         f'PHIEN_BAN đã bump khỏi "1" — nay {D.dau_bo_doc().get("phien_ban")!r}')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -854,6 +943,7 @@ def main():
         ca_9_lenh_so_in_vua_dien_thoai(tm)
         ca_10_khuyet_tat_noi_them_khong_de(tm)
         ca_11_doi_chieu_chi_doc_va_thay_dung_cho_lech(tm)
+        ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 

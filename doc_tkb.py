@@ -37,6 +37,7 @@ import hashlib
 import io
 import os
 import re
+import re
 import zipfile
 import xml.etree.ElementTree as ET
 
@@ -44,7 +45,27 @@ NS = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
 NS_R = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
 
 # Phiên bản BỘ ĐỌC. Bump khi đổi cách tách/cách đọc — xem `dau_bo_doc()`.
-PHIEN_BAN = '1'
+#   '1' -> '2' (26/8/2026): đọc thêm `ngay_truong_sua` từ docProps.
+PHIEN_BAN = '2'
+
+# ==========================================================================
+# docProps/core.xml — ĐỌC ĐÚNG MỘT THẺ, VÀ ĐÂY LÀ DANH SÁCH TRẮNG
+# ==========================================================================
+# Ô `docProps/core.xml` của tệp Excel chứa cả **tên người**. Đo trên hai bản
+# thật của tuần 2026-08-24 (26/8/2026):
+#     dc:creator          -> CÓ TÊN NGƯỜI ở CẢ HAI bản
+#     cp:lastModifiedBy   -> rỗng ở bản 18/8, CÓ TÊN NGƯỜI ở bản 21/8
+#     dcterms:modified    -> 2026-08-18T17:06:19Z · 2026-08-21T11:44:31Z
+#     cp:lastPrinted · dcterms:created · cp:revision · dc:language ...
+#
+# Vì vậy đây là DANH SÁCH TRẮNG MỘT PHẦN TỬ, không phải "đọc core.xml rồi
+# lọc bớt". Lọc bớt thì thẻ mới của một phiên bản Excel khác sẽ tự đi vào;
+# danh sách trắng thì không.
+THE_DOC_PROPS = ('{http://purl.org/dc/terms/}modified',)
+
+# Ngày phải đúng khuôn ISO thì mới nhận. `core.xml` là XML của tệp NGƯỜI
+# TA gửi tới — không có gì bảo đảm nội dung nó là một ngày.
+MAU_NGAY_ISO = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$'
 
 # Bố cục tờ TKB in của trường. KHÔNG suy từ cauhinh.json: mô-đun này đọc tệp
 # CỦA TRƯỜNG, tệp đó có bố cục riêng và không việc gì phải khớp cấu hình của
@@ -60,6 +81,40 @@ BO_CUC = {
     'o_tuan': 'A4',              # ô chứa chuỗi tuần + khoảng ngày
     'o_tieu_de': 'A3',
 }
+
+
+def _ngay_truong_sua(z):
+    """Ngày nhà trường sửa tệp lần cuối — `dcterms:modified`, NGUYÊN VĂN.
+
+       Trả chuỗi ISO, hoặc None. KHÔNG BAO GIỜ NÉM.
+
+       ┌──────────────────────────────────────────────────────────────────┐
+       │ CHỈ LẤY MỘT THẺ. `cp:lastModifiedBy` và `dc:creator` nằm ngay     │
+       │ cạnh trong cùng tệp XML và ĐỀU LÀ TÊN NGƯỜI — đã đo, không phải  │
+       │ lo xa. Chúng KHÔNG BAO GIỜ được ra khỏi hàm này.                 │
+       │ `tests/thu_kho_tuan.py` CA 12 canh trên HÀNH VI: nhét tên người  │
+       │ vào cả hai thẻ rồi đòi chúng không xuất hiện ở bất kỳ đâu trong  │
+       │ dict mà `doc()` trả về.                                          │
+       └──────────────────────────────────────────────────────────────────┘
+
+       GIỮ NGUYÊN VĂN, KHÔNG ĐỔI MÚI GIỜ. Excel ghi `...T17:06:19Z`, và
+       người vận hành đã đọc chuỗi đó theo nghĩa đen rồi gõ "17:06" vào ghi
+       chú. Tự đổi sang giờ Việt Nam sẽ ra "00:06 ngày 19/8" và **âm thầm
+       mâu thuẫn** với mọi ghi chú cũ. Ai cần giờ địa phương thì đổi ở tầng
+       hiển thị, đừng đổi ở tầng đọc.
+    """
+    try:
+        if 'docProps/core.xml' not in set(z.namelist()):
+            return None
+        goc = ET.fromstring(z.read('docProps/core.xml'))
+    except Exception:                                   # noqa: BLE001
+        return None
+    for the in THE_DOC_PROPS:
+        for nut in goc.iter(the):
+            gt = (nut.text or '').strip()
+            if re.match(MAU_NGAY_ISO, gt):
+                return gt
+    return None
 
 
 def dau_bo_doc():
@@ -250,7 +305,7 @@ def doc(duong_dan, bo_cuc=None, ten_mon_biet=None):
 
     ra = {
         'bo_doc': dau_bo_doc(), 'tep': os.path.basename(duong_dan),
-        'o': [], 'tuan_A4': None, 'tieu_de': None,
+        'o': [], 'tuan_A4': None, 'tieu_de': None, 'ngay_truong_sua': None,
         'ngoai_mo_hinh': [], 'o_tong': [], 'dem_tach_duoc': {},
         'lech_dem': [], 'ten_mon_la': [], 'sheet_khac': [], 'loi': [],
     }
@@ -285,6 +340,7 @@ def doc(duong_dan, bo_cuc=None, ten_mon_biet=None):
         if duong not in muc:
             return chiu(f'Sheet {bc["sheet"]!r} trỏ tới {duong} mà mục đó '
                         'không có trong tệp — tệp hỏng.')
+        ra['ngay_truong_sua'] = _ngay_truong_sua(z)
         chuoi = _chuoi_chung(z)
         gt, ct = _doc_o(z, duong, chuoi)
         if not gt and not ct:

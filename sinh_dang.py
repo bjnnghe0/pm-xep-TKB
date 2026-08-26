@@ -129,24 +129,40 @@ def _qua_khuon(khoa, gt):
     return gt, None
 
 
-def _cau_khai_nguon(gio_luu, sha256):
+def _cau_khai_nguon(ngay_truong_sua, sha256):
     """Dòng KHAI NGUỒN của trang, sinh TỪ TRƯỜNG CÓ CẤU TRÚC.
 
        KHÔNG có ô nào cho người gõ chữ tự do vào dòng này — nó ghép từ đúng
-       hai giá trị máy sinh: mốc ISO và 64 hex.
+       hai giá trị máy sinh: `dcterms:modified` của chính tệp trường phát,
+       và 12 hex đầu của SHA-256.
 
-       ⚠ `gio_luu` là lúc BẤM LỆNH LƯU VÀO KHO, **không phải** ngày nhà
-       trường sửa tệp. Đo 26/8/2026 trên bản tuần 1: lưu 22/8 11:32, còn
-       tệp thì trường sửa lần cuối 18/8 17:06 — lệch BỐN NGÀY. Vì vậy câu
-       dưới nói "lưu vào kho lúc", tuyệt đối không nói "bản ngày".
-       Ngày sửa tệp thật nằm trong `docProps/core.xml` (`dcterms:modified`)
-       mà `doc_tkb.py` KHÔNG đọc — thêm nó là việc riêng, phải bump
-       `PHIEN_BAN`, và phải tránh `cp:lastModifiedBy` ngay cạnh (tên người).
+       ┌──────────────────────────────────────────────────────────────────┐
+       │ THIẾU NGÀY THÌ NÓI LÀ KHÔNG CÓ — TUYỆT ĐỐI KHÔNG THAY BẰNG       │
+       │ `gio_luu`. Thà TRỐNG còn hơn NÓI SAI NGÀY.                       │
+       │                                                                  │
+       │ `gio_luu` là lúc BẤM LỆNH LƯU VÀO KHO, không phải ngày trường    │
+       │ sửa tệp. Đo 26/8/2026 trên bản tuần 1: lưu 22/8 11:32, tệp sửa   │
+       │ lần cuối 18/8 17:06 — LỆCH BỐN NGÀY. Thầy cô đọc trang này để    │
+       │ biết *tờ này trường phát ngày nào*, không phải để biết ai đó bấm │
+       │ lệnh lúc nào. Một con số sai bốn ngày mà trông như đúng thì tệ   │
+       │ hơn hẳn một ô trống có ghi rõ là trống.                          │
+       │                                                                  │
+       │ Bản tách sinh bởi bộ đọc PHIÊN BẢN 1 không có khoá này — nên     │
+       │ nhánh "không rõ" là đường ĐANG ĐI THẬT với mọi bản lưu trước     │
+       │ 26/8/2026, không phải nhánh phòng xa.                            │
+       └──────────────────────────────────────────────────────────────────┘
+
+       Ngày giữ NGUYÊN VĂN chuỗi ISO của Excel (`...T17:06:19Z`), không đổi
+       múi giờ — xem `doc_tkb._ngay_truong_sua()`.
     """
-    if not isinstance(gio_luu, str) or not isinstance(sha256, str):
+    if not isinstance(sha256, str):
         return None
-    return (f'Bản nhà trường phát, lưu vào kho lúc {gio_luu} · '
-            f'SHA-256 {sha256[:12]}…')
+    if isinstance(ngay_truong_sua, str) and ngay_truong_sua:
+        ngay = f'sửa lần cuối {ngay_truong_sua}'
+    else:
+        ngay = ('KHÔNG RÕ ngày trường sửa — bản này lưu bằng bộ đọc đời cũ, '
+                'chưa đọc được ngày từ tệp')
+    return f'Bản nhà trường phát, {ngay} · SHA-256 {sha256[:12]}…'
 
 
 def du_lieu_dang(goc, ma_tuan):
@@ -202,7 +218,12 @@ def du_lieu_dang(goc, ma_tuan):
     # Bóc tay là cách `ly_do` lọt ra được suốt từ đầu: nó nằm ngay cạnh ba
     # khoá máy sinh, trông y như chúng, và không ai phải quyết gì để nó ra.
     ra['nguon'] = {k: ban.get(k) for k in TRUONG_NGUON}
-    ra['khai_nguon'] = _cau_khai_nguon(ban.get('gio_luu'), ban.get('sha256'))
+    # Ngày lấy từ BẢN TÁCH (bộ đọc sinh ra), KHÔNG từ phiếu — phiếu là chỗ
+    # người gõ. `.get()` chứ không bóc thẳng: bản tách của bộ đọc phiên bản
+    # 1 không có khoá này, và đó là đường đang đi thật.
+    ra['nguon']['ngay_truong_sua'] = tach.get('ngay_truong_sua')
+    ra['khai_nguon'] = _cau_khai_nguon(tach.get('ngay_truong_sua'),
+                                       ban.get('sha256'))
 
     # ⚠ `tieu_de` là NGOẠI LỆ DUY NHẤT, và là ngoại lệ KHAI RA chứ không
     # phải bỏ sót. Nó KHÔNG nằm trong phiếu — nó là ô A3 của chính tệp nhà
