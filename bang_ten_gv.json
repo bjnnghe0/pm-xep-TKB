@@ -1,0 +1,59 @@
+{
+ "_doc_truoc": [
+  "BẢNG TÊN GIÁO VIÊN — THẦY CÔ DUYỆT TAY, PHẦN MỀM KHÔNG BAO GIỜ TỰ GỘP.",
+  "Cùng kiểu, cùng chỗ, cùng luật với bang_ten_mon.json. CÓ COMMIT, vì nó",
+  "là QUYẾT ĐỊNH thầy cô duyệt chứ không phải dữ liệu lưu trữ.",
+  "",
+  "⚠ CÁI BẪY LÀM TỆP NÀY PHẢI TỒN TẠI RIÊNG, ĐỌC KỸ TRƯỚC KHI SỬA:",
+  "  khoa có H.Hiền (Địa lí, GVCN 12B2) VÀ T.T.Hiền (Sinh học) — HAI",
+  "  NGƯỜI KHÁC NHAU, cùng phần sau dấu chấm cuối. Bất kỳ phép so 'gần",
+  "  đúng' nào — split('.')[-1], endswith, bỏ dấu rồi so, hạ hoa-thường —",
+  "  đều gộp hai cô làm một, và khi ấy tờ TKB treo ở trường sẽ ghi tiết",
+  "  của cô này dưới tên cô kia. Vì vậy bang_ten.py tra bảng bằng SO CHUỖI",
+  "  ĐÚNG Y HỆT, và tests/thu_bang_ten.py canh đúng chuyện đó.",
+  "",
+  "biet = ĐỂ RỖNG, CÓ CHỦ Ý. Danh sách tên viết tắt giáo viên ĐÃ BIẾT là",
+  "       cauhinh.json — chép 28 tên sang đây là dựng bản thứ hai, và bản",
+  "       thứ hai sẽ lệch khi khoa đổi phân công. Đếm bằng lệnh:",
+  "         python3 -c \"import json; p=json.load(open('cauhinh.json'))['phan_cong']; print(len({m[1] for k,d in p.items() if not k.startswith('_') for m in d}))\"",
+  "       Tệp này chỉ giữ QUYẾT ĐỊNH gộp, tức khoá 'gop'.",
+  "",
+  "gop  = cặp 'chuỗi lạ' -> tên chuẩn, dạng chuẩn lấy theo cauhinh.json.",
+  "       Mỗi mục BẮT BUỘC có 'nguoi_duyet' + 'ngay'. Không phép đo nào",
+  "       chứng minh được hai chuỗi là một NGƯỜI — difflib cho 'T.Hiền'",
+  "       khớp >= 0.6 với cả T.T.Hiền, H.Hiền, T.Trinh và T.Hà. Chỉ có",
+  "       chữ ký người duyệt. Thiếu một trong hai khoá thì bang_ten.nap()",
+  "       coi cả bảng là HỎNG.",
+  "",
+  "AI ĐỌC TỆP NÀY: bang_ten.py — dùng cho ĐỐI CHIẾU và BÁO CÁO.",
+  "AI KHÔNG ĐỌC:   doc_tkb.py và sinh_dang.py. Trang công khai là bản",
+  "                điện tử của đúng tờ đang treo ở trường: trường phát ra",
+  "                sao thì đăng vậy, không tự bịa nhãn.",
+  "",
+  "⚠ BẢNG NÀY CHỈ NHẬN CẶP ĐÚNG Ở MỌI Ô, y như bảng môn. Sai lệch của MỘT",
+  "  Ô là khuyết tật của một bản, ghi bằng kho_tuan.ghi_khuyet_tat().",
+  "",
+  "Xem lại bảng bằng:  python3 bang_ten.py"
+ ],
+ "biet": [],
+ "gop": {
+  "T.Hằng": {
+   "chuan": "T.Thu.Hằng",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "Sinh học 12B3, 12B4 — tệp viết tắt bớt chữ đệm"
+  },
+  "T.Hiền": {
+   "chuan": "T.T.Hiền",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "Sinh học 12B5, 12B6. KHÔNG PHẢI H.Hiền dạy Địa lí — hai người khác nhau"
+  },
+  "T.Hương": {
+   "chuan": "T.T.Hương",
+   "nguoi_duyet": "Anh Lân",
+   "ngay": "2026-08-26",
+   "ghi_chu": "GDKT-PL 12B4, 12B5 — tệp viết tắt bớt chữ đệm"
+  }
+ }
+}

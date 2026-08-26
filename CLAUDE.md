@@ -41,6 +41,7 @@ python3 tests/thu_doc_lai.py            # Đợt 3 việc 1+2: câu đọc lại
 python3 tests/thu_o_tong.py             # BẮT BUỘC chạy sau mỗi lần sửa mau_tkb.xlsx
 python3 tests/thu_kho_tuan.py           # kho TKB theo tuần + bộ đọc .xlsx
 python3 tests/thu_sinh_dang.py          # BẮT BUỘC khi sửa sinh_dang.py
+python3 tests/thu_bang_ten.py           # BẮT BUỘC khi sửa bang_ten.py hoặc hai bảng tên
 
 python3 luu_tuan.py xem <tệp.xlsx>       # đọc thử một tuần, KHÔNG ghi gì
 python3 luu_tuan.py them <tệp.xlsx> --tuan 2026-08-24 --nguoi "..."
@@ -109,7 +110,8 @@ chạy `pip install openpyxl`, rồi bấm đúp `chay.bat`.
 | `sinh_dang.py` | Sinh dữ liệu MỘT TUẦN để đăng. Đường **duy nhất** tới dữ liệu là `kho_tuan.ban_de_dang()`. Chỉ TRẢ VỀ dict, không ghi tệp | **Không nhận bản/phiếu/tách làm tham số** — nhận được là có lối vòng. `TRUONG_O` mở rộng = mở rộng phạm vi công khai, phải hỏi nhà trường |
 | `luu_tuan.py` | Dòng lệnh cho thầy cô: `xem` · `them` · `danh-dau` · `de-dang` · `so` · `dang-thu` · `liet-ke` | `xem` và `so` không ghi một byte nào. `so` in **HẸP** mặc định — thầy cô đọc trên **điện thoại** là chính, và bảng 84 cột đổ ra màn hình hẹp thì bằng không in gì. `dang-thu` ghi vào thư mục TẠM và **TỪ CHỐI** mọi đường dẫn trong `docs/` |
 | `bang_ten.py` | **MỘT bản cài duy nhất** của việc TRA BẢNG TÊN. `Bang.chuan()` là `gop.get(s, s)` — **so chuỗi đúng y hệt**, không `.strip()`/`.lower()`/bỏ dấu/gần giống. Không đọc `cauhinh.json` | Áp cho **đối chiếu** và **báo cáo**, **KHÔNG BAO GIỜ** áp cho **đăng** và **KHÔNG** cho bộ đọc. Nạp một lần ở điểm vào, truyền `Bang` xuống |
-| `bang_ten_mon.json` | Chuỗi tên môn **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp**. Mỗi mục `gop` **bắt buộc** có `nguoi_duyet` + `ngay` |
+| `bang_ten_mon.json` · `bang_ten_gv.json` | Chuỗi tên môn / tên viết tắt GV **thầy cô duyệt tay**. **CÓ COMMIT** | Là quyết định, không phải dữ liệu lưu trữ. Phần mềm **không bao giờ tự gộp**. Mỗi mục `gop` **bắt buộc** có `nguoi_duyet` + `ngay`. `biet` của bảng GV **cố ý để rỗng** — danh sách tên GV đã biết là `cauhinh.json`, chép sang là dựng bản thứ hai |
+| `tests/thu_bang_ten.py` | 6 ca. Mục canh chính là **BẢNG BẪY TỔNG HỢP**: sinh mọi biến thể của mọi tên thật, trỏ tới **đích giả**, rồi đòi tên thật đi qua nguyên vẹn. CA 4 canh cặp **H.Hiền ~ T.T.Hiền** không bao giờ ra cùng một người | **Chạy khi sửa `bang_ten.py` hoặc hai bảng tên** |
 | `luu_tru/` | Kho tuần: tệp gốc + bản tách + phiếu. **Đã gitignore** | ⚠ git KHÔNG phải bản sao lưu — xem `CHAY_CUNG_MAY.md` mục 10 |
 | `tests/thu_sinh_dang.py` | 4 ca. **CA 2 canh KIẾN TRÚC bằng cây cú pháp**: `sinh_dang.py` không được gọi `doc_phieu*`, không bóc khoá `'ban'`, và mọi hàm công khai phải bắt đầu bằng `(goc, ma_tuan)`. CA 3 thử gọi thẳng vào ruột với bản SAI làm đối số | **Chạy khi sửa `sinh_dang.py` hoặc `ban_de_dang()`** |
 | `tests/thu_kho_tuan.py` | 6 ca: đọc đúng · tệp hỏng thật thì ĐỎ không VỠ · định nghĩa `loi` · không đè + từ chối trùng · dấu bộ đọc · phiếu hỏng thì dừng. **Tự dựng mọi tệp .xlsx của mình** | **Chạy khi sửa `doc_tkb.py` hoặc `kho_tuan.py`** |
