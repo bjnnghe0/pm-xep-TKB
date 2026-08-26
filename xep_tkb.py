@@ -701,8 +701,54 @@ def xuat_excel(bt, pa, file_mau, file_xuat):
 
     _sheet_giao_vien(wb, bt, Font, Alignment, Border, Side)
     _sheet_kiem_tra(wb, bt, pa, Font, Alignment, Border, Side)
+    _xoa_ten_nguoi(wb)
     wb.save(file_xuat)
     return file_xuat
+
+
+# ==========================================================================
+# SIÊU DỮ LIỆU NGƯỜI: XOÁ TRƯỚC KHI LƯU
+# ==========================================================================
+# Tệp .xlsx mang một khối `docProps/core.xml` mà KHÔNG AI NHÌN THẤY khi mở
+# bảng tính, và openpyxl **giữ nguyên khối đó** khi load rồi save. Nên mọi
+# trường trong `mau_tkb.xlsx` đi thẳng sang `TKB_Khoi12.xlsx`, rồi sang tay
+# bất kỳ ai bấm Tải về.
+#
+# Đo 26/8/2026: `mau_tkb.xlsx` khai `dc:creator` = chuỗi `'HELLO'`, và
+# `TKB_Khoi12.xlsx` trên đĩa mang y nguyên chuỗi đó. Chuỗi ấy **không phải
+# tên người** — nó là chữ mồi của công cụ nào đó làm ra bản mẫu. Nhưng cái
+# ĐƯỜNG thì có thật: ai mở bản mẫu bằng Excel rồi lưu lại là Excel ghi tên
+# họ vào `cp:lastModifiedBy`, và từ đó mọi tệp xuất ra đều mang tên ấy mà
+# **không một dòng mã nào của ta phải đổi**. Đo trên tệp thật của trường:
+# bản 21/8 có `cp:lastModifiedBy` là một tên người dài 7 ký tự.
+#
+# Người dùng chốt 26/8/2026: XOÁ. "Chuỗi đó không phải dữ liệu nghiệp vụ,
+# không ai đọc, không ca thử nào dựa vào."
+#
+# ⚠ `mau_tkb.xlsx` TRÊN ĐĨA GIỮ NGUYÊN — sửa nó nằm trong "Điều cấm". Ta
+# chỉ xoá trên BẢN CHÉP đã nằm ở `file_xuat`.
+TRUONG_TEN_NGUOI = ('creator', 'lastModifiedBy')
+
+
+def _xoa_ten_nguoi(wb):
+    """Xoá mọi trường TÊN NGƯỜI khỏi siêu dữ liệu của workbook.
+
+       Gọi NGAY TRƯỚC `wb.save()`. Đặt `None` thì openpyxl bỏ hẳn thẻ khỏi
+       `core.xml` (đã đo), chứ không để lại thẻ rỗng.
+
+       CỐ Ý KHÔNG đụng `created` / `modified` / `lastPrinted`: chúng là mốc
+       thời gian, không phải tên ai, và `modified` còn là thứ `doc_tkb.py`
+       đọc để biết nhà trường sửa tệp ngày nào. Xoá sạch cho "an toàn" là
+       tự tay bỏ đi một dữ kiện đang được dùng.
+    """
+    p = getattr(wb, 'properties', None)
+    if p is None:
+        return
+    for truong in TRUONG_TEN_NGUOI:
+        try:
+            setattr(p, truong, None)
+        except Exception:                               # noqa: BLE001
+            pass
 
 
 def _khung(Border, Side):

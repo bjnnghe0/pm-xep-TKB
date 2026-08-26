@@ -300,8 +300,19 @@ def ca_2_tep_xuat_ra_giu_nguyen(bo_cuc, tm):
          f'Xếp giả lấp được hết {len(pa)}/{len(bt.cac_cum)} cụm')
 
     xuat = os.path.join(tm, 'ra.xlsx')
-    X.xuat_excel(bt, pa, os.path.join(GOC, 'mau_tkb.xlsx'), xuat)
-    kiem(os.path.exists(xuat), 'Xuất được tệp Excel')
+    # Bọc `try`: một bản vá làm `xuat_excel()` ném thì mục này phải ra một
+    # dòng ĐỎ, không phải một Traceback nuốt sạch mọi ca chạy sau. Đã dính
+    # 26/8/2026 khi thử bản vá "xoá luôn cả mốc thời gian" — openpyxl ném
+    # AttributeError ngay trong `save()`, và CA 2 (không liên quan gì tới
+    # bản vá đó) vỡ trước khi CA 5 kịp chạy. Đúng kiểu hỏng số 2.
+    try:
+        X.xuat_excel(bt, pa, os.path.join(GOC, 'mau_tkb.xlsx'), xuat)
+        no = None
+    except Exception as e:                              # noqa: BLE001
+        no = f'{type(e).__name__}: {e}'
+    kiem(no is None and os.path.exists(xuat), f'Xuất được tệp Excel — {no}')
+    if no is not None or not os.path.exists(xuat):
+        return
 
     ct = doc_cong_thuc(xuat)
     loi = kiem_vung(ct, cac_cot, hang_tong, hang_dau, hang_cuoi_ghi)
@@ -415,6 +426,148 @@ def ca_4_a8_khong_bat_duoc_loi_nay():
 
 
 # ==========================================================================
+def _the_core_xml(duong):
+    """{tên thẻ không kèm namespace: giá trị} của docProps/core.xml."""
+    with zipfile.ZipFile(duong) as z:
+        if 'docProps/core.xml' not in set(z.namelist()):
+            return {}
+        x = z.read('docProps/core.xml').decode('utf-8')
+    # Phân tích XML THẬT, không dò chuỗi: thẻ ở đây mang cả thuộc tính
+    # `xmlns:dc="http://purl.org/..."`, mà biểu thức chính quy nào loại trừ
+    # dấu `/` sẽ trượt sạch — đã dính đúng một lần lúc viết mục này.
+    import xml.etree.ElementTree as ET
+    try:
+        goc = ET.fromstring(x)
+    except Exception:                                   # noqa: BLE001
+        return {}
+    ra = {}
+    for nut in goc.iter():
+        ten = nut.tag.split('}')[-1]
+        if ten != 'coreProperties':
+            ra[ten] = (nut.text or '').strip()
+    return ra
+
+
+def _xep_gia(bt):
+    """Một phương án GIẢ đủ hợp lệ để `xuat_excel()` chạy được.
+
+       `xuat_excel(bt, {})` KHÔNG chạy được: `nap()` để `vitri` là None rồi
+       `c.vitri + c.size` ném TypeError. Mục này canh SIÊU DỮ LIỆU, không
+       canh việc giải — nhưng vẫn phải đưa cho nó một phương án thật.
+    """
+    pa, da_dung = {}, {}
+    for c in bt.cac_cum:
+        dung = da_dung.setdefault(c.lop, [])
+        for d in range(bt.SO_NGAY):
+            for v in range(bt.SO_TIET - c.size + 1):
+                if any((d, v + k) in dung for k in range(c.size)):
+                    continue
+                dung.extend((d, v + k) for k in range(c.size))
+                pa[c.ma] = (d, v)
+                break
+            if c.ma in pa:
+                break
+    return pa
+
+
+# Trường TÊN NGƯỜI của `docProps/core.xml`, GHIM LITERAL ngay tại đây.
+# TUYỆT ĐỐI KHÔNG lấy từ `xep_tkb.TRUONG_TEN_NGUOI` — đó chính là hằng đang
+# bị canh, và lấy mốc so từ nó là nếp hỏng 12: thu hằng lại thì HAI VẾ CÙNG
+# DỊCH và mục vẫn xanh. Đã đo 26/8/2026: bản vá thu `TRUONG_TEN_NGUOI` còn
+# `('lastModifiedBy',)` làm mục ĐIỀU KIỆN TIÊN QUYẾT đỏ (0 trường tên
+# người) thay vì mục canh rò — tức đỏ NHẦM CHỖ, nếp hỏng 19.
+TEN_NGUOI_DA_BIET = ('creator', 'lastModifiedBy')
+
+
+def ca_5_tep_xuat_ra_khong_mang_ten_nguoi(bo_cuc, tm):
+    print('\nCA 5 — chiều GHI RA: tệp xuất ra KHÔNG mang trường tên người')
+    print('-' * 74)
+    import xep_tkb as X
+    mau = os.path.join(GOC, 'mau_tkb.xlsx')
+
+    # Hằng của mã chạy thật phải PHỦ HẾT bộ đã duyệt. Ghim literal ở đây là
+    # ĐÚNG chứ không phạm luật "đừng ghim hằng số": đây là một QUYẾT ĐỊNH
+    # về phạm vi, cùng hạng với `TRUONG_O` và `THE_DOC_PROPS`.
+    thieu = sorted(set(TEN_NGUOI_DA_BIET) - set(X.TRUONG_TEN_NGUOI))
+    kiem(not thieu,
+         f'xep_tkb.TRUONG_TEN_NGUOI phủ hết bộ đã duyệt — thiếu {thieu}')
+
+    # ĐIỀU KIỆN TIÊN QUYẾT. Giá trị lấy TỪ CHÍNH bản mẫu (bản mẫu đổi thì
+    # mốc đổi theo), nhưng TÊN TRƯỜNG lấy từ literal ở trên. Nếu bản mẫu
+    # không còn trường tên người nào thì mọi mục dưới đây xanh mà không
+    # kiểm gì — đúng bẫy `n_uyen == 0`.
+    the_mau = _the_core_xml(mau)
+    co_ten = {k: v for k, v in the_mau.items()
+              if k in TEN_NGUOI_DA_BIET and v}
+    kiem(bool(co_ten),
+         f'Điều kiện tiên quyết: BẢN MẪU có {len(co_ten)} trường tên người '
+         f'khác rỗng — {sorted(co_ten)}')
+    if not co_ten:
+        return
+
+    bam_mau_truoc = _bam(mau)
+    xuat = os.path.join(tm, 'ra-ten-nguoi.xlsx')
+    cfg = X.doc_cau_hinh(os.path.join(GOC, 'cauhinh.json'))
+    bt = X.BaiToan(cfg)
+    pa = _xep_gia(bt)
+    kiem(len(pa) == len(bt.cac_cum),
+         f'Xếp giả lấp được hết {len(pa)}/{len(bt.cac_cum)} cụm')
+    # Bọc `try`: mục này CỐ Ý chạy trên bản mẫu thật, và nếu bản vá làm
+    # `xuat_excel()` ném thì phải ra một dòng ĐỎ, không phải một Traceback
+    # nuốt sạch mọi mục còn lại (kiểu hỏng số 2).
+    try:
+        X.xuat_excel(bt, pa, mau, xuat)
+        no = None
+    except Exception as e:                              # noqa: BLE001
+        no = f'{type(e).__name__}: {e}'
+    kiem(no is None and os.path.exists(xuat),
+         f'Xuất được tệp Excel — {no}')
+    if no is not None or not os.path.exists(xuat):
+        return
+
+    # (a) Không thẻ tên người nào còn trong tệp ra.
+    the_ra = _the_core_xml(xuat)
+    con = sorted(k for k in X.TRUONG_TEN_NGUOI if the_ra.get(k))
+    kiem(not con, f'KHÔNG thẻ tên người nào còn trong tệp xuất ra — {con}')
+
+    # (b) Và không GIÁ TRỊ nào của chúng còn, ở bất kỳ đâu trong tệp — thẻ
+    #     đổi tên được, giá trị thì không tự biến mất.
+    #     ⚠ PHẢI GIẢI NÉN TỪNG MỤC. Bản đầu của mục này đọc byte THÔ của
+    #     tệp .xlsx và tìm chuỗi trong đó — mà mọi mục trong .xlsx đều nén
+    #     DEFLATE, nên phép tìm ấy KHÔNG BAO GIỜ khớp, kể cả khi chuỗi còn
+    #     nguyên. Đo 26/8/2026: `b'HELLO' in mau_tkb.xlsx` -> False, còn
+    #     tìm trong nội dung đã giải nén -> True. Một mục xanh vĩnh viễn.
+    ro = []
+    with zipfile.ZipFile(xuat) as z:
+        noi_dung = {n: z.read(n) for n in z.namelist()}
+    for k, v in co_ten.items():
+        b = v.encode('utf-8')
+        o = sorted(n for n, x in noi_dung.items() if b in x)
+        if o:
+            ro.append((k, o))
+    kiem(not ro,
+         f'và không GIÁ TRỊ nào của chúng còn trong {len(noi_dung)} mục đã '
+         f'giải nén — rò: {ro}')
+
+    # (c) Mốc thời gian thì PHẢI CÒN. Xoá sạch cho "an toàn" là tự tay bỏ
+    #     đi dữ kiện mà doc_tkb.py đang đọc.
+    kiem(bool(the_mau.get('modified')),
+         f'Điều kiện tiên quyết: bản mẫu có dcterms:modified — '
+         f'{the_mau.get("modified")!r}')
+    kiem(bool(the_ra.get('modified')),
+         f'dcterms:modified VẪN CÒN sau khi xuất — {the_ra.get("modified")!r}')
+
+    # (d) BẢN MẪU TRÊN ĐĨA KHÔNG ĐƯỢC ĐỔI — nó nằm trong "Điều cấm".
+    kiem(_bam(mau) == bam_mau_truoc,
+         'mau_tkb.xlsx trên đĩa KHÔNG đổi một byte nào')
+
+
+def _bam(duong):
+    import hashlib
+    with io.open(duong, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -427,6 +580,7 @@ def main():
         ca_2_tep_xuat_ra_giu_nguyen(bo_cuc, tm)
         ca_3_lui_ban_va_thi_phai_do(bo_cuc, tm)
         ca_4_a8_khong_bat_duoc_loi_nay()
+        ca_5_tep_xuat_ra_khong_mang_ten_nguoi(bo_cuc, tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 
