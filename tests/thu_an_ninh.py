@@ -42,6 +42,7 @@ from tien_ich_web import (GOC_TM, MayChuTam, Khach, cau_hinh_tam,   # noqa: E402
                           doi_trang_thai)
 import xep_tkb as X          # noqa: E402
 import web as _W             # noqa: E402
+from tien_ich_ca_thu import bo_qua, ghi_chu, in_bo_qua  # noqa: E402
 W_TEN_COOKIE = _W.TEN_COOKIE
 
 KQ = []
@@ -885,7 +886,8 @@ def ca_a11_ben_vung(tm):
                      f'Lần Lưu đầu: fsync 3 tệp (tam + bak.goc + bak) — '
                      f'đếm {ten.count("fsync-tep")}')
             else:
-                kiem(True, 'Không phải POSIX — bỏ qua mục fsync thư mục')
+                bo_qua('Nền này KHÔNG PHẢI POSIX nên mục fsync THƯ MỤC '
+                       'chưa được kiểm')
 
             # lần lưu THỨ HAI: bak.goc không ghi lại nữa -> 2 tệp.
             # ĐỪNG ghim một con số cho mọi lần lưu: nó khác nhau theo lần.
@@ -965,7 +967,8 @@ def ca_a11_ben_vung(tm):
     # điện thật hoặc dùng dm-flakey. Cách "biến fsync thành lệnh rỗng rồi đọc
     # lại" là VÔ DỤNG: trong cùng một máy, đọc lại luôn thấy dữ liệu qua bộ nhớ
     # đệm, nên ca thử sẽ xanh cả trên mã hỏng.
-    kiem(True, 'Ghi chú: ca này ghim THỨ TỰ, không chứng minh chống mất điện')
+    ghi_chu('ca này ghim THỨ TỰ fsync/replace, KHÔNG chứng minh chống mất '
+            'điện — muốn chứng minh phải cắt điện thật hoặc dùng dm-flakey')
 
 
 # ==========================================================================
@@ -1396,8 +1399,8 @@ def ca_a8_khong_thanh_cong_thuc(tm):
          f'Trong XML có đúng 7 thẻ công thức (của mẫu) — đếm được {tong_f}')
 
     # 4. các dấu khác KHÔNG bị đụng tới (đổi chữ là hỏng tờ in)
-    kiem(True, 'Ghi chú: openpyxl vốn lưu "+", "-", "@" dạng chữ nên '
-               'không cần đụng — tờ in không đổi ký tự nào')
+    ghi_chu('openpyxl vốn lưu "+", "-", "@" dạng chữ nên '
+            'không cần đụng — tờ in không đổi ký tự nào')
 
 
 # ==========================================================================
@@ -1425,6 +1428,7 @@ if __name__ == '__main__':
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
+    in_bo_qua()
     if hong:
         for m in hong:
             print('  LỖI:', m)

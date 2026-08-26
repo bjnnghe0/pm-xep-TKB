@@ -36,6 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from tien_ich_web import GOC_TM, MayChuTam, cau_hinh_tam    # noqa: E402
 import quy_tac as QT         # noqa: E402
+from tien_ich_ca_thu import bo_qua, ghi_chu, in_bo_qua  # noqa: E402
 
 KQ = []
 
@@ -303,8 +304,8 @@ def ca_7_xem_truoc_pham_vi(tm):
         kiem(cb3 and 'KHÔNG khớp tiết nào' in cb3,
              f'Tên đúng nhưng không khớp gì -> vẫn cảnh báo — {str(cb3)[:60]!r}')
     else:
-        kiem(True, f'(bộ lọc này khớp {pv3["so_cum"]} cụm, không dựng được '
-                   f'cảnh cần thử — bỏ qua)')
+        bo_qua(f'Bộ lọc thử khớp {pv3["so_cum"]} cụm nên KHÔNG dựng '
+               f'được cảnh "tên đúng mà khớp 0 cụm" — chưa kiểm')
 
     # --- loại HAI VẾ: đếm riêng từng vế ---
     pv4 = QT.pham_vi_quy_tac(
@@ -379,6 +380,7 @@ if __name__ == '__main__':
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
+    in_bo_qua()
     if hong:
         for m in hong:
             print('  LỖI:', m)

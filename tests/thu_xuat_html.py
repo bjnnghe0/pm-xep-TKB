@@ -28,6 +28,7 @@ sys.path.insert(0, GOC_TM)
 
 import xep_tkb as X          # noqa: E402
 import xuat_html as XH       # noqa: E402
+from tien_ich_ca_thu import bo_qua, ghi_chu, in_bo_qua  # noqa: E402
 
 KQ = []
 
@@ -205,8 +206,9 @@ def ca_5_cu_phap_js(tm, js):
     print('-' * 74)
     node = shutil.which('node') or shutil.which('nodejs')
     if not node:
-        kiem(True, 'Bỏ qua node --check: máy này không có node '
-                   '(ca thử không bắt buộc phải có)')
+        bo_qua('Máy này KHÔNG CÓ node nên cú pháp JS của tkb_web.html '
+               'CHƯA được kiểm. Cài node rồi chạy lại (CHAY_CUNG_MAY.md '
+               'mục 11).')
         return
     dd = os.path.join(tm, 'kiem.js')
     io.open(dd, 'w', encoding='utf-8').write(js)
@@ -231,6 +233,7 @@ if __name__ == '__main__':
     print('=' * 74)
     hong = [m for ok, m in KQ if not ok]
     print(f'Tổng: {len(KQ) - len(hong)}/{len(KQ)} mục ĐẠT.')
+    in_bo_qua()
     if hong:
         for m in hong:
             print('  LỖI:', m)
