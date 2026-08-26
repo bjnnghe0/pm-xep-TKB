@@ -1897,15 +1897,24 @@ HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiể
          chạy thật: gần như không thêm gì — đây là mục KIỂM TỆP, không
          phải kiểm hành vi. Để nguyên là đúng.
     thu_xuat_html.py
-     12. mục `node --check` cú pháp JS
-         chạy thật: đã là chạy thật rồi (gọi node). Nhưng nó viết theo
-         cách SAI của nếp hỏng 21 — vắng node thì `kiem(True, ...)`.
-         Đây là mục đáng sửa TRƯỚC, và rẻ nhất: đổi sang `bo_qua()`.
+     12. [x] mục `node --check` cú pháp JS — **ĐÃ SỬA 26/8/2026**.
+         Nó vốn đã chạy thật, chỉ viết theo cách SAI của nếp hỏng 21.
+         Nay dùng `bo_qua()`: có node 35/35, không node 34/34 + ⚠.
 
-    GIÁ PHẢI TRẢ, ghi ra để khỏi phải đo lại: mỗi mục chạy thật cần một
-    lưới đỡ DOM, và lưới đỡ ấy KHÔNG PHẢI trình duyệt — nó không có bố
-    cục, không có pixel. Nên chạy thật KHÔNG thay được mục "xem bằng
-    mắt"; nó chỉ thay được phần LOGIC. Xem danh sách 23 mục xem-bằng-mắt.
+    HAI MỤC ĐÃ CÓ QUYẾT ĐỊNH, ĐỪNG HỎI LẠI (người dùng chốt 26/8/2026):
+      · **11 — `thu_web` CA 4: GIỮ NGUYÊN.** Đó là mục KIỂM TỆP (utf-8,
+        có nhãn tiếng Việt), không phải kiểm hành vi. Chạy thật không
+        thêm được gì.
+      · **12 — đã sửa**, xem trên.
+    MƯỜI MỤC CÒN LẠI (1–10) để nguyên, người dùng chọn từng cái sau.
+
+    > **GIÁ PHẢI TRẢ, và đây là RANH GIỚI, không phải một ghi chú:**
+    > **Lưới đỡ DOM không phải trình duyệt — không bố cục, không pixel.
+    > Chạy thật thay được phần LOGIC, KHÔNG thay được mục xem-bằng-mắt.**
+    > Một mục chạy thật khẳng định được *"docForm() trả null"*; nó không
+    > bao giờ khẳng định được *"chữ có tràn khung không"*. Hai danh sách
+    > này KHÔNG trừ nhau: sửa hết mười mục kia thì danh sách 23 mục
+    > xem-bằng-mắt vẫn còn nguyên 23 mục.
 
 [ ] RÀ NẾP HỎNG 16 — bốn chỗ khác cùng hình dạng. LIỆT KÊ 26/8/2026,
     CHƯA SỬA CÁI NÀO (người dùng dặn: liệt kê, đừng sửa).
