@@ -331,6 +331,125 @@ def ca_6b_day_the_chon_loai():
          f'{js_sach.count(chr(34) + "Chưa chọn" + chr(34)) if False else js_sach.count("Chưa chọn")} chỗ')
 
 
+MO_DOM_JS = r"""
+globalThis.__goi_fetch = 0;
+function O(id) {
+  return { id, value: '', textContent: '', innerHTML: '', disabled: false,
+    dataset: {}, style: {}, checked: false,
+    classList: { _s: new Set(),
+      add(...c) { c.forEach((x) => this._s.add(x)); },
+      remove(...c) { c.forEach((x) => this._s.delete(x)); },
+      toggle(c, b) { if (b === undefined) b = !this._s.has(c);
+                     if (b) this._s.add(c); else this._s.delete(c); },
+      contains(c) { return this._s.has(c); } },
+    querySelectorAll() { return []; }, querySelector() { return null; },
+    addEventListener() {}, removeEventListener() {},
+    focus() {}, blur() {}, click() {}, scrollIntoView() {},
+    setSelectionRange() {}, appendChild() {}, closest() { return null; },
+    getAttribute() { return null; }, setAttribute() {} };
+}
+const __kho = new Map();
+globalThis.document = {
+  getElementById(i) { if (!__kho.has(i)) __kho.set(i, O(i)); return __kho.get(i); },
+  querySelectorAll() { return []; }, querySelector() { return null; },
+  addEventListener() {}, createElement(t) { return O('<' + t + '>'); },
+  body: O('body'), title: '' };
+globalThis.window = globalThis;
+globalThis.location = { hash: '', href: '', assign() {}, reload() {} };
+globalThis.navigator = { userAgent: 'node' };
+globalThis.fetch = async () => { globalThis.__goi_fetch += 1;
+  throw new Error('CA 6c: khong duoc goi mang'); };
+globalThis.__o = (i) => document.getElementById(i);
+"""
+
+DUOI_JS = r"""
+globalThis.__thu = {
+  docForm: () => docForm(), veTruong: (n) => veTruong(n),
+  loaiDangChon: () => loaiDangChon(), datLoai: (t) => datLoai(t),
+  datLoaiChon: (v) => { loaiChon = v; }, layLoaiChon: () => loaiChon,
+  datDM: (v) => { DM = v; }, soNhomMo: () => nhomMo.size,
+  bamThem: () => document.getElementById('nut-them').onclick(),
+  bamThu: () => document.getElementById('nut-thu').onclick() };
+(async () => {
+  const T = globalThis.__thu, kq = {};
+  T.datDM({ nhom: [{ nhom: 'NHOM THU', loai: [{ ten: 'loai_thu',
+    nhan: 'NHAN THU — ve hai', mo_ta: 'mo ta thu',
+    vi_du: { ghi_chu: 'cau mau' }, truong: [] }] }] });
+  T.datLoaiChon('');                       // TRẠNG THÁI: CHƯA BẤM GÌ
+  kq.loaiDangChon = T.loaiDangChon();
+  kq.docForm = T.docForm();
+  __o('mo-ta-loai').textContent = 'RAC CU';
+  __o('ten-ky-thuat').textContent = 'RAC CU';
+  __o('o-truong').innerHTML = '<b>RAC CU</b>';
+  T.veTruong();
+  kq.moTa = __o('mo-ta-loai').textContent;
+  kq.tenKyThuat = __o('ten-ky-thuat').textContent;
+  kq.oTruong = __o('o-truong').innerHTML;
+  __o('o-ghi-chu').value = 'cau thu';
+  let n = globalThis.__goi_fetch;
+  try { await T.bamThem(); } catch (e) {}
+  kq.themGoiMang = globalThis.__goi_fetch - n;
+  kq.chuThem = __o('chu-them').textContent;
+  n = globalThis.__goi_fetch;
+  try { await T.bamThu(); } catch (e) {}
+  kq.thuGoiMang = globalThis.__goi_fetch - n;
+  kq.chuThu = __o('chu-them').textContent;
+  kq.datLoaiMoNhom = (T.datLoai('loai_thu'), T.soNhomMo());
+  kq.sauDatLoai = T.layLoaiChon();
+  console.log('__KQ__' + JSON.stringify(kq));
+})();
+"""
+
+
+def ca_6c_chua_chon_loai(tm):
+    print('\nCA 6c — "CHƯA CHỌN LOẠI": CHẠY THẬT app.js dưới node')
+    print('-' * 74)
+    node = shutil.which('node')
+    if not node:
+        # Tự khai MẤT KHẢ NĂNG PHÂN BIỆT chứ không âm thầm xanh.
+        kiem(True, 'BỎ QUA: máy này không có node — ca thử KHÔNG kiểm được '
+                   'gì ở mục này. Cài node rồi chạy lại.')
+        return
+
+    js = os.path.join(tm, 'thu_chua_chon.js')
+    goc = io.open(os.path.join(GOC_TM, 'web', 'app.js'), encoding='utf-8').read()
+    io.open(js, 'w', encoding='utf-8').write(MO_DOM_JS + goc + DUOI_JS)
+    r = subprocess.run([node, js], capture_output=True, text=True, timeout=60)
+    dong = [x for x in r.stdout.splitlines() if x.startswith('__KQ__')]
+    kiem(bool(dong),
+         f'Chạy được app.js THẬT dưới node — {(r.stderr or "")[:90]}')
+    if not dong:
+        return
+    d = json.loads(dong[-1][len('__KQ__'):])
+
+    # `<select>` luôn tự chọn phần tử đầu, nên trước 26/8/2026 trạng thái này
+    # KHÔNG TỒN TẠI. Bỏ <select> đẻ ra nó, và MỌI chỗ đọc loại đang chọn đều
+    # phải chịu được. Sáu chỗ, thử từng chỗ một:
+    kiem(d.get('loaiDangChon') is None,
+         '(1) loaiDangChon() trả null, không ném')
+    kiem(d.get('docForm') is None,
+         '(2) docForm() trả null, không ném ở dòng `l.ten`')
+    kiem(d.get('moTa') == '' and d.get('tenKyThuat') == '',
+         f'(3) veTruong() DỌN hai dòng mô tả — mô tả của loại cũ không được '
+         f'nằm lại: {d.get("moTa")!r} / {d.get("tenKyThuat")!r}')
+    kiem(d.get('oTruong') == '',
+         f'(3b) và dọn cả khung ô nhập — {d.get("oTruong")!r}')
+    kiem('Chưa chọn' in (d.get('chuThem') or ''),
+         f'(4) nút Thêm nói rõ — {d.get("chuThem")!r}')
+    kiem('Chưa chọn' in (d.get('chuThu') or ''),
+         f'(5) nút Thử nói rõ — {d.get("chuThu")!r}')
+    # docLai() là chỗ thứ sáu: nó bọc try + `if (!r || !r.loai)` sẵn từ trước.
+    # Ở đây đo bằng HỆ QUẢ: không nút nào gọi mạng khi chưa chọn.
+    kiem(d.get('themGoiMang') == 0 and d.get('thuGoiMang') == 0,
+         f'(6) và KHÔNG nút nào gọi mạng khi chưa chọn — Thêm '
+         f'{d.get("themGoiMang")} lượt, Thử {d.get("thuGoiMang")} lượt')
+    # Chiều ngược lại: chọn rồi thì phải chạy, nếu không mọi mục trên đều
+    # xanh nhờ "chẳng làm gì cả".
+    kiem(d.get('sauDatLoai') == 'loai_thu' and d.get('datLoaiMoNhom') == 1,
+         f'ĐỐI CHỨNG: datLoai() đặt được loại và mở ĐÚNG một nhóm — '
+         f'{d.get("sauDatLoai")!r}, {d.get("datLoaiMoNhom")} nhóm mở')
+
+
 def ca_6_kich_thuoc_css():
     print('\nCA 6 — kích thước ô nhập (ĐỌC CSS, không đo trên trình duyệt)')
     print('-' * 74)
@@ -867,6 +986,7 @@ if __name__ == '__main__':
             may.shutdown()
         ca_6_kich_thuoc_css()
         ca_6b_day_the_chon_loai()
+        ca_6c_chua_chon_loai(tm)
         ca_11_bon_trang_thai()
         ca_7_kiem_nhanh_sau_luu(tm)
     print('=' * 74)
