@@ -924,6 +924,25 @@ def ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm):
     kiem(D.dau_bo_doc().get('phien_ban') != '1',
          f'PHIEN_BAN đã bump khỏi "1" — nay {D.dau_bo_doc().get("phien_ban")!r}')
 
+    # (h) GHIM LITERAL danh sách trắng. Mục (c) ở trên KHÔNG thay được mục
+    #     này: đo 26/8/2026, thêm `dc:creator` vào CUỐI `THE_DOC_PROPS` thì
+    #     `modified` vẫn đứng trước nên hàm vẫn trả đúng ngày, (c) XANH, và
+    #     bộ thử chỉ tụt vì một mục KHÁC — đỏ nhầm chỗ, nếp hỏng 19.
+    #     Chỉ phép so literal mới bắt được việc NỚI danh sách, bất kể thẻ
+    #     mới đứng ở đâu.
+    #
+    #     Ghim literal ở đây là ĐÚNG chứ không phạm luật "đừng ghim hằng
+    #     số": `THE_DOC_PROPS` không phải dữ liệu nhà trường mà là một
+    #     QUYẾT ĐỊNH VỀ PHẠM VI — cùng hạng với `TRUONG_O` và
+    #     `TRAN_NGOAI_LE`. Cả điểm của mục này là bắt người nới nó phải
+    #     dừng lại và giải thích: cùng tệp XML đó có `dc:creator` và
+    #     `cp:lastModifiedBy`, đều là tên người.
+    DA_DUYET = ('{http://purl.org/dc/terms/}modified',)
+    kiem(tuple(D.THE_DOC_PROPS) == DA_DUYET,
+         f'THE_DOC_PROPS ĐÚNG BẰNG bộ đã duyệt — thừa '
+         f'{sorted(set(D.THE_DOC_PROPS) - set(DA_DUYET))}, thiếu '
+         f'{sorted(set(DA_DUYET) - set(D.THE_DOC_PROPS))}')
+
 
 def main():
     dat_dong_ho_canh(180)
