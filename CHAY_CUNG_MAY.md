@@ -332,10 +332,28 @@ nó lên · và ghi được xuống đĩa.
 > **TÊN TỆP BỊ ĐỔI KHI NẠP LÀ BÌNH THƯỜNG — ĐỪNG TƯỞNG NẠP NHẦM TỆP.**
 > Kho đặt tên theo **giờ lưu** (`2026-08-22T11-32-21_...`) để mọi bản xếp
 > đúng thứ tự thời gian. Tên gốc Khoa gửi **KHÔNG MẤT** — nó nằm trong
-> `phieu.json` ở khoá `ten_goc`, nguyên văn từng ký tự. Xem bằng:
-> ```bash
-> python3 -B luu_tuan.py liet-ke
+> `luu_tru/<tuần>/phieu.json` ở khoá `ten_goc`, nguyên văn từng ký tự.
+>
+> **ĐỪNG ĐỌC THƯ MỤC `ban/` BẰNG MẮT.** Tên trong đó dài và gần giống
+> nhau — hai bản của tuần 1 chỉ khác nhau ở **tám giây** và một ký tự
+> cuối:
 > ```
+> 2026-08-22T11-32-21_KHOA_KHCB-TKB_Tuần_1_24-8-26_-_29-8-26__1.xlsx
+> 2026-08-22T11-32-29_KHOA_KHCB-TKB_Tuần_1_24-8-26_-_29-8-26_-2.xlsx
+> ```
+> Nhìn bằng mắt thì hai dòng ấy như một. Mà **một bản `dung`, một bản
+> `sai`** — chọn nhầm là đăng bản đã bị Khoa bác. Hãy dùng lệnh:
+> ```bash
+> python3 -B luu_tuan.py liet-ke                    # tuần nào có mấy bản
+> python3 -B luu_tuan.py de-dang --tuan 2026-08-24  # bản nào ĐĂNG ĐƯỢC
+> ```
+> `de-dang` in ra ĐÚNG MỘT bản kèm lý do nó được đánh dấu `dung` và mọi
+> khuyết tật đã biết — đó mới là câu trả lời, không phải danh sách tệp.
+>
+> ⚠ **CHƯA LỆNH NÀO IN `ten_goc`** — đếm bằng lệnh:
+> `grep -c ten_goc luu_tuan.py` → **0**. Muốn xem tên gốc thì mở
+> `phieu.json`. (Dòng này trước đây ghi *"xem bằng `liet-ke`"* — **SAI**,
+> `liet-ke` chỉ in tóm tắt cấp tuần. Sửa 27/8/2026.)
 >
 > `kho_tuan._ten_ban()` tự dọn: mọi ký tự ngoài `[0-9A-Za-zÀ-ỹ._-]` thành
 > `_`. Đo 26/8/2026:
@@ -356,17 +374,24 @@ nó lên · và ghi được xuống đĩa.
 > ```
 > Chữa: đổi tên tệp cho ngắn lại rồi nạp lại. Không mất gì, không hỏng gì.
 >
-> **KÝ TỰ chứ không phải BYTE — và chỗ này hai ổ khác nhau BA LẦN.** Đo
-> 26/8/2026 trên MÁY A, cùng một phép dò nhị phân, với tên toàn chữ có dấu:
+> **KÝ TỰ chứ không phải BYTE.** Đo lại 27/8/2026 trên MÁY A, dò nhị
+> phân, **từng ký tự một** — vì trên ext4 con số phụ thuộc ký tự ấy nặng
+> mấy byte, còn trên ntfs3 thì không:
 >
-> | Ổ | Đếm theo | Tên CÓ DẤU dài tối đa |
-> |---|---|---|
-> | `ntfs3` — chỗ `luu_tru/` nằm | **KÝ TỰ** (255) | **255 ký tự** (765 byte UTF-8) |
-> | `ext4` — `/tmp`, chỗ bộ thử chạy | **BYTE** (255) | **85 ký tự** |
+> | Ký tự lặp | Nặng | ext4 (`/tmp`) | ntfs3 (`luu_tru/`) |
+> |---|---|---|---|
+> | `T` | 1 byte | 255 ký tự | 255 ký tự |
+> | `ê` | 2 byte | **127 ký tự** | 255 ký tự |
+> | `ầ` | 3 byte | **85 ký tự** | 255 ký tự |
 >
-> Tên `KHOA KHCB-TKB Tuần 1 (24-8-26 - 29-8-26)` là 40 ký tự / 42 byte —
-> còn rất xa ngưỡng, cả hai ổ. Ghi bảng này ra chỉ để ai đọc con số 236
-> đừng đem nó sang một ổ khác rồi tưởng vẫn đúng.
+> `ntfs3` đếm **KÝ TỰ** nên cột của nó không nhúc nhích; `ext4` đếm
+> **BYTE** nên tên càng nhiều dấu càng ngắn đi. (Bảng cũ ở đây ghi
+> *"tên có dấu: 85 ký tự"* mà **không nói dấu nào** — con số ấy chỉ đúng
+> cho ký tự 3 byte như `ầ`. Sửa 27/8/2026.)
+>
+> Tên thật `KHOA KHCB-TKB Tuần 1 (24-8-26 - 29-8-26)` là **40 ký tự / 42
+> byte** — còn rất xa ngưỡng ở cả hai ổ. Ghi bảng này ra chỉ để ai đọc
+> con số 236 đừng đem nó sang một ổ khác rồi tưởng vẫn đúng.
 
 
 
