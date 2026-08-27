@@ -1669,7 +1669,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+HAI MƯƠI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1711,6 +1711,7 @@ HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiể
 | 19 | **Cột lùi lại ĐỎ, nhưng đỏ vì MỤC KHÁC — không phải mục nó nhắm** | **Cột lùi phải đỏ vì ĐÚNG MỤC nó nhắm, không phải vì mục khác đỏ thay.** Mã thoát vẫn là 1, số vẫn tụt, bảng vẫn trông như một cột lùi tử tế — nên đây là kiểu hỏng **tự tin nhất** trong cả bảng: nó không giấu mình sau một mục xanh, nó giấu mình sau một mục ĐỎ. Đã dính 26/8/2026: để chứng minh mục *"tên người không ra khỏi `doc_tkb`"* biết đỏ, tôi vá "thêm `dc:creator` vào **cuối** `THE_DOC_PROPS`" và bộ thử tụt 161→160. Nhưng mục đỏ lại là mục **kiểm khuôn ISO**, không phải mục tên người — vì `modified` đứng TRƯỚC trong danh sách nên hàm vẫn trả về đúng ngày, chưa hề rò tên. Phải cho `creator` đứng **ĐẦU** thì tên mới thật sự ra, và khi đó mới đỏ đúng chỗ (158/161, 3 mục). **Luật: ghi cột lùi thì ghi kèm TÊN MỤC đã đỏ, đừng chỉ ghi con số** — con số một mình không phân biệt nổi "đỏ đúng chỗ" với "đỏ nhờ may". |
 | 20 | **Số đo không nói rõ ĐO TRÊN BẢN NÀO** | **Mọi số đo phải nói rõ đo trên BẢN TRÊN CÂY GIT hay BẢN ĐÃ VÁ trong scratchpad. Thiếu vế đó thì người đọc mặc định là bản thật — và xử lý nhầm.** Đã dính 26/8/2026, và hậu quả đi xa hơn mọi nếp hỏng khác trong bảng này: tôi báo *"bắn HTTP thật, không cookie phiên, vào chính máy chủ đó → `/api/gia-tri` trả 200, 726 byte, tên MỌI giáo viên"*. Câu ấy đúng từng chữ — nhưng "máy chủ đó" là **bản đã vá** trong scratchpad, không phải bản trên cây git. Người dùng đọc thành "cửa đang mở" và ra lệnh **đóng gấp một cửa chưa bao giờ mở**. Đo lại trên bản thật: `/api/gia-tri` → **401**, `'/api/gia-tri' in web.DUONG_MO` → **False**. Chữa: mỗi con số kèm một vế **"trên bản X"** — *"bản thật"*, *"bản vá <tên bản vá>"*. Nguy nhất ở chỗ nó **không hỏng ca thử nào cả** — nó hỏng ở lớp giữa mã và người, chỗ không bộ thử nào với tới.<br><br>**KHÔNG CÓ CỘT LÙI NGHĨA LÀ NẾP NÀY CHỈ CHẶN ĐƯỢC BẰNG THÓI QUEN ĐỌC, KHÔNG CHẶN ĐƯỢC BẰNG MÁY. Mọi số đo trong báo cáo phải nói rõ đo trên bản nào.** Mười chín dòng còn lại của bảng này đều có một bản vá làm chúng đỏ; dòng này thì không, và sẽ không bao giờ có. Nó là dòng duy nhất mà việc đọc lại chính mình trước khi gửi là hàng rào cuối cùng. |
 | 21 | **Ca thử cần CÔNG CỤ NGOÀI mà vắng công cụ thì lặng lẽ XANH** | **Ca thử cần công cụ ngoài phải TỰ KHAI khi công cụ vắng, không được im lặng xanh. Máy không có `node` thì mục nói rõ "không kiểm được", không phải ĐẠT.** Cách viết sai là `kiem(True, 'bỏ qua vì thiếu X')` — nó **cộng một mục vào "Tổng: N/N"**, nên máy thiếu công cụ vẫn cho ra một bộ thử **xanh trọn vẹn**, và người đọc con số ấy không có cách nào biết một mục đã không chạy. Cách đúng: mục rơi **HẲN** khỏi tổng, in `[BỎ QUA]`, và dòng tổng in kèm `⚠ BỎ QUA k mục vì THIẾU CÔNG CỤ NGOÀI`. Đo 26/8/2026 trên `thu_them_quy_tac.py`: có `node` → **137/137**; giả vờ không có `node` → **128/128 + một dòng ⚠**. Hai con số khác nhau, và cái khác nhau ấy chính là thứ phải nhìn thấy. ⚠ `tests/thu_xuat_html.py:208` **vẫn đang viết theo cách sai** — cùng một lớp lỗi, chưa sửa, chờ người dùng quyết. |
+| 22 | **Ca thử KHÔNG DỰNG NỔI TIỀN ĐỀ của chính nó rồi báo ĐẠT** | Khác nếp hỏng 21 ở chỗ quyết định: nếp 21 là **thiếu công cụ ngoài, biết mà khai**; ở đây **công cụ đủ**, chỉ là **cảnh cần thử không dựng được**, và mục **im lặng xanh**. **DẤU NHẬN BIẾT: xoá phép khẳng định THẬT của mục đi mà TỔNG KHÔNG ĐỔI** — nghĩa là nhánh ấy chưa bao giờ chạy trên máy này. Đã dính 26/8/2026: `thu_doc_lai.py` CA 7 muốn thử cảnh *"tên đúng mà bộ lọc khớp 0 cụm"*, viết `if pv3['so_cum'] == 0: kiem(...)` / `else: kiem(True, 'không dựng được cảnh — bỏ qua')`. Trên MÁY A bộ lọc ấy khớp **1 cụm**, nên nhánh `else` chạy và mục **đếm ĐẠT suốt trong khi chưa bao giờ chạy**. Đo: bản cũ **44/44**, xoá hẳn phép khẳng định thật đi vẫn **44/44**. ⚠ **VÀ SỬA NÓ KHÔNG LÀM CẢNH ĐÓ CHẠY ĐƯỢC** — chỉ làm chỗ hổng HIỆN RA (`43/43` + `[BỎ QUA]`). Cảnh ấy tới nay **vẫn chưa được thử**; muốn thử thì phải dựng một bộ lọc thật sự khớp 0 cụm, và đó là việc khác. Đừng đọc dòng `[BỎ QUA]` mà tưởng đã xong. |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1820,6 +1821,13 @@ HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiể
    khỏi tổng và in `[BỎ QUA]`**, chứ KHÔNG được `kiem(True, ...)`.
    `kiem(True)` cộng một mục vào "Tổng: N/N" và biến "chưa kiểm" thành
    "đã đạt" — hai chuyện khác hẳn nhau. (Nếp hỏng 21.)
+23. **Mục này có DỰNG ĐƯỢC cảnh nó cần không, hay chỉ đi qua phần dựng
+   rồi trả về sớm?** Nếu cảnh dựng bằng một BỘ LỌC trên dữ liệu thật thì
+   bộ lọc ấy có thể trả về thứ khác điều bạn cần — và một nhánh `else`
+   viết cho tử tế sẽ nuốt gọn chuyện đó. Phép thử: **xoá phép khẳng định
+   THẬT đi rồi chạy lại; TỔNG KHÔNG ĐỔI nghĩa là nhánh ấy chưa bao giờ
+   chạy.** Và nhớ: khai `[BỎ QUA]` chỉ làm chỗ hổng HIỆN RA, **không
+   lấp nó**. (Nếp hỏng 22.)
 21. **ĐƯỜNG ĐANG CHẠY THẬT đã ghim chưa?** Cái mới làm thì còn nhớ, cái
    chạy lâu thì không ai soi. Bằng chứng, đo 26/8/2026:
    `sinh_dang.TRUONG_O` — đường đăng **CHƯA dùng thật** — đã ghim literal
@@ -1849,6 +1857,45 @@ HAI MƯƠI MỐT lần đã dính, cùng một gốc — mỗi lần một kiể
     => Mời người = mở Directus. Hai chuyện này đi liền, đừng tách.
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
+
+[ ] NẾP HỎNG 22 — HAI CHỖ ĐANG IM LẶNG XANH. Rà 27/8/2026 bằng cách
+    đếm SỐ LẦN CHẠY THẬT của từng dòng (`sys.monitoring`) trên cả 22 bộ
+    thử + `tu_kiem_tra.py`. LIỆT KÊ, CHƯA SỬA.
+
+    1. `tu_kiem_tra.py` — LỆNH TỰ KIỂM BẮT BUỘC, và nó KHÔNG CÓ PHÁN
+       QUYẾT MÁY ĐỌC ĐƯỢC. Đếm bằng lệnh: 0 lời gọi `kiem()`
+       (`grep -n "kiem(" tu_kiem_tra.py` chỉ ra hai dòng `hau_kiem`),
+       0 dòng "Tổng", 0 `sys.exit` — nên nó **LUÔN THOÁT 0**, kể cả khi
+       in `KHÔNG XẾP ĐƯỢC` / `CÒN LỖI` / `CHẶN HẾT Ô`.
+       Và một quy tắc khớp **0 cụm** thì `loi == 0` (không có gì để vi
+       phạm) nên nó in `OK … | ĐẠT` — đúng bẫy `n_uyen == 0`.
+       ĐO 27/8/2026: đổi `"gv": "H.Nam"` thành một tên bịa, chạy lại:
+         bản thật : khong_xep_o … OK  điểm=-46 | ĐẠT   MÃ THOÁT=0
+         bản vá   : khong_xep_o … OK  điểm=-49 | ĐẠT   MÃ THOÁT=0
+       Khác nhau đúng **một con số điểm mềm** mà không ai đọc như một
+       phán quyết. ⚠ "Điều cấm" của tài liệu này bảo *đừng báo xong khi
+       chưa chạy sạch `tu_kiem_tra.py`* — mà **không có định nghĩa máy
+       đọc được của chữ "sạch"**.
+       Công cụ để chữa ĐÃ CÓ SẴN: `quy_tac.pham_vi_quy_tac()` trả đúng
+       `so_cum=0` và `ten_la` cho bộ lọc gõ sai. Chỉ là chưa ai gọi.
+       Đo thêm: nhánh `continue` khi có lỗi (dòng 57), nhánh
+       `KHÔNG XẾP ĐƯỢC` (76) và `CHẶN HẾT Ô` (82-83) đều chạy **0 lần** —
+       chưa ai biết chúng in ra cái gì.
+
+    2. `tests/thu_gop_bo_loc.py:97` `ca_1_tuong_duong` — dựng cảnh bằng
+       `cum = [c for c in NEN.cac_cum if not c.la_trong]` rồi **không
+       chỗ nào ghim `len(cum) > 0`**. Con số 90 chỉ nằm trong CÂU THÔNG
+       BÁO (`f'… 0/{len(cum)} lệch'`), không bao giờ trong ĐIỀU KIỆN.
+       ĐO 27/8/2026 — đổi bộ lọc sang một lớp không có thật:
+         chín dòng `[ĐẠT] … 0/0 lệch` · Tổng **23/23** · MÃ THOÁT **0**
+       Chín mục báo ĐẠT trong khi **không so một cụm nào**. Đây đúng là
+       bộ thử sinh ra để canh bài học `khop_loc()` / `_cum_cua()`.
+
+    Ba dạng khác đã rà và SẠCH trên cả 23 tệp: vòng `for` chạy 0 lần
+    (không có cái nào) · `return` giữa chừng bỏ lại `kiem()` phía sau
+    (0 chỗ) · 15 chốt `if not X: kiem(False, …); return` đều báo động
+    đúng cách. `thu_web.py:345` là MẪU ĐÚNG: không dựng được cảnh
+    chỉ-đọc thì `kiem(False, '… đừng tin nó')`.
 
 [ ] CA THỬ DÒ CHUỖI JS/HTML — MƯỜI HAI MỤC, chạy thật thì bắt thêm
     được gì. LIỆT KÊ 26/8/2026, CHƯA VIẾT LẠI CÁI NÀO (người dùng chọn
