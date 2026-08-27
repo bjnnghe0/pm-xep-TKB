@@ -426,7 +426,11 @@ def main(argv=None):
         return 0 if r['ok'] else 1
 
     if a.lenh == 'doc-lai':
-        import doc_tkb as D
+        # KHÔNG `import doc_tkb as D` ở đây. Mô-đun đã nhập ở đầu tệp; một
+        # lời `import ... as D` bên trong hàm biến `D` thành BIẾN CỤC BỘ
+        # CỦA CẢ `main()` và che mất bản ở mức module — mọi nhánh khác
+        # chạm `D` sẽ ném `UnboundLocalError`. Đã dính thật ở `7f209f6`:
+        # `xem` và `them` VỠ hoàn toàn suốt từ đó.
         p, loi = K.doc_phieu_ky(goc, a.tuan)
         if loi or p is None:
             print('[DỪNG] ' + (loi or f'Kho chưa có tuần {a.tuan}.'))

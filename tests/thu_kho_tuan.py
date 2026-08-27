@@ -1204,6 +1204,79 @@ def ca_14_ghim_hai_danh_sach_trang(tm):
              'và KHÔNG ghi một byte nào vào kho')
 
 
+def ca_15_moi_lenh_con_chay_duoc(tm):
+    print('\nCA 15 — MỌI lệnh con của luu_tuan.py chạy được qua DÒNG LỆNH')
+    print('-' * 74)
+    # Vì sao cần: bộ thử cũ chỉ gọi `so` và `doi-chieu` qua tiến trình con,
+    # nên một lỗi ở nhánh khác của `main()` KHÔNG AI THẤY. Đã dính thật —
+    # `7f209f6` thêm `import doc_tkb as D` bên trong nhánh `doc-lai`, biến
+    # `D` thành biến CỤC BỘ của cả `main()` và che mất bản ở mức module.
+    # `xem` và `them` VỠ bằng UnboundLocalError, im lặng suốt một ngày, mà
+    # `them` chính là lệnh nạp tệp Khoa gửi mỗi tuần.
+    #
+    # Mục này đi qua TỪNG lệnh con, mỗi lệnh một lượt `subprocess`, và đòi
+    # KHÔNG lệnh nào ném. Nó KHÔNG kiểm nội dung đầu ra — việc đó là của
+    # các CA khác; nó chỉ canh "mọi nhánh của main() còn nhập được".
+    GOC_DA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    goc, MA = os.path.join(tm, 'kho15'), '2026-12-07'
+    t = dung_xlsx(os.path.join(tm, 'k15.xlsx'), o_mau(so_tiet=3))
+    t2 = dung_xlsx(os.path.join(tm, 'k15b.xlsx'), o_mau(so_tiet=4))
+    dd_cfg = os.path.join(GOC_DA, 'cauhinh.json')
+
+    def goi(*a):
+        r = subprocess.run(
+            [sys.executable, '-B', os.path.join(GOC_DA, 'luu_tuan.py'),
+             '--kho', goc] + list(a),
+            capture_output=True, text=True, timeout=180)
+        return r
+
+    # Thứ tự CỐ Ý: `them` trước để các lệnh sau có bản mà đọc.
+    BUOC = [
+        ('them', ('them', t, '--tuan', MA, '--nguoi', 'người thử')),
+        ('xem', ('xem', t)),
+        ('liet-ke', ('liet-ke',)),
+        ('danh-dau', ('danh-dau', '--tuan', MA, '--ban', '1',
+                      '--trang-thai', 'dung', '--ly-do', 'ca thử')),
+        ('khuyet-tat', ('khuyet-tat', '--tuan', MA, '--ban', '1',
+                        '--mo-ta', 'ca thử', '--nguoi', 'người thử')),
+        ('de-dang', ('de-dang', '--tuan', MA)),
+        ('so', ('so', t2, '--tuan', MA)),
+        ('doi-chieu', ('doi-chieu', '--tuan', MA, '--cauhinh', dd_cfg)),
+        ('doc-lai', ('doc-lai', '--tuan', MA)),
+        ('dang-thu', ('dang-thu', '--tuan', MA)),
+    ]
+    vo = []
+    for nhan, a in BUOC:
+        r = goi(*a)
+        if 'Traceback' in r.stderr:
+            cuoi = (r.stderr.strip().splitlines() or [''])[-1][:70]
+            vo.append(f'{nhan}: {cuoi}')
+    kiem(not vo, f'KHÔNG lệnh con nào NÉM — {len(BUOC)} lệnh đã đi qua; '
+                 f'vỡ: {vo}')
+
+    # ĐỐI CHỨNG: nếu mục trên xanh nhờ "chẳng chạy gì", thì đây bắt được.
+    kiem(goi('lenh-khong-co-that').returncode != 0,
+         'ĐỐI CHỨNG: lệnh con bịa ra thì THOÁT KHÁC 0 — bộ gọi có hoạt động')
+    kiem(goi('liet-ke').returncode == 0,
+         'và một lệnh có thật thì thoát 0')
+
+    # `import ... as D` bên trong main() là ĐÚNG cái đã cắn. Ghim bằng cây
+    # cú pháp: trong `main()` không được có lệnh import nào.
+    import ast
+    cay = ast.parse(io.open(os.path.join(GOC_DA, 'luu_tuan.py'),
+                            encoding='utf-8').read())
+    trong_main = []
+    for n in ast.walk(cay):
+        if isinstance(n, ast.FunctionDef) and n.name == 'main':
+            for m in ast.walk(n):
+                if isinstance(m, (ast.Import, ast.ImportFrom)):
+                    trong_main.append(
+                        [x.asname or x.name for x in m.names])
+    kiem(not trong_main,
+         f'main() KHÔNG có lệnh `import` nào bên trong — một `import X as D` '
+         f'ở đây biến D thành biến CỤC BỘ của cả hàm: {trong_main}')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -1225,6 +1298,7 @@ def main():
         ca_12_ten_nguoi_trong_docprops_khong_bao_gio_ra(tm)
         ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm)
         ca_14_ghim_hai_danh_sach_trang(tm)
+        ca_15_moi_lenh_con_chay_duoc(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 
