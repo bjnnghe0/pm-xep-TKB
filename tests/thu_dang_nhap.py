@@ -22,6 +22,7 @@
  trên văn bản mã nguồn, phải biết ĐỎ chứ không biết VỠ, và có ĐỒNG HỒ CANH.
 ==========================================================================
 """
+import ast
 import io
 import json
 import os
@@ -276,6 +277,44 @@ MO_DA_DUYET = (
 # `TINH` sinh ra phần `/web/*` của `DUONG_MO`, nên nới `TINH` là nới luôn
 # danh sách đường mở — ghim cả nó.
 TINH_DA_DUYET = ('index.html', 'style.css', 'app.js')
+
+
+def ca_3b_ghi_tai_khoan_phai_fsync(tm):
+    print('\nCA 3b — đường ghi tài khoản PHẢI fsync (điều kiện của QĐ 3)')
+    print('-' * 74)
+    # QĐ 3 ("tắt tài khoản có hiệu lực NGAY") dựa vào `_dau_tep()` =
+    # (st_ino, st_mtime_ns, st_size): hai lần ghi liên tiếp phải cho hai
+    # dấu khác nhau. Nó ĐÚNG hôm nay — nhưng đúng vì `TK.ghi()` fsync
+    # HAI LẦN nên tự nó đã tốn hơn 1 ms.
+    #
+    # Đo 27/8/2026: `st_mtime_ns` trên **ntfs3** (chỗ kho thật nằm) nhảy
+    # từng nấc **1 ms**, thô hơn ext4 (28 µs) **35 lần**. Bỏ fsync đi thì
+    # ba lần ghi lọt trong một nấc là `st_ino` quay về giá trị cũ, dấu
+    # TRÙNG KHÍT, và QĐ 3 hở — mà không mục nào đỏ.
+    # Đây là mục ghim CHÍNH ĐIỀU KIỆN ấy, không phải ghim hệ quả.
+    ma = io.open(os.path.join(GOC_TM, 'tai_khoan.py'), encoding='utf-8').read()
+    cay = ast.parse(ma)
+    goi = []
+    for n in ast.walk(cay):
+        if isinstance(n, ast.FunctionDef) and n.name == 'ghi':
+            for m in ast.walk(n):
+                if isinstance(m, ast.Call) and getattr(
+                        m.func, 'id', None) == '_ghi_nguyen_tu':
+                    goi.append({k.arg: getattr(k.value, 'value', None)
+                                for k in m.keywords})
+    kiem(len(goi) == 1,
+         f'Đọc được lời gọi ghi trong TK.ghi() — {len(goi)} chỗ')
+    kiem(bool(goi) and goi[0].get('ben') is True,
+         f'và nó gọi với ben=True (fsync tệp + fsync thư mục) — {goi}')
+
+    # HÀNH VI: hai lần ghi liên tiếp phải cho HAI dấu khác nhau.
+    dd = os.path.join(tm, 'tk-fsync.json')
+    TK.ghi(dd, [TK.ban_ghi_moi('nguoimot', 'matkhau-thu-that-dai')])
+    d1 = W._dau_tep(dd)
+    TK.ghi(dd, [TK.ban_ghi_moi('nguoihai', 'matkhau-thu-that-dai')])
+    d2 = W._dau_tep(dd)
+    kiem(d1 is not None and d1 != d2,
+         f'Hai lần ghi LIÊN TIẾP cho hai dấu KHÁC nhau — {d1} vs {d2}')
 
 
 def ca_4_khong_cookie(tm):
@@ -740,6 +779,7 @@ if __name__ == '__main__':
         ca_1_dang_nhap_dung(tm)
         ca_2_dang_nhap_sai(tm)
         ca_3_xoay_ma_phien(tm)
+        ca_3b_ghi_tai_khoan_phai_fsync(tm)
         ca_4_khong_cookie(tm)
         ca_5_cookie_gia_va_het_han(tm)
         ca_6_dang_xuat(tm)

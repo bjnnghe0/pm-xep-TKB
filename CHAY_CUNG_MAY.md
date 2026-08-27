@@ -553,6 +553,34 @@ còn `luu_tru/` thật thì trên ntfs3. Đo 27/8/2026, MÁY A:
 > tiếng Việt: **hai lần**. Và `statvfs.f_namemax` trả 255 ở cả hai nên
 > **không dùng nó để suy ra giới hạn** — phải thử thật.
 
+> ### Hai ĐIỀU KIỆN của máy này, không phải hai nhận xét
+>
+> Cả hai đúng **hôm nay** nhờ cấu hình, không nhờ bản chất — nên phải kiểm
+> lại sau mỗi lần cài đặt lại máy hay sửa `/etc/fstab`.
+>
+> **1. Ổ phân biệt HOA/THƯỜNG.** Kernel `ntfs3` có sẵn tuỳ chọn `nocase`;
+> `/etc/fstab` hiện **không** khai nó. Bật `nocase` là `docs/` và `DOCS/`
+> hoá một, `cauhinh.json` và `CauHinh.json` hoá một.
+> ```bash
+> cd "/media/adminnam/NAM MEO/projects/PM xep tkb"
+> touch .a && ( touch .A 2>/dev/null; ls -a | grep -c '^\.[aA]$' ) ; rm -f .a .A
+> #  -> 2 = PHÂN BIỆT (đúng)   ·   1 = KHÔNG phân biệt (HỎNG)
+> ```
+> ⚠ **Windows cài song song đọc chính ổ đó theo kiểu KHÔNG phân biệt.**
+> Đừng bao giờ tạo hai tệp chỉ khác nhau hoa/thường trong dự án này.
+>
+> **2. Bit quyền được giữ.** `chmod 600` của `tai_khoan.json` chỉ có tác
+> dụng nhờ `ntfs3` bật POSIX ACL **và** `fstab` khai `acl`. ntfs3 cất
+> quyền trong thuộc tính mở rộng kiểu WSL.
+> ```bash
+> modinfo ntfs3 | grep -i acl                  # -> "Enabled Linux POSIX ACLs"
+> findmnt -no OPTIONS --target . | tr , '\n' | grep -x acl   # -> acl
+> touch .q && chmod 600 .q && getfattr -d .q 2>/dev/null | head -4 ; rm -f .q
+> #  -> $LXUID / $LXGID / $LXMOD  = quyền đang được cất thật
+> ```
+> Bỏ `acl` khỏi fstab là `thu_chong_do` CA 9 và `thu_web` CA 7 mất chỗ dựa,
+> và `tai_khoan.json` hết được che.
+
 > **Muốn chạy bộ thử TRÊN ĐÚNG NỀN CỦA KHO** thì đặt `TMPDIR`:
 > ```bash
 > mkdir -p ./.tmp-ntfs
