@@ -262,9 +262,21 @@ def them_ban(goc, ma_tuan, duong_tep, nguoi, ghi_chu='', tach=None,
                              json.dumps(tach, ensure_ascii=False, indent=1),
                              ben=True)
         except OSError as e:
-            ra['canh_bao'].append(f'Lưu được tệp gốc nhưng KHÔNG lưu được bản '
-                                  f'tách: {e}')
-            ten_tach = None
+            # KHÔNG hạ xuống cảnh báo. `ok=True` nghĩa là MỌI thứ hàm này
+            # hứa lưu đã nằm trên đĩa — thiếu bản tách mà vẫn báo lưu được
+            # là MẤT DỮ LIỆU IM LẶNG. Dọn tệp gốc vừa chép để kho không
+            # còn nửa vời, rồi từ chối.
+            try:
+                os.unlink(dich)
+            except OSError:
+                ra['canh_bao'].append(f'và KHÔNG xoá được tệp vừa chép: {dich}')
+            ra['cau'] = (
+                f'Chép được tệp gốc nhưng KHÔNG ghi được bản tách: {e}\n'
+                f'      Đã bỏ tệp vừa chép — KHO KHÔNG ĐỔI.\n'
+                f'      Hay gặp nhất là TÊN TỆP QUÁ DÀI: tên tạm của bản '
+                f'tách còn dài hơn tên thật ~17 ký tự.\n'
+                f'      Đổi tên tệp cho ngắn lại rồi nạp lại.')
+            return ra
 
     ban = {'tep': f'ban/{ten}', 'tach': f'tach/{ten_tach}' if ten_tach else None,
            'gio_luu': khi.isoformat(timespec='seconds'), 'sha256': bam,

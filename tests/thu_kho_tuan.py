@@ -1277,6 +1277,50 @@ def ca_15_moi_lenh_con_chay_duoc(tm):
          f'ở đây biến D thành biến CỤC BỘ của cả hàm: {trong_main}')
 
 
+def ca_16_ok_true_nghia_la_moi_thu_da_nam_tren_dia(tm):
+    print('\nCA 16 — ok=True nghĩa là MỌI thứ đã nằm trên đĩa')
+    print('-' * 74)
+    # Cửa sổ nguy hiểm: tên tạm của bản tách dài hơn tên thật ~17 ký tự
+    # (`.tam.<PID>.json`), nên có một khoảng độ dài mà TỆP GỐC chép được
+    # còn BẢN TÁCH thì không. Trước 27/8/2026 kho báo `ok=True` kèm một
+    # `canh_bao` — mất dữ liệu im lặng.
+    #
+    # KHÔNG ghim số: khoảng ấy lệch 115 ký tự giữa ext4 và ntfs3 (bộ thử
+    # chạy ext4, kho thật ntfs3). Quét độ dài và khẳng định BẤT BIẾN.
+    import doc_tkb as D
+    nguon = dung_xlsx(os.path.join(tm, 'ca16.xlsx'), o_mau(so_tiet=3))
+    tach = D.doc(nguon)
+    xau, thay_ca_hai = [], [False, False]
+    for n in range(100, 260, 3):
+        ten = 'T' * (n - 5) + '.xlsx'
+        p = os.path.join(tm, ten)
+        try:
+            shutil.copy(nguon, p)
+        except OSError:
+            continue                      # hệ tệp không cho tên này
+        goc = os.path.join(tm, f'k16-{n}')
+        r = K.them_ban(goc, '2026-12-14', p, 'người thử', tach=tach)
+        os.unlink(p)
+        thay_ca_hai[0 if r.get('ok') else 1] = True
+        if not r.get('ok'):
+            # từ chối thì KHÔNG được để lại gì trong kho
+            if os.path.isdir(os.path.join(goc, 'ban')) and \
+                    os.listdir(os.path.join(goc, 'ban')):
+                xau.append(f'n={n}: từ chối mà vẫn để lại tệp trong ban/')
+            continue
+        b = (r.get('ban') or {})
+        if not b.get('tach'):
+            xau.append(f'n={n}: ok=True mà phiếu KHÔNG có bản tách')
+        elif not os.path.exists(os.path.join(K.thu_muc_tuan(goc, '2026-12-14'),
+                                             b['tach'])):
+            xau.append(f'n={n}: ok=True mà tệp tách KHÔNG có trên đĩa')
+    kiem(all(thay_ca_hai),
+         f'Điều kiện tiên quyết: quét được cả cảnh ok=True lẫn ok=False — '
+         f'{thay_ca_hai}')
+    kiem(not xau, f'ok=True LUÔN kèm bản tách có thật, và ok=False KHÔNG '
+                  f'để lại gì — sai: {xau}')
+
+
 def main():
     dat_dong_ho_canh(180)
     print('=' * 74)
@@ -1299,6 +1343,7 @@ def main():
         ca_13_doc_lai_khong_them_ban_khong_doi_quyet_dinh(tm)
         ca_14_ghim_hai_danh_sach_trang(tm)
         ca_15_moi_lenh_con_chay_duoc(tm)
+        ca_16_ok_true_nghia_la_moi_thu_da_nam_tren_dia(tm)
     finally:
         shutil.rmtree(tm, ignore_errors=True)
 
