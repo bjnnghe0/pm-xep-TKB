@@ -476,6 +476,42 @@ công cụ ngoài, và **thiếu chúng thì bộ thử KHÔNG báo đỏ — n�
 | `soffice` (LibreOffice) | không ca thử nào — chỉ dùng khi **kiểm bản in bằng tay** (xuất PDF rồi đếm trang) | không ảnh hưởng bộ thử | `soffice --version` |
 | `pdfinfo`, `pdftoppm`, `pdftotext` | như trên | như trên | `pdfinfo -v` |
 
+### 11b. BỘ THỬ CHẠY TRÊN ext4, KHO THẬT NẰM TRÊN ntfs3
+
+Hai nền khác nhau, và ca thử chạy ở nền KHÔNG PHẢI nền của kho:
+
+```bash
+findmnt -no TARGET,FSTYPE --target .        # -> /media/adminnam/NAM MEO  ntfs3
+findmnt -no TARGET,FSTYPE --target /tmp     # -> /                        ext4
+```
+
+`tempfile.mkdtemp()` cho `/tmp`, nên **mọi kho thử đều dựng trên ext4**,
+còn `luu_tru/` thật thì trên ntfs3. Đo 27/8/2026, MÁY A:
+
+| Phép đo | ext4 (`/tmp`) | ntfs3 (kho thật) |
+|---|---|---|
+| tên tệp toàn ASCII | 255 ký tự | 255 ký tự |
+| **tên tệp toàn chữ có dấu** | **127 ký tự** (254 byte) | **255 ký tự** (510 byte) |
+| `statvfs.f_namemax` | 255 | 255 — **nói dối**, ntfs3 đếm KÝ TỰ |
+| `them_ban()` tên có dấu, còn `ok=True` | tới **115** ký tự | tới **230** ký tự |
+| bước nhảy `st_mtime_ns` nhỏ nhất | **28 µs** | **1 ms** (thô hơn 35 lần) |
+| `chmod 600` cất ở đâu | bit quyền | thuộc tính mở rộng `$LXUID/$LXGID/$LXMOD` |
+| phân biệt hoa/thường | có | có — **nhưng là tuỳ chọn gắn**, không phải tính chất |
+
+> **Đừng đem số của nền này nói về nền kia.** Khác biệt lớn nhất là tên
+> tiếng Việt: **hai lần**. Và `statvfs.f_namemax` trả 255 ở cả hai nên
+> **không dùng nó để suy ra giới hạn** — phải thử thật.
+
+> **Muốn chạy bộ thử TRÊN ĐÚNG NỀN CỦA KHO** thì đặt `TMPDIR`:
+> ```bash
+> mkdir -p ./.tmp-ntfs
+> TMPDIR="$PWD/.tmp-ntfs" python3 -B tests/thu_kho_tuan.py
+> rm -rf ./.tmp-ntfs
+> ```
+> Đã chạy thử 16 bộ theo cách đó ngày 27/8/2026: **cả 16 ra số giống hệt
+> lượt chạy trên ext4.** Không phải để sửa gì — để biết là hôm nay chúng
+> chưa lệch.
+
 ```bash
 node --version          # cần cho CA 6c. Không có thì cài: sudo apt install nodejs
 ~/.venvs/xeptkb/bin/python -B tests/thu_them_quy_tac.py | tail -4

@@ -1863,6 +1863,59 @@ HAI MƯƠI BA lần đã dính, cùng một gốc — mỗi lần một kiểu k
     NGƯỜI DÙNG TỰ SỬA ACL. Đừng đụng vào — sửa sai là mất đường vào máy
     từ xa, và không có đường nào chữa từ xa.
 
+[ ] HAI NỀN, MỘT KHO — ca thử chạy ext4, kho thật ntfs3. Rà 27/8/2026,
+    chạy 16 bộ thử HAI LƯỢT (một lượt `TMPDIR` mặc định = /tmp/ext4, một
+    lượt `TMPDIR` trỏ sang ổ ntfs3 của dự án). LIỆT KÊ, CHƯA SỬA.
+
+    KẾT QUẢ TỔNG: **cả 16 bộ ra số GIỐNG HỆT nhau trên hai nền.** Không
+    ca thử nào đỏ oan hay xanh giả hôm nay. Cái đáng ghi là BIÊN AN TOÀN
+    HẸP LẠI, và mấy chỗ giả định đúng nhờ một TUỲ CHỌN GẮN Ổ chứ không
+    nhờ hệ tệp.
+
+    K1. ĐỘ DÀI TÊN — ext4 đếm BYTE, ntfs3 đếm KÝ TỰ. Đo lại 27/8:
+          tên toàn ASCII      255 ký tự  /  255 ký tự
+          tên toàn chữ có dấu **127**    /  **255**   ký tự
+          statvfs.f_namemax   255        /  255  <- **NÓI DỐI cho ntfs3**
+        `them_ban()` với tên có dấu: ok=True tới **115** ký tự (ext4) và
+        **230** (ntfs3). CA 14 cố ý dùng tên THUẦN ASCII nên đúng ở cả
+        hai — đã ghi trong chú thích.
+        ⚠ CÒN MỘT KHOẢNG CHƯA CA THỬ NÀO CHẠM, và nó **lệch 115 ký tự**
+        giữa hai nền: n = 113–115 (ext4) / 228–230 (ntfs3) cho
+        `ok=True` **nhưng BẢN TÁCH MẤT**, chỉ còn một `canh_bao`
+        (*"Lưu được tệp gốc nhưng KHÔNG lưu được bản tách"*). Nguyên
+        nhân: `ghi_ben.ghi_nguyen_tu` cộng `.tam.<PID>.json` (~17 ký tự)
+        vào tên TẠM, nên tên tạm vượt ngưỡng TRƯỚC tên thật. Cửa sổ rộng
+        đúng 3 ký tự. Ai viết ca thử cho khoảng này bằng số của ext4 sẽ
+        trượt hoàn toàn trên ntfs3.
+
+    K2. `st_mtime_ns` — ntfs3 THÔ HƠN 35 LẦN: bước nhảy nhỏ nhất
+        **28.173 ns** (ext4) so với **đúng 1.000.000 ns = 1 ms** (ntfs3).
+        `_dau_tep()` của `web.py` = `(st_ino, st_mtime_ns, st_size)`, và
+        QĐ 3 *"tắt tài khoản có hiệu lực NGAY"* dựa vào việc hai lần ghi
+        liên tiếp cho hai dấu khác nhau. Đo 20 lượt ghi qua ĐÚNG đường
+        thật: **0 cặp trùng dấu** trên cả hai nền, `thu_dang_nhap` 97/97
+        cả hai. Nó đúng **vì mỗi lượt `TK.ghi()` có HAI lần `fsync` nên
+        tự nó đã tốn hơn 1 ms**.
+        ⚠ **KHÔNG CA THỬ NÀO GHIM RẰNG ĐƯỜNG GHI TÀI KHOẢN PHẢI `fsync`.**
+        Đổi `TK.ghi()` sang `ben=False` (đúng như `khoa_dang_nhap.json`
+        đang dùng) thì trên ntfs3 chỉ cần ba lần ghi trong 1 ms là
+        `st_ino` quay lại giá trị cũ, dấu trùng khít, QĐ 3 hở — mà bộ
+        thử vẫn xanh. Trên ext4 điều đó khó hơn 35 lần.
+
+    K3. QUYỀN TỆP — ntfs3 giữ được, nhưng nhờ HAI thứ NGOÀI mã nguồn:
+        `modinfo ntfs3` có `Enabled Linux POSIX ACLs support`, và
+        `/etc/fstab` khai `acl`. Đo: `chmod 600` đọc lại đúng `0o600` ở
+        cả hai, nhưng ntfs3 cất nó trong thuộc tính mở rộng kiểu WSL —
+        `os.listxattr` cho `['$LXUID', '$LXGID', '$LXMOD']`, ext4 cho
+        `[]`. Bỏ `acl` khỏi fstab là `thu_chong_do` CA 9 và `thu_web`
+        CA 7 mất chỗ dựa.
+
+    K4. HOA/THƯỜNG — hôm nay **hai ổ GIỐNG NHAU, đều PHÂN BIỆT**
+        (tạo `a.txt` rồi `A.txt` ra hai tệp trên cả hai). Nhưng đó là
+        **tuỳ chọn gắn**: kernel `ntfs3` có sẵn `nocase`, fstab hiện
+        không khai. Và **Windows cài song song đọc chính ổ đó theo kiểu
+        KHÔNG phân biệt** — xem mục "Ổ NTFS, Windows song song".
+
 [ ] NẾP HỎNG 22 — HAI CHỖ ĐANG IM LẶNG XANH. Rà 27/8/2026 bằng cách
     đếm SỐ LẦN CHẠY THẬT của từng dòng (`sys.monitoring`) trên cả 22 bộ
     thử + `tu_kiem_tra.py`. LIỆT KÊ, CHƯA SỬA.
