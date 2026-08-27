@@ -2,11 +2,29 @@
 # -*- coding: utf-8 -*-
 """Chạy thử từng loại quy tắc để chắc chắn tất cả đều hoạt động.
    Dùng khi vừa thêm một loại quy tắc mới vào quy_tac.py:
-       python3 tu_kiem_tra.py
+       python3 -B tu_kiem_tra.py
+
+   ┌──────────────────────────────────────────────────────────────────────┐
+   │ MÃ THOÁT LÀ PHÁN QUYẾT. 0 = mọi quy tắc thử đều ĐẠT; khác 0 = có     │
+   │ chuyện, và dòng cuối nói rõ chuyện gì.                               │
+   │                                                                      │
+   │ Trước 27/8/2026 tệp này **LUÔN THOÁT 0** — không `sys.exit`, không   │
+   │ dòng "Tổng", không một phép khẳng định nào. Đo được: đổi `"gv":      │
+   │ "H.Nam"` thành một tên KHÔNG CÓ THẬT thì khác biệt duy nhất là       │
+   │ `điểm=-46` thành `điểm=-49`, cả hai đều in `OK … | ĐẠT`, cả hai      │
+   │ đều thoát 0. Mà "Điều cấm" của CLAUDE.md lại bảo *đừng báo xong khi  │
+   │ chưa chạy sạch tu_kiem_tra.py* — không có định nghĩa máy đọc được    │
+   │ của chữ "sạch" thì câu ấy chỉ là một lời nhắc.                       │
+   │                                                                      │
+   │ ĐIỂM MỀM KHÔNG PHẢI PHÁN QUYẾT và không được biến thành cổng.        │
+   │ Nó là tiêu chí SO SÁNH giữa các phương án, không phải ranh giới      │
+   │ đúng/sai. Phán quyết chỉ hỏi: có quy tắc nào HỎNG không.             │
+   └──────────────────────────────────────────────────────────────────────┘
 """
 import copy
 import json
 import random
+import sys
 import time
 
 import xep_tkb as X
@@ -64,23 +82,56 @@ def chay(cfg, so_lan=60):
 print('Các loại quy tắc đã đăng ký:', len(QT.DANH_MUC))
 print('=' * 68)
 
-bt, pa, d = chay(copy.deepcopy(GOC))
+HONG = []          # câu mô tả từng chỗ hỏng. Rỗng = thoát 0.
+
+bt_goc, pa, d = chay(copy.deepcopy(GOC))
 print(f'{"CƠ SỞ (không thêm gì)":<42} {"OK" if pa else "HỎNG":<6} điểm={d}')
+if pa is None:
+    HONG.append('CƠ SỞ: cauhinh.json hiện tại KHÔNG xếp được — mọi dòng '
+                'dưới đây vô nghĩa')
 
 for r in THU:
     cfg = copy.deepcopy(GOC)
     cfg['quy_tac'].append(r)
+    ten = r['loai'] + ' — ' + r['ghi_chu']
+    # PHẠM VI TRƯỚC ĐÃ. Một quy tắc khớp 0 cụm thì `loi == 0` (không có gì
+    # để vi phạm) nên hậu kiểm báo ĐẠT — nó "không cấm gì mà vẫn ĐẠT",
+    # đúng bẫy `n_uyen == 0`. Phải bắt ở đây, trước khi chạy bộ giải.
+    try:
+        pv = QT.pham_vi_quy_tac(r, bt_goc)
+    except Exception as e:                              # noqa: BLE001
+        pv = None
+        HONG.append(f'{ten}: không tính được phạm vi — {type(e).__name__}: {e}')
+    if pv is not None:
+        la = {k: v for k, v in (pv.get('ten_la') or {}).items() if v}
+        if la:
+            HONG.append(f'{ten}: bộ lọc khai TÊN KHÔNG CÓ THẬT — {la}')
+        elif not pv.get('so_cum'):
+            HONG.append(f'{ten}: khớp 0 cụm — quy tắc này KHÔNG CẤM GÌ, '
+                        'mà hậu kiểm vẫn sẽ báo ĐẠT')
     try:
         bt, pa, d = chay(cfg)
         if pa is None:
             kq, ghi = 'KHÔNG XẾP ĐƯỢC', ''
+            HONG.append(f'{ten}: KHÔNG XẾP ĐƯỢC')
         else:
             bc, loi = X.hau_kiem(bt, pa)
             dong = [x for x in bc if r['ghi_chu'] in x[1]]
             kq = 'OK' if loi == 0 else 'CÒN LỖI'
             ghi = f'điểm={d}' + (f' | {dong[0][0]}' if dong else '')
+            if loi:
+                HONG.append(f'{ten}: CÒN LỖI — {loi} quy tắc vi phạm')
     except SystemExit as e:
         kq, ghi = 'CHẶN HẾT Ô', str(e)[:40]
-    print(f'{r["loai"] + " — " + r["ghi_chu"]:<42.42} {kq:<16} {ghi}')
+        HONG.append(f'{ten}: CHẶN HẾT Ô — {str(e)[:60]}')
+    if pv is not None and kq == 'OK':
+        ghi += f' | {pv.get("so_cum")} cụm'
+    print(f'{ten:<42.42} {kq:<16} {ghi}')
 
 print('=' * 68)
+print(f'Tổng: {len(THU) - len(HONG)}/{len(THU)} quy tắc thử ĐẠT.'
+      if not HONG else
+      f'Tổng: {len(THU)} quy tắc thử, {len(HONG)} CHỖ HỎNG.')
+for c in HONG:
+    print('  HỎNG:', c)
+sys.exit(1 if HONG else 0)
