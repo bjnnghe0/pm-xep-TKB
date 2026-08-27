@@ -1669,7 +1669,7 @@ khoá. **Giữ vì mỗi số đang chống lưng cho một quyết định**, g
 > **Mọi ca thử dựng máy chủ, luồng, hoặc khoá phải có ĐỒNG HỒ CANH.**
 > **Bộ thử không bao giờ được phép TREO — hết giờ thì ĐỎ, không chờ tiếp.**
 
-HAI MƯƠI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
+HAI MƯƠI BA lần đã dính, cùng một gốc — mỗi lần một kiểu khác:
 
 | # | Kiểu | Nó đã che giấu gì |
 |---|---|---|
@@ -1712,6 +1712,7 @@ HAI MƯƠI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu 
 | 20 | **Số đo không nói rõ ĐO TRÊN BẢN NÀO** | **Mọi số đo phải nói rõ đo trên BẢN TRÊN CÂY GIT hay BẢN ĐÃ VÁ trong scratchpad. Thiếu vế đó thì người đọc mặc định là bản thật — và xử lý nhầm.** Đã dính 26/8/2026, và hậu quả đi xa hơn mọi nếp hỏng khác trong bảng này: tôi báo *"bắn HTTP thật, không cookie phiên, vào chính máy chủ đó → `/api/gia-tri` trả 200, 726 byte, tên MỌI giáo viên"*. Câu ấy đúng từng chữ — nhưng "máy chủ đó" là **bản đã vá** trong scratchpad, không phải bản trên cây git. Người dùng đọc thành "cửa đang mở" và ra lệnh **đóng gấp một cửa chưa bao giờ mở**. Đo lại trên bản thật: `/api/gia-tri` → **401**, `'/api/gia-tri' in web.DUONG_MO` → **False**. Chữa: mỗi con số kèm một vế **"trên bản X"** — *"bản thật"*, *"bản vá <tên bản vá>"*. Nguy nhất ở chỗ nó **không hỏng ca thử nào cả** — nó hỏng ở lớp giữa mã và người, chỗ không bộ thử nào với tới.<br><br>**KHÔNG CÓ CỘT LÙI NGHĨA LÀ NẾP NÀY CHỈ CHẶN ĐƯỢC BẰNG THÓI QUEN ĐỌC, KHÔNG CHẶN ĐƯỢC BẰNG MÁY. Mọi số đo trong báo cáo phải nói rõ đo trên bản nào.** Mười chín dòng còn lại của bảng này đều có một bản vá làm chúng đỏ; dòng này thì không, và sẽ không bao giờ có. Nó là dòng duy nhất mà việc đọc lại chính mình trước khi gửi là hàng rào cuối cùng. |
 | 21 | **Ca thử cần CÔNG CỤ NGOÀI mà vắng công cụ thì lặng lẽ XANH** | **Ca thử cần công cụ ngoài phải TỰ KHAI khi công cụ vắng, không được im lặng xanh. Máy không có `node` thì mục nói rõ "không kiểm được", không phải ĐẠT.** Cách viết sai là `kiem(True, 'bỏ qua vì thiếu X')` — nó **cộng một mục vào "Tổng: N/N"**, nên máy thiếu công cụ vẫn cho ra một bộ thử **xanh trọn vẹn**, và người đọc con số ấy không có cách nào biết một mục đã không chạy. Cách đúng: mục rơi **HẲN** khỏi tổng, in `[BỎ QUA]`, và dòng tổng in kèm `⚠ BỎ QUA k mục vì THIẾU CÔNG CỤ NGOÀI`. Đo 26/8/2026 trên `thu_them_quy_tac.py`: có `node` → **137/137**; giả vờ không có `node` → **128/128 + một dòng ⚠**. Hai con số khác nhau, và cái khác nhau ấy chính là thứ phải nhìn thấy. ⚠ `tests/thu_xuat_html.py:208` **vẫn đang viết theo cách sai** — cùng một lớp lỗi, chưa sửa, chờ người dùng quyết. |
 | 22 | **Ca thử KHÔNG DỰNG NỔI TIỀN ĐỀ của chính nó rồi báo ĐẠT** | Khác nếp hỏng 21 ở chỗ quyết định: nếp 21 là **thiếu công cụ ngoài, biết mà khai**; ở đây **công cụ đủ**, chỉ là **cảnh cần thử không dựng được**, và mục **im lặng xanh**. **DẤU NHẬN BIẾT: xoá phép khẳng định THẬT của mục đi mà TỔNG KHÔNG ĐỔI** — nghĩa là nhánh ấy chưa bao giờ chạy trên máy này. Đã dính 26/8/2026: `thu_doc_lai.py` CA 7 muốn thử cảnh *"tên đúng mà bộ lọc khớp 0 cụm"*, viết `if pv3['so_cum'] == 0: kiem(...)` / `else: kiem(True, 'không dựng được cảnh — bỏ qua')`. Trên MÁY A bộ lọc ấy khớp **1 cụm**, nên nhánh `else` chạy và mục **đếm ĐẠT suốt trong khi chưa bao giờ chạy**. Đo: bản cũ **44/44**, xoá hẳn phép khẳng định thật đi vẫn **44/44**. ⚠ **VÀ SỬA NÓ KHÔNG LÀM CẢNH ĐÓ CHẠY ĐƯỢC** — chỉ làm chỗ hổng HIỆN RA (`43/43` + `[BỎ QUA]`). Cảnh ấy tới nay **vẫn chưa được thử**; muốn thử thì phải dựng một bộ lọc thật sự khớp 0 cụm, và đó là việc khác. Đừng đọc dòng `[BỎ QUA]` mà tưởng đã xong. |
+| 23 | **Dồn nhiều việc lên MỘT TỆP rồi mới nghĩ tới chuyện tách commit** | **Một tệp bị nhiều việc chạm thì commit việc đó TRƯỚC khi mở việc sau. Đừng dồn rồi tách — tách sau phải `reset`, và `reset` thì dễ mất phần đã đúng.** Đã dính **HAI LẦN**, cùng một nguyên nhân: (1) 26/8/2026 — năm việc cùng sửa `CLAUDE.md`, phải chụp ảnh bản cuối rồi `git checkout` và phát lại từng script để tách ra ba commit; (2) 26/8/2026, ngay trong cùng một buổi — commit "Việc 3" **nuốt luôn** thay đổi của Việc 4 vì tôi sửa `CHAY_CUNG_MAY.md` cho việc sau **trước khi** commit việc trước, rồi `git add` cả tệp. Phải `git reset --mixed HEAD~1` rồi dựng lại hai commit. Cả hai lần đều cứu được nhờ **chụp ảnh bản cuối và `diff` lại sau khi tách** — nhưng đó là cứu, không phải tránh. Đây là nếp hỏng về **quy trình**, không phải về ca thử: không bộ thử nào bắt được nó, cùng hạng với nếp hỏng 20. |
 
 > ### MỘT MỤC CANH SAI CHỖ TRÔNG Y HỆT MỘT MỤC CANH ĐÚNG CHỖ.
 > ### CHỈ CÓ LÙI BẢN VÁ RA MỚI PHÂN BIỆT ĐƯỢC.
@@ -1828,6 +1829,10 @@ HAI MƯƠI HAI lần đã dính, cùng một gốc — mỗi lần một kiểu 
    THẬT đi rồi chạy lại; TỔNG KHÔNG ĐỔI nghĩa là nhánh ấy chưa bao giờ
    chạy.** Và nhớ: khai `[BỎ QUA]` chỉ làm chỗ hổng HIỆN RA, **không
    lấp nó**. (Nếp hỏng 22.)
+24. **Tệp bạn sắp sửa đã có thay đổi CHƯA COMMIT của một việc khác
+   chưa?** `git status` trước khi gõ phím đầu tiên. Có rồi thì **commit
+   việc kia xong đã**. Dồn rồi tách phải `reset`, và `reset` thì dễ mất
+   phần đã đúng. (Nếp hỏng 23.)
 21. **ĐƯỜNG ĐANG CHẠY THẬT đã ghim chưa?** Cái mới làm thì còn nhớ, cái
    chạy lâu thì không ai soi. Bằng chứng, đo 26/8/2026:
    `sinh_dang.TRUONG_O` — đường đăng **CHƯA dùng thật** — đã ghim literal
