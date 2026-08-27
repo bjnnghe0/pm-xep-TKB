@@ -334,6 +334,32 @@ nó lên · và ghi được xuống đĩa.
 > đúng thứ tự thời gian. Tên gốc Khoa gửi **KHÔNG MẤT** — nó nằm trong
 > `luu_tru/<tuần>/phieu.json` ở khoá `ten_goc`, nguyên văn từng ký tự.
 >
+> **ĐỪNG PHÂN BIỆT HAI BẢN BẰNG TÊN TỆP. Phân biệt bằng `trang_thai`.**
+> Tuần 1 có hai bản, và tên chúng chỉ khác nhau ở **giây thứ 21 với 29**
+> — hai chữ số nằm giữa một chuỗi 60 ký tự. Một bản `dung`, một bản
+> `sai`. Đọc nhầm là đăng bản Khoa đã bác.
+> ```bash
+> python3 -B luu_tuan.py liet-ke                              # có mấy bản
+> python3 -B luu_tuan.py doi-chieu --tuan 2026-08-24 --ban 1  # bản 1 là gì
+> python3 -B luu_tuan.py doi-chieu --tuan 2026-08-24 --ban 2  # bản 2 là gì
+> ```
+> Hai dòng đầu của mỗi lượt là câu trả lời:
+> ```
+> --ban 1:  kho: 2026-08-22T11-32-21_KHOA_KHCB-
+>                2026-08-22T11:32:21 · dung
+> --ban 2:  kho: 2026-08-22T11-32-29_KHOA_KHCB-
+>                2026-08-22T11:32:29 · sai
+> ```
+> **Số thứ tự bản (1, 2) mới là thứ đọc được** — dùng nó, đừng dùng tên tệp.
+>
+> ⚠ **CHƯA LỆNH NÀO IN TRẠNG THÁI CỦA MỌI BẢN TRONG MỘT LƯỢT.** Đã rà cả
+> bảy lệnh con 27/8/2026: `liet-ke` chỉ **đếm gộp** (`[dung=1 sai=1]` —
+> không nói bản nào là bản nào); `de-dang` chỉ ra bản `dung` và **im hẳn**
+> về bản `sai`; `so` cần cầm sẵn một tệp `.xlsx`; `dang-thu`, `xem`,
+> `--help` không in. Nên phải gõ `doi-chieu` **N lần**, mỗi bản một lần.
+> Đó là cái giá hôm nay, không phải chỗ hỏng — nhưng biết trước thì đỡ đi
+> tìm một lệnh không tồn tại.
+
 > **ĐỪNG ĐỌC THƯ MỤC `ban/` BẰNG MẮT.** Tên trong đó dài và gần giống
 > nhau — hai bản của tuần 1 chỉ khác nhau ở **tám giây** và một ký tự
 > cuối:
