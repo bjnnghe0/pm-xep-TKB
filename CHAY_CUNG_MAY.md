@@ -2,6 +2,8 @@
 
 Mục đích: bật máy lên là phần mềm tự chạy, không phải mở cửa sổ dòng lệnh gõ gì.
 
+**Cập nhật:** máy chủ tự kéo `main` mỗi 15 phút (`~/bin/dong-bo.sh`, timer `dong-bo`) rồi restart `xeptkb` — sửa mã qua PR trên GitHub, đừng sửa thẳng trên máy.
+
 Mọi lệnh dưới đây **không cần `sudo`**. Đó là chủ ý, không phải may: dịch vụ chạy
 ở **phạm vi người dùng** (`systemctl --user`) chứ không phải phạm vi hệ thống.
 
