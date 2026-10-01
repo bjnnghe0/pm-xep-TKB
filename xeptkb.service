@@ -24,7 +24,7 @@ Description=Xep thoi khoa bieu - giao dien web (Khoa Khoa hoc Co ban)
 #  đó mới là chỗ khó chịu: systemd tự thêm mount của WorkingDirectory vào
 #  RequiresMountsFor, nên phụ thuộc kia có mặt do MAY, không do khai đúng.)
 # ---------------------------------------------------------------------------
-RequiresMountsFor="/media/adminnam/NAM MEO"
+RequiresMountsFor="/home/adminnam/projects/PM xep tkb"
 
 Wants=network-online.target
 After=network-online.target
@@ -54,7 +54,7 @@ Type=simple
 # ⚠ DẤU CÁCH, NGƯỢC HẲN VỚI RequiresMountsFor: ở đây là MỘT giá trị chứ không
 #   phải danh sách, nên để dấu cách TRẦN. Đã đo: bọc ngoặc kép thì systemd báo
 #   "Unit configuration has fatal error, unit will not be started".
-WorkingDirectory=/media/adminnam/NAM MEO/projects/PM xep tkb
+WorkingDirectory=/home/adminnam/projects/PM xep tkb
 
 # ---------------------------------------------------------------------------
 # ⚠ PHẢI là python của venv, KHÔNG phải /usr/bin/python3. Đã đo trên máy này:
